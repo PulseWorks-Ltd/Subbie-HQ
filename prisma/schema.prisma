@@ -1,0 +1,331 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DocumentStatus {
+  draft
+  parsed
+  confirmed
+}
+
+enum ItemStatus {
+  draft
+  parsed
+  confirmed
+}
+
+enum ClaimStatus {
+  draft
+  issued
+  responded
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  paid
+}
+
+enum EvidenceStatus {
+  draft
+  confirmed
+}
+
+enum EvidenceType {
+  upload
+  inbound_email
+  system_generated
+}
+
+enum EmailStatus {
+  new
+  reviewed
+  linked
+}
+
+enum RiskLevel {
+  low
+  medium
+  high
+}
+
+enum VariationStatus {
+  draft
+  submitted
+  approved
+  rejected
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  name          String?
+  createdAt     DateTime        @default(now())
+  memberships   ProjectMember[]
+  organisations Organisation[]  @relation("OrganisationOwners")
+}
+
+model Organisation {
+  id        String     @id @default(cuid())
+  name      String
+  createdAt DateTime   @default(now())
+  owners    User[]     @relation("OrganisationOwners")
+  projects  Project[]
+}
+
+model Project {
+  id                 String            @id @default(cuid())
+  organisationId     String?
+  name               String
+  code               String?
+  status             String            @default("active")
+  riskLevel          RiskLevel         @default(low)
+  nextClaimDate      DateTime?
+  invoiceModeEnabled Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+
+  organisation       Organisation?     @relation(fields: [organisationId], references: [id])
+  members            ProjectMember[]
+  contractDocuments  ContractDocument[]
+  clauses            Clause[]
+  scopeItems         ScopeItem[]
+  programmeItems     ProgrammeItem[]
+  monthlyWorkRecords MonthlyWorkRecord[]
+  variations         Variation[]
+  paymentClaims      PaymentClaim[]
+  invoices           Invoice[]
+  evidence           Evidence[]
+  inboundEmails      InboundEmail[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+}
+
+model ContractDocument {
+  id          String         @id @default(cuid())
+  projectId   String
+  title       String
+  fileName    String
+  fileUrl     String
+  storageKey  String
+  status      DocumentStatus @default(draft)
+  sourceNotes String?
+  uploadedAt  DateTime       @default(now())
+
+  project     Project        @relation(fields: [projectId], references: [id])
+  clauses     Clause[]
+  scopeItems  ScopeItem[]
+  programmeItems ProgrammeItem[]
+}
+
+model Clause {
+  id             String         @id @default(cuid())
+  projectId      String
+  documentId     String
+  clauseRef      String
+  title          String?
+  body           String
+  riskLevel      RiskLevel      @default(low)
+  status         ItemStatus      @default(parsed)
+  pageNumber     Int?
+  sourceRef      String?
+  createdAt      DateTime        @default(now())
+
+  project        Project         @relation(fields: [projectId], references: [id])
+  document       ContractDocument @relation(fields: [documentId], references: [id])
+  scopeItems     ScopeItem[]
+}
+
+model ScopeItem {
+  id               String         @id @default(cuid())
+  projectId        String
+  title            String
+  description      String?
+  status           ItemStatus     @default(parsed)
+  confidence       Float?         @default(0)
+  ambiguityFlag    Boolean        @default(false)
+  sourceDocumentId String?
+  sourceClauseId   String?
+  sourcePage       Int?
+  createdAt        DateTime       @default(now())
+
+  project          Project        @relation(fields: [projectId], references: [id])
+  sourceDocument   ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
+  sourceClause     Clause?        @relation(fields: [sourceClauseId], references: [id])
+  programmeLinks   ScopeProgrammeLink[]
+  evidenceLinks    EvidenceScopeItem[]
+}
+
+model ProgrammeItem {
+  id               String         @id @default(cuid())
+  projectId        String
+  title            String
+  description      String?
+  startDate        DateTime?
+  endDate          DateTime?
+  status           ItemStatus     @default(parsed)
+  confidence       Float?         @default(0)
+  sourceDocumentId String?
+  sourcePage       Int?
+  createdAt        DateTime       @default(now())
+
+  project          Project        @relation(fields: [projectId], references: [id])
+  sourceDocument   ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
+  scopeLinks       ScopeProgrammeLink[]
+  evidenceLinks    EvidenceProgrammeItem[]
+}
+
+model ScopeProgrammeLink {
+  id              String         @id @default(cuid())
+  scopeItemId     String
+  programmeItemId String
+
+  scopeItem       ScopeItem      @relation(fields: [scopeItemId], references: [id])
+  programmeItem   ProgrammeItem  @relation(fields: [programmeItemId], references: [id])
+
+  @@unique([scopeItemId, programmeItemId])
+}
+
+model MonthlyWorkRecord {
+  id            String     @id @default(cuid())
+  projectId     String
+  periodStart   DateTime
+  periodEnd     DateTime
+  completedValue Decimal   @default(0)
+  notes         String?
+  status        ItemStatus @default(draft)
+  createdAt     DateTime   @default(now())
+
+  project       Project    @relation(fields: [projectId], references: [id])
+}
+
+model Variation {
+  id          String          @id @default(cuid())
+  projectId   String
+  title       String
+  description String?
+  amount      Decimal         @default(0)
+  status      VariationStatus @default(draft)
+  sourceRef   String?
+  createdAt   DateTime        @default(now())
+
+  project     Project         @relation(fields: [projectId], references: [id])
+}
+
+model PaymentClaim {
+  id               String          @id @default(cuid())
+  projectId        String
+  claimNumber      Int
+  referenceDate    DateTime
+  periodStart      DateTime
+  periodEnd        DateTime
+  status           ClaimStatus     @default(draft)
+  claimedAmount    Decimal         @default(0)
+  statutoryWording String
+  serviceDate      DateTime?
+  pdfUrl           String?
+  storageKey       String?
+  createdAt        DateTime        @default(now())
+
+  project          Project         @relation(fields: [projectId], references: [id])
+  evidenceLinks    EvidencePaymentClaim[]
+
+  @@unique([projectId, claimNumber])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  projectId     String
+  invoiceNumber Int
+  referenceDate DateTime
+  status        InvoiceStatus @default(draft)
+  amount        Decimal       @default(0)
+  pdfUrl        String?
+  storageKey    String?
+  createdAt     DateTime      @default(now())
+
+  project       Project       @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, invoiceNumber])
+}
+
+model Evidence {
+  id          String        @id @default(cuid())
+  projectId   String
+  type        EvidenceType
+  status      EvidenceStatus @default(draft)
+  title       String?
+  fileName    String
+  fileUrl     String
+  storageKey  String
+  sourceRef   String?
+  uploadedAt  DateTime      @default(now())
+  inboundEmailId String?
+
+  project     Project       @relation(fields: [projectId], references: [id])
+  inboundEmail InboundEmail? @relation(fields: [inboundEmailId], references: [id])
+  scopeLinks  EvidenceScopeItem[]
+  programmeLinks EvidenceProgrammeItem[]
+  paymentClaimLinks EvidencePaymentClaim[]
+}
+
+model InboundEmail {
+  id         String      @id @default(cuid())
+  projectId  String
+  sender     String
+  subject    String
+  body       String
+  status     EmailStatus @default(new)
+  receivedAt DateTime    @default(now())
+
+  project    Project     @relation(fields: [projectId], references: [id])
+  evidence   Evidence[]
+}
+
+model EvidenceScopeItem {
+  id         String   @id @default(cuid())
+  evidenceId String
+  scopeItemId String
+
+  evidence   Evidence @relation(fields: [evidenceId], references: [id])
+  scopeItem  ScopeItem @relation(fields: [scopeItemId], references: [id])
+
+  @@unique([evidenceId, scopeItemId])
+}
+
+model EvidenceProgrammeItem {
+  id             String   @id @default(cuid())
+  evidenceId     String
+  programmeItemId String
+
+  evidence       Evidence @relation(fields: [evidenceId], references: [id])
+  programmeItem  ProgrammeItem @relation(fields: [programmeItemId], references: [id])
+
+  @@unique([evidenceId, programmeItemId])
+}
+
+model EvidencePaymentClaim {
+  id            String   @id @default(cuid())
+  evidenceId    String
+  paymentClaimId String
+
+  evidence      Evidence @relation(fields: [evidenceId], references: [id])
+  paymentClaim  PaymentClaim @relation(fields: [paymentClaimId], references: [id])
+
+  @@unique([evidenceId, paymentClaimId])
+}

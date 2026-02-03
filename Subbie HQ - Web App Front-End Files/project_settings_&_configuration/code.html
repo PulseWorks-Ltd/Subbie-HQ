@@ -35,70 +35,87 @@
 </head>
 <body class="font-sans">
 <div class="flex h-screen overflow-hidden">
-<aside class="w-64 flex-shrink-0 border-r border-border-subtle dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between">
-<div class="flex flex-col overflow-y-auto">
-<div class="p-6 flex gap-3 items-center border-b border-border-subtle dark:border-slate-800 mb-4">
-<div class="bg-primary rounded-lg size-10 flex items-center justify-center text-white shadow-lg shadow-primary/20">
-<span class="material-symbols-outlined">analytics</span>
-</div>
-<div class="flex flex-col">
-<h1 class="text-slate-900 dark:text-white text-base font-bold tracking-tight">Subbie HQ</h1>
-<p class="text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold tracking-widest">Contract Intel</p>
-</div>
-</div>
-<nav class="flex flex-col px-3 space-y-1">
-<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">dashboard</span>
-<p class="text-sm font-semibold">Dashboard</p>
-</a>
-<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">account_tree</span>
-<p class="text-sm font-semibold">Projects</p>
-</a>
-<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">description</span>
-<p class="text-sm font-semibold">Claims</p>
-</a>
-<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">folder</span>
-<p class="text-sm font-semibold">Documents</p>
-</a>
-<div class="my-4 border-t border-border-subtle dark:border-slate-800 mx-4"></div>
-<a class="flex items-center gap-3 px-4 py-2.5 text-primary bg-primary/5 rounded-lg transition-all border-r-2 border-primary" href="#">
-<span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">settings</span>
-<p class="text-sm font-bold">Settings</p>
-</a>
-</nav>
-</div>
-<div class="p-4 border-t border-border-subtle dark:border-slate-800">
-<button class="w-full py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-bold transition-all shadow-md shadow-primary/10 flex items-center justify-center gap-2">
-<span class="material-symbols-outlined text-sm">add</span>
-                New Claim
-            </button>
-</div>
-</aside>
-<main class="flex-1 overflow-y-auto">
-<header class="sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-border-subtle dark:border-slate-800 px-8 py-4 flex items-center justify-between">
+<div class="flex flex-col w-full">
+<header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 py-3">
 <div class="flex items-center gap-6">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-primary font-bold">construction</span>
-<h2 class="text-sm font-bold uppercase tracking-wider text-slate-500">Project Configuration</h2>
+<div class="flex items-center gap-3 text-slate-900 dark:text-white">
+<div class="size-8 flex items-center justify-center rounded-lg bg-primary text-white">
+<span class="material-symbols-outlined text-xl filled-icon" style="font-variation-settings: 'FILL' 1">deployed_code</span>
 </div>
-<div class="h-4 w-px bg-border-subtle dark:border-slate-800"></div>
-<nav class="flex items-center gap-6">
-<a class="text-primary font-bold text-sm border-b-2 border-primary pb-4 -mb-5" href="#">Technical Settings</a>
-<a class="text-slate-500 hover:text-primary text-sm font-medium pb-4 -mb-5" href="#">Compliance</a>
-<a class="text-slate-500 hover:text-primary text-sm font-medium pb-4 -mb-5" href="#">Access Control</a>
-</nav>
+<h2 class="text-lg font-bold leading-tight tracking-tight">Subbie HQ</h2>
+</div>
+<label class="hidden md:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-slate-400 text-[18px]">search</span>
+<input class="h-9 w-72 rounded-full bg-slate-100 dark:bg-slate-800 border-transparent pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20" placeholder="Search project data..."/>
+</label>
 </div>
 <div class="flex items-center gap-4">
-<div class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full">
-<span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-<span class="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter">Live API Ingestion Active</span>
-</div>
+<a class="text-sm font-semibold text-slate-500 hover:text-primary" href="#">Launchpad</a>
+<button class="relative p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined text-[22px]">notifications</span>
+</button>
 <div class="size-9 rounded-full ring-2 ring-primary/10 border-2 border-white dark:border-slate-800" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC4_sitQuYYXwyr_mO_HeHfsRNAys6Id43f4qP8I2G1nJzFn71kbfu98Q6IEnJAG45GBJuyucjnLD-uxwO7P3wIQlcdngOIDUTXKEntKmeq4J9n7Obl8oH699z_JQraWPVR0UbQJrgK4tJsDETtaLk0Ky7lYZqDxfSb8Z6hrSZJqLLHWgKTHahKN9-r9AdlZRxBA7kpbq-VthN39VykWRamV8NOLBgpmY4IlAjmaPAcpVqOPWUQzmI5jcG9xexNL42Ujoo5z561EdGH"); background-size: cover;'></div>
 </div>
 </header>
+<div class="flex flex-1 overflow-hidden">
+<aside class="w-64 flex-shrink-0 border-r border-border-subtle dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+<div class="p-5 border-b border-border-subtle dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">SA</div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Skyline Apartments</p>
+<p class="text-[10px] uppercase tracking-widest font-bold text-slate-500">#2024-882-AU</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-sm font-semibold">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="text-sm font-semibold">Contract</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<span class="text-sm font-semibold">Scope</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+<span class="text-sm font-semibold">Programme</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+<span class="text-sm font-semibold">Payment Claims</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">inventory_2</span>
+<span class="text-sm font-semibold">Evidence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-primary/10 text-primary rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px] filled-icon" style="font-variation-settings: 'FILL' 1">settings</span>
+<span class="text-sm font-bold">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-subtle dark:border-slate-800">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+<span class="text-sm font-medium">Back to Launchpad</span>
+</a>
+</div>
+</aside>
+<main class="flex-1 overflow-y-auto">
+<div class="border-b border-border-subtle dark:border-slate-800 bg-white dark:bg-slate-900 px-8 py-4">
+<div class="flex items-center justify-between">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Project</p>
+<h1 class="text-lg font-bold text-slate-900 dark:text-white">Skyline Apartments</h1>
+<p class="text-xs text-slate-500">Contract #2024-882-AU • Settings</p>
+</div>
+<span class="px-2 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-600 rounded-full">Active</span>
+</div>
+</div>
 <div class="max-w-6xl mx-auto px-8 py-10">
 <div class="flex items-center gap-2 mb-6 text-xs font-semibold uppercase tracking-widest text-slate-400">
 <a class="hover:text-primary transition-colors" href="#">Workspace</a>
@@ -284,6 +301,7 @@
 </div>
 </div>
 </main>
+</div>
 </div>
 
 </body></html>

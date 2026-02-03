@@ -50,86 +50,88 @@
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-[#0d141b] dark:text-slate-200 h-screen overflow-hidden">
-<div class="relative flex h-full w-full flex-col">
-<header class="flex h-16 shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 px-6">
-<div class="flex items-center gap-8">
-<div class="flex items-center gap-3 text-[#0d141b] dark:text-white">
-<div class="size-8 flex items-center justify-center bg-primary rounded-lg text-white">
-<span class="material-symbols-outlined filled-icon text-xl">deployed_code</span>
+<div class="flex h-screen overflow-hidden">
+<div class="flex flex-col w-full">
+<header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 py-3">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3 text-slate-900 dark:text-white">
+<div class="size-8 flex items-center justify-center rounded-lg bg-primary text-white">
+<span class="material-symbols-outlined text-xl filled-icon" style="font-variation-settings: 'FILL' 1">deployed_code</span>
 </div>
 <h2 class="text-lg font-bold leading-tight tracking-tight">Subbie HQ</h2>
 </div>
-<div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
-<label class="flex flex-col min-w-40 !h-10 max-w-64">
-<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
-<div class="text-[#4c739a] flex border-none bg-[#f1f4f9] dark:bg-slate-800 items-center justify-center pl-4 rounded-l-lg">
-<span class="material-symbols-outlined text-lg">search</span>
-</div>
-<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d141b] dark:text-white focus:outline-0 focus:ring-0 border-none bg-[#f1f4f9] dark:bg-slate-800 placeholder:text-[#4c739a] px-4 rounded-l-none pl-2 text-sm font-normal" placeholder="Search data..."/>
-</div>
+<label class="hidden md:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-slate-400 text-[18px]">search</span>
+<input class="h-9 w-72 rounded-full bg-slate-100 dark:bg-slate-800 border-transparent pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20" placeholder="Search project data..."/>
 </label>
 </div>
-<div class="flex flex-1 justify-end gap-6 items-center">
-<div class="flex items-center gap-6">
-<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Projects</a>
-<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Support</a>
-</div>
-<div class="flex gap-2">
-<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-[#f1f4f9] dark:bg-slate-800 text-[#4c739a] dark:text-white hover:bg-slate-200 transition-colors">
-<span class="material-symbols-outlined">notifications</span>
+<div class="flex items-center gap-4">
+<a class="text-sm font-semibold text-slate-500 hover:text-primary" href="#">Launchpad</a>
+<button class="relative p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined text-[22px]">notifications</span>
 </button>
-</div>
-<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-slate-200" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDhu4yTZO67oHRE-9uNeoC99cJ8ElkugFzFoHLRyDLwtyl_2ZhzSdL8xEpkX-92P_R3RSrBNURb8j0Wzv0CaGmNyXdVJtTwK_xuKTUkoJDl_jW6wDasZkk81wPGFB2VDpgh-aCatV7cZ8LOhfspMCvUr57XMW9bBnXmMQMyplaBILoz44BgZqrRqeoUFIUQeVAipG1tomOUQTi0s38Rm7dDI7sr2XydWSC525BOGE26InS6RX_bGfBTE6_1ae4a1IzHmC-4X89jJ9ms");'></div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 ring-2 ring-primary/10 cursor-pointer" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDhu4yTZO67oHRE-9uNeoC99cJ8ElkugFzFoHLRyDLwtyl_2ZhzSdL8xEpkX-92P_R3RSrBNURb8j0Wzv0CaGmNyXdVJtTwK_xuKTUkoJDl_jW6wDasZkk81wPGFB2VDpgh-aCatV7cZ8LOhfspMCvUr57XMW9bBnXmMQMyplaBILoz44BgZqrRqeoUFIUQeVAipG1tomOUQTi0s38Rm7dDI7sr2XydWSC525BOGE26InS6RX_bGfBTE6_1ae4a1IzHmC-4X89jJ9ms");'></div>
 </div>
 </header>
 <div class="flex flex-1 overflow-hidden">
-<aside class="w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col gap-6">
-<div class="flex flex-col px-3">
-<h1 class="text-[#0d141b] dark:text-white text-base font-bold leading-normal truncate">Skyline Apartments</h1>
-<p class="text-[#4c739a] text-[11px] font-medium leading-normal tracking-wide">REF: #2024-882-AU</p>
+<aside class="w-64 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+<div class="p-5 border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">SA</div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Skyline Apartments</p>
+<p class="text-[10px] uppercase tracking-widest font-bold text-slate-500">#2024-882-AU</p>
 </div>
-<nav class="flex flex-col gap-1 overflow-y-auto">
-<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">dashboard</span>
-<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Project Overview</p>
+</div>
+</div>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-sm font-semibold">Overview</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/5 text-primary border border-primary/10" href="#">
-<span class="material-symbols-outlined text-[22px] filled-icon">description</span>
-<p class="text-sm font-bold">Contract Intelligence</p>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-primary/10 text-primary rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px] filled-icon" style="font-variation-settings: 'FILL' 1">description</span>
+<span class="text-sm font-bold">Contract</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">content_cut</span>
-<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Scope Engine</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<span class="text-sm font-semibold">Scope</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">event_note</span>
-<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Programme</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+<span class="text-sm font-semibold">Programme</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">receipt_long</span>
-<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Claims/Invoices</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+<span class="text-sm font-semibold">Payment Claims</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">folder_shared</span>
-<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Evidence Vault</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">inventory_2</span>
+<span class="text-sm font-semibold">Evidence</span>
 </a>
-<div class="my-3 border-t border-slate-100 dark:border-slate-800 mx-3"></div>
-<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">settings</span>
-<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Settings</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-sm font-semibold">Settings</span>
 </a>
 </nav>
-<div class="mt-auto pt-4">
-<div class="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3">
-<div class="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
-<span class="material-symbols-outlined text-lg filled-icon">warning</span>
-<p class="text-xs font-bold uppercase tracking-wider">Critical Focus</p>
-</div>
-<p class="text-xs text-amber-800 dark:text-amber-300 font-medium">4 High-Risk Clauses detected in the latest scan.</p>
-</div>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+<span class="text-sm font-medium">Back to Launchpad</span>
+</a>
 </div>
 </aside>
 <main class="flex-1 flex flex-col overflow-hidden">
+<div class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 py-4">
+<div class="flex items-center justify-between">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Project</p>
+<h1 class="text-lg font-bold text-slate-900 dark:text-white">Skyline Apartments</h1>
+<p class="text-xs text-slate-500">Contract #2024-882-AU • Contract Workspace</p>
+</div>
+<span class="px-2 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-600 rounded-full">Active</span>
+</div>
+</div>
 <div class="flex-none bg-white dark:bg-slate-900 border-b border-[#e7edf3] dark:border-slate-800">
 <div class="flex items-center gap-2 px-8 py-3">
 <a class="text-[#4c739a] text-[11px] font-medium" href="#">Projects</a>

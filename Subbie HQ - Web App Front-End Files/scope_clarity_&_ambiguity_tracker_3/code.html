@@ -49,83 +49,88 @@
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-200 antialiased overflow-hidden">
-<div class="relative flex h-screen w-full flex-col">
-<header class="flex h-16 items-center justify-between border-b border-border-light dark:border-border-dark bg-white dark:bg-slate-900 px-6 shrink-0 z-20">
-<div class="flex items-center gap-8">
-<div class="flex items-center gap-2.5">
-<div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-<span class="material-symbols-outlined filled-icon text-white text-xl">account_balance_wallet</span>
+<div class="flex h-screen overflow-hidden">
+<div class="flex flex-col w-full">
+<header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 py-3">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3 text-slate-900 dark:text-white">
+<div class="size-8 flex items-center justify-center rounded-lg bg-primary text-white">
+<span class="material-symbols-outlined text-xl filled-icon" style="font-variation-settings: 'FILL' 1">deployed_code</span>
 </div>
-<h2 class="text-xl font-black leading-tight tracking-tight dark:text-white">Subbie HQ</h2>
+<h2 class="text-lg font-bold leading-tight tracking-tight">Subbie HQ</h2>
 </div>
-<div class="hidden md:flex items-center gap-1">
-<label class="relative flex items-center">
-<span class="material-symbols-outlined absolute left-3 text-slate-400 text-lg">search</span>
-<input class="form-input h-9 w-72 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="Search project data..."/>
+<label class="hidden md:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-slate-400 text-[18px]">search</span>
+<input class="h-9 w-72 rounded-full bg-slate-100 dark:bg-slate-800 border-transparent pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20" placeholder="Search project data..."/>
 </label>
 </div>
-</div>
 <div class="flex items-center gap-4">
-<nav class="hidden lg:flex items-center gap-6 mr-4">
-<a class="text-sm font-semibold text-slate-500 hover:text-primary transition-colors" href="#">Portfolio</a>
-<a class="text-sm font-semibold text-slate-900 dark:text-white" href="#">Active Projects</a>
-<a class="text-sm font-semibold text-slate-500 hover:text-primary transition-colors" href="#">Organisation</a>
-</nav>
-<div class="flex items-center gap-3 border-l border-slate-200 dark:border-slate-800 pl-6">
-<button class="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500">
-<span class="material-symbols-outlined">notifications</span>
+<a class="text-sm font-semibold text-slate-500 hover:text-primary" href="#">Launchpad</a>
+<button class="relative p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined text-[22px]">notifications</span>
 </button>
-<div class="h-9 w-9 rounded-full bg-cover bg-center border border-slate-200 ring-2 ring-white dark:ring-slate-900 shadow-sm" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAxANnvI9JfTFYf_ZwfC_piKn3G99IeNUKp2tzYOD_ugbgAYA40FRcKvtrlgZj2ndY66rJORhY7vJJ-T2q820tZFrb0xtb41E3LZVGw9iZMEqMu8V3Gk_HpOiUYGoD6mkgvinj_TfrqM1VrNbYas9gAVbeSf-Ga5NHG9ZVr5IdGlz4VNZF8TbkHricVkfc9a_0LFiXGRBQC6iQEfkcFrXLChcwn9Zes7l-G5PgHQ9dPHeZiw0lQpdYmWAbAVlY5kxAy4SoYvnPY1VPu");'></div>
-</div>
+<div class="h-9 w-9 rounded-full bg-cover bg-center border border-slate-200 ring-2 ring-primary/10 shadow-sm" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAxANnvI9JfTFYf_ZwfC_piKn3G99IeNUKp2tzYOD_ugbgAYA40FRcKvtrlgZj2ndY66rJORhY7vJJ-T2q820tZFrb0xtb41E3LZVGw9iZMEqMu8V3Gk_HpOiUYGoD6mkgvinj_TfrqM1VrNbYas9gAVbeSf-Ga5NHG9ZVr5IdGlz4VNZF8TbkHricVkfc9a_0LFiXGRBQC6iQEfkcFrXLChcwn9Zes7l-G5PgHQ9dPHeZiw0lQpdYmWAbAVlY5kxAy4SoYvnPY1VPu");'></div>
 </div>
 </header>
 <div class="flex flex-1 overflow-hidden">
-<aside class="w-64 flex-shrink-0 flex flex-col border-r border-border-light dark:border-border-dark bg-white dark:bg-slate-900 z-10">
-<div class="p-4 bg-slate-50/50 dark:bg-slate-800/20">
-<div class="flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700">
-<div class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                        SA
-                    </div>
-<div class="min-w-0">
-<h1 class="text-slate-900 dark:text-white text-sm font-bold truncate">Skyline Apartments</h1>
-<p class="text-slate-500 text-[11px] font-medium tracking-tight">ID: #2024-882-AU</p>
+<aside class="w-64 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+<div class="p-5 border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">SA</div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Skyline Apartments</p>
+<p class="text-[10px] uppercase tracking-widest font-bold text-slate-500">#2024-882-AU</p>
 </div>
 </div>
 </div>
-<nav class="flex-1 overflow-y-auto p-4 space-y-1">
-<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">dashboard</span>
-<p class="text-sm font-semibold">Project Overview</p>
+<nav class="flex-1 p-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-sm font-semibold">Overview</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">description</span>
-<p class="text-sm font-semibold">Contract</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="text-sm font-semibold">Contract</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary text-white shadow-md shadow-primary/20" href="#">
-<span class="material-symbols-outlined text-[22px] filled-icon">analytics</span>
-<p class="text-sm font-bold">Scope Engine</p>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-primary/10 text-primary rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px] filled-icon" style="font-variation-settings: 'FILL' 1">analytics</span>
+<span class="text-sm font-bold">Scope</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">calendar_month</span>
-<p class="text-sm font-semibold">Programme</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+<span class="text-sm font-semibold">Programme</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">payments</span>
-<p class="text-sm font-semibold">Claims/Invoices</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+<span class="text-sm font-semibold">Payment Claims</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">folder_shared</span>
-<p class="text-sm font-semibold">Evidence Vault</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">inventory_2</span>
+<span class="text-sm font-semibold">Evidence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-sm font-semibold">Settings</span>
 </a>
 </nav>
-<div class="p-4 border-t border-slate-100 dark:border-slate-800">
-<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
-<span class="material-symbols-outlined text-[22px] group-hover:text-primary">settings</span>
-<p class="text-sm font-semibold">Settings</p>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+<span class="text-sm font-medium">Back to Launchpad</span>
 </a>
 </div>
 </aside>
 <main class="flex-1 flex flex-col overflow-hidden">
+<div class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 py-4">
+<div class="flex items-center justify-between">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Project</p>
+<h1 class="text-lg font-bold text-slate-900 dark:text-white">Skyline Apartments</h1>
+<p class="text-xs text-slate-500">Contract #2024-882-AU • Scope Workspace</p>
+</div>
+<span class="px-2 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-600 rounded-full">Active</span>
+</div>
+</div>
 <div class="bg-white dark:bg-slate-900 border-b border-border-light dark:border-border-dark px-8 py-6 shrink-0">
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
 <div>

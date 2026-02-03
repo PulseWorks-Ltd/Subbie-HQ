@@ -37,44 +37,33 @@
 </head>
 <body class="bg-background-light dark:bg-background-dark text-[#0d141b] dark:text-slate-50 min-h-screen flex flex-col font-display">
 <!-- TopNavBar -->
-<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark px-10 py-3 sticky top-0 z-50">
-<div class="flex items-center gap-8">
-<div class="flex items-center gap-4 text-[#0d141b] dark:text-slate-50">
-<div class="size-6 text-primary">
-<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-<path clip-rule="evenodd" d="M24 18.4228L42 11.475V34.3663C42 34.7796 41.7457 35.1504 41.3601 35.2992L24 42V18.4228Z" fill="currentColor" fill-rule="evenodd"></path>
-<path clip-rule="evenodd" d="M24 8.18819L33.4123 11.574L24 15.2071L14.5877 11.574L24 8.18819ZM9 15.8487L21 20.4805V37.6263L9 32.9945V15.8487ZM27 37.6263V20.4805L39 15.8487V32.9945L27 37.6263ZM25.354 2.29885C24.4788 1.98402 23.5212 1.98402 22.646 2.29885L4.98454 8.65208C3.7939 9.08038 3 10.2097 3 11.475V34.3663C3 36.0196 4.01719 37.5026 5.55962 38.098L22.9197 44.7987C23.6149 45.0671 24.3851 45.0671 25.0803 44.7987L42.4404 38.098C43.9828 37.5026 45 36.0196 45 34.3663V11.475C45 10.2097 44.2061 9.08038 43.0155 8.65208L25.354 2.29885Z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
+<header class="flex items-center justify-between border-b border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark px-8 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3 text-[#0d141b] dark:text-slate-50">
+<div class="size-8 flex items-center justify-center rounded-lg bg-primary text-white">
+<span class="material-symbols-outlined text-xl filled-icon" style="font-variation-settings: 'FILL' 1">deployed_code</span>
 </div>
-<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Subbie HQ</h2>
+<h2 class="text-lg font-bold leading-tight tracking-tight">Subbie HQ</h2>
 </div>
-<label class="flex flex-col min-w-40 !h-10 max-w-64">
-<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
-<div class="text-[#4c739a] flex border-none bg-[#e7edf3] dark:bg-slate-800 items-center justify-center pl-4 rounded-l-lg border-r-0">
-<span class="material-symbols-outlined text-xl">search</span>
-</div>
-<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d141b] dark:text-slate-50 focus:outline-0 focus:ring-0 border-none bg-[#e7edf3] dark:bg-slate-800 focus:border-none h-full placeholder:text-[#4c739a] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search projects..." value=""/>
-</div>
+<label class="hidden md:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-[#4c739a] text-[18px]">search</span>
+<input class="h-9 w-72 rounded-full bg-[#e7edf3] dark:bg-slate-800 border-transparent pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 placeholder:text-[#4c739a]" placeholder="Search projects..."/>
 </label>
 </div>
-<div class="flex flex-1 justify-end gap-8">
-<nav class="flex items-center gap-9">
-<a class="text-primary text-sm font-bold leading-normal border-b-2 border-primary pb-1" href="#">Launchpad</a>
-<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Contracts</a>
-<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Payments</a>
-<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Analytics</a>
+<div class="flex items-center gap-4">
+<nav class="hidden lg:flex items-center gap-6">
+<a class="text-primary text-sm font-bold border-b-2 border-primary pb-1" href="#">Launchpad</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Contracts</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Payments</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Analytics</a>
 </nav>
-<div class="flex gap-2">
-<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-slate-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<button class="flex min-w-[140px] items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:bg-primary/90">
 <span class="truncate">Add New Project</span>
 </button>
-<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#e7edf3] dark:bg-slate-800 text-[#0d141b] dark:text-slate-50 gap-2 text-sm font-bold leading-normal min-w-0 px-2.5">
-<span class="material-symbols-outlined">notifications</span>
+<button class="relative p-2 text-[#4c739a] dark:text-slate-300 hover:bg-[#e7edf3] dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined text-[22px]">notifications</span>
 </button>
-<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#e7edf3] dark:bg-slate-800 text-[#0d141b] dark:text-slate-50 gap-2 text-sm font-bold leading-normal min-w-0 px-2.5">
-<span class="material-symbols-outlined">account_circle</span>
-</button>
-</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 ring-2 ring-primary/10 cursor-pointer" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCOO2MRsmO3Au9zJNEP19TF6J8wIoJwduE2pWMyHUxHnBtoEk6JVSVZ4x9tKvmUHuDs1v0OwCepLl4JRQg9TIE1Mdng6c1WGmDQt1MTSDOkzFGmT2b8FZE1d8JGfDO8EBUmg8VVw5Ea6sVrd50JgsWOE1CN4nYOJj_WsG40OWsIAVRQGLrkOTA1XOYFA-hhTsWVQ47tQxpKk34OJS0XJV-uDHakh6Jf2HMK1C49ptNP4a9tnrCvv4hN0dsgLhYjHIjeAZV_IQ9XRX_a");'></div>
 </div>
 </header>
 <main class="flex-1 flex flex-col items-center">

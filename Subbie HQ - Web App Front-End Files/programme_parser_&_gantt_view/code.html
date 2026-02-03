@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Programme Parser &amp; Gantt View - Subbie HQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "critical": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.375rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer base {
+            .material-symbols-outlined {
+                font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+                @apply align-middle;
+            }
+        }
+        .gantt-grid-pattern {
+            background-size: 40px 100%;
+            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px);
+        }
+        .dark .gantt-grid-pattern {
+            background-image: linear-gradient(to right, #334155 1px, transparent 1px);
+        }
+        .pdf-mask {
+            mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="flex h-screen overflow-hidden">
+<aside class="w-64 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full">
+<div class="p-6 flex flex-col h-full">
+<div class="flex gap-3 items-center mb-8">
+<div class="bg-primary rounded-lg size-10 flex items-center justify-center text-white shadow-sm">
+<span class="material-symbols-outlined text-2xl fill-1" style="font-variation-settings: 'FILL' 1">construction</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-white text-base font-bold leading-tight">Subbie HQ</h1>
+<p class="text-slate-500 dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider">Project Workspace</p>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-1">
+<p class="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Management</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">dashboard</span>
+<p class="text-sm font-medium">Project Overview</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">description</span>
+<p class="text-sm font-medium">Contract</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">engineering</span>
+<p class="text-sm font-medium">Scope Engine</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-primary/10 text-primary border-r-4 border-primary rounded-l-lg" href="#">
+<span class="material-symbols-outlined text-[20px] fill-1" style="font-variation-settings: 'FILL' 1">calendar_month</span>
+<p class="text-sm font-bold">Programme</p>
+</a>
+<p class="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-6 mb-2">Commercial</p>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">receipt_long</span>
+<p class="text-sm font-medium">Claims/Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary">inventory_2</span>
+<p class="text-sm font-medium">Evidence Vault</p>
+</a>
+</div>
+<div class="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<p class="text-sm font-medium">Workspace Settings</p>
+</a>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-hidden bg-white dark:bg-background-dark">
+<header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 py-4 shrink-0">
+<div class="flex items-center gap-4">
+<nav class="flex items-center gap-2 text-sm font-medium">
+<a class="text-slate-400 hover:text-slate-600" href="#">Skyline Apartments</a>
+<span class="text-slate-300">/</span>
+<span class="text-slate-900 dark:text-white font-bold tracking-tight">Programme Parser</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative w-64 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+<input class="w-full h-9 pl-9 pr-4 rounded-full bg-slate-100 dark:bg-slate-800 border-transparent focus:bg-white focus:ring-2 focus:ring-primary/20 text-sm transition-all" placeholder="Find activity..."/>
+</div>
+<div class="flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-4">
+<button class="relative p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined text-[22px]">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-critical rounded-full border-2 border-white dark:border-slate-900"></span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 ring-2 ring-primary/10 cursor-pointer" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCg69CMsYnrfwUSPDIcW_VjG4kp38xnmEiW4QFquqKP8JMvXy5SUKBlqTl-OI6LJp1r35LrZop6iL1eKemzWCklKZoKUsroe11MFgcx0UEMq88WgfhmO2uaUu7Hfy5SbER8ix7y-Mxjqz4L0I2H--pxe3GOQcM_ePq78ulgPspuBhNeRTTbzQs1K1G20fVnISv3K-B8Ytdy2XMUC9zxxFFgLepvzCpZdIri_RQh7jITf6Xh6r7RuOeGonRfN1wzMUNxpp-8RozjCn8O");'></div>
+</div>
+</div>
+</header>
+<div class="flex-1 flex flex-col overflow-hidden">
+<div class="px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-6">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Programme Alignment</h2>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Reviewing PDF baseline against digital Gantt logic.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-lg flex items-center gap-2 text-xs hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-[16px]">file_download</span> Export
+                        </button>
+<button class="px-4 py-2 bg-primary text-white font-bold rounded-lg flex items-center gap-2 text-xs hover:bg-primary/90 transition-shadow shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">verified</span> Commit Baseline
+                        </button>
+</div>
+</div>
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Confidence Score</span>
+<span class="material-symbols-outlined text-green-500 bg-green-100 dark:bg-green-900/30 p-1 rounded-full text-[16px]">verified</span>
+</div>
+<div class="flex items-end gap-2">
+<p class="text-3xl font-black text-slate-900 dark:text-white">94<span class="text-lg text-slate-400">%</span></p>
+<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded mb-1">HIGH ACCURACY</span>
+</div>
+<div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+<div class="bg-green-500 h-full w-[94%]"></div>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Critical Path</span>
+<span class="material-symbols-outlined text-critical bg-red-100 dark:bg-red-900/30 p-1 rounded-full text-[16px]">alt_route</span>
+</div>
+<div class="flex items-end gap-2">
+<p class="text-3xl font-black text-slate-900 dark:text-white">12</p>
+<span class="text-xs font-semibold text-slate-500 mb-1">Active Tasks</span>
+</div>
+<p class="text-[10px] text-slate-500">4 dependencies triggering alerts</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Total Activities</span>
+<span class="material-symbols-outlined text-primary bg-primary/10 p-1 rounded-full text-[16px]">list_alt</span>
+</div>
+<div class="flex items-end gap-2">
+<p class="text-3xl font-black text-slate-900 dark:text-white">148</p>
+<span class="text-xs font-semibold text-slate-500 mb-1">Elements</span>
+</div>
+<p class="text-[10px] text-slate-500">Synced from PrimaV6-Rev-03.pdf</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col gap-3 border-l-4 border-l-orange-400">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">Sync Issues</span>
+<span class="material-symbols-outlined text-orange-500 text-[16px]">warning</span>
+</div>
+<div class="flex items-end gap-2">
+<p class="text-3xl font-black text-slate-900 dark:text-white">03</p>
+<span class="text-xs font-semibold text-slate-500 mb-1">Mismatches</span>
+</div>
+<p class="text-[10px] text-orange-600 font-medium underline cursor-pointer">Review mismatches →</p>
+</div>
+</div>
+</div>
+<div class="flex-1 flex overflow-hidden">
+<div class="w-[40%] border-r border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 flex flex-col shadow-inner">
+<div class="h-12 flex items-center justify-between px-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-red-500">picture_as_pdf</span>
+<span class="text-xs font-bold text-slate-600 dark:text-slate-300">Programme_Baseline_V1.pdf</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><span class="material-symbols-outlined text-[18px]">zoom_in</span></button>
+<button class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"><span class="material-symbols-outlined text-[18px]">zoom_out</span></button>
+<button class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded ml-2"><span class="material-symbols-outlined text-[18px]">fullscreen</span></button>
+</div>
+</div>
+<div class="flex-1 overflow-auto p-8 flex justify-center pdf-mask">
+<div class="w-full max-w-2xl bg-white shadow-2xl rounded-sm p-10 min-h-[800px] flex flex-col relative border border-slate-200">
+<div class="absolute top-[320px] left-[5%] w-[90%] h-[120px] border-2 border-primary bg-primary/5 rounded z-10 flex items-start justify-end p-2">
+<span class="bg-primary text-[8px] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">Recognized Block</span>
+</div>
+<div class="flex justify-between border-b-2 border-slate-800 pb-4 mb-8">
+<div class="space-y-1">
+<div class="h-6 w-48 bg-slate-900 rounded"></div>
+<div class="h-3 w-32 bg-slate-200 rounded"></div>
+</div>
+<div class="h-12 w-12 bg-slate-200 rounded-lg"></div>
+</div>
+<div class="space-y-4">
+<div class="h-2 w-full bg-slate-100 rounded"></div>
+<div class="h-2 w-5/6 bg-slate-100 rounded"></div>
+<div class="h-2 w-4/6 bg-slate-100 rounded"></div>
+</div>
+<div class="mt-12 overflow-hidden border border-slate-300 rounded">
+<table class="w-full text-[9px] font-medium">
+<thead class="bg-slate-50 border-b border-slate-300">
+<tr>
+<th class="p-3 text-left uppercase text-slate-400">Ref</th>
+<th class="p-3 text-left uppercase text-slate-400">Task Name</th>
+<th class="p-3 text-left uppercase text-slate-400">Duration</th>
+<th class="p-3 text-left uppercase text-slate-400">Start</th>
+</tr>
+</thead>
+<tbody class="text-slate-600">
+<tr class="border-b border-slate-100 bg-primary/5">
+<td class="p-3">ACT-001</td>
+<td class="p-3 font-bold text-slate-900">Concrete Pour L1</td>
+<td class="p-3">5 Days</td>
+<td class="p-3">01 Oct 24</td>
+</tr>
+<tr class="border-b border-slate-100">
+<td class="p-3">ACT-002</td>
+<td class="p-3 font-bold text-slate-900">Steel Reinforcement L2</td>
+<td class="p-3">7 Days</td>
+<td class="p-3">06 Oct 24</td>
+</tr>
+<tr class="border-b border-slate-100">
+<td class="p-3">ACT-003</td>
+<td class="p-3 font-bold text-slate-900">Formwork Installation L2</td>
+<td class="p-3">8 Days</td>
+<td class="p-3">13 Oct 24</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-auto pt-8 flex justify-center">
+<div class="text-[9px] text-slate-400 flex gap-4 uppercase tracking-widest font-bold">
+<span>P6 Professional Desktop</span>
+<span>•</span>
+<span>Page 1 of 12</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
+<div class="h-12 flex items-center justify-between px-6 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+<div class="flex gap-6">
+<button class="h-12 border-b-2 border-primary text-primary font-bold text-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">format_list_bulleted</span> Task List
+                            </button>
+<button class="h-12 text-slate-500 font-bold text-xs flex items-center gap-2 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">timeline</span> Critical Path
+                            </button>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+<button class="px-2 py-1 text-[10px] font-black bg-white dark:bg-slate-600 shadow-sm rounded text-slate-800 dark:text-white uppercase">Weekly</button>
+<button class="px-2 py-1 text-[10px] font-black text-slate-400 uppercase">Monthly</button>
+</div>
+<button class="text-slate-400 hover:text-slate-900"><span class="material-symbols-outlined text-[20px]">filter_list</span></button>
+</div>
+</div>
+<div class="flex-1 overflow-auto flex flex-col">
+<div class="grid grid-cols-[320px_1fr] border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-20">
+<div class="p-4 border-r border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase tracking-widest">Activity Details</div>
+<div class="flex">
+<div class="flex-1 grid grid-cols-4 text-center border-l border-slate-200 dark:border-slate-700">
+<div class="p-4 border-r border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">Week 1 (Oct)</div>
+<div class="p-4 border-r border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">Week 2 (Oct)</div>
+<div class="p-4 border-r border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase">Week 3 (Oct)</div>
+<div class="p-4 text-[10px] font-black text-slate-400 uppercase">Week 4 (Oct)</div>
+</div>
+</div>
+</div>
+<div class="flex-1 gantt-grid-pattern relative min-h-0">
+<div class="grid grid-cols-[320px_1fr] border-b border-slate-100 dark:border-slate-800 group hover:bg-primary/[0.02] transition-colors">
+<div class="p-4 border-r border-slate-200 dark:border-slate-800 flex items-center gap-4 bg-white dark:bg-slate-900">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-green-500 text-[18px]">check_circle</span>
+<span class="text-sm font-bold text-slate-900 dark:text-slate-100">Concrete Pour Level 1</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[10px] font-mono text-slate-400">ACT-001</span>
+<span class="size-1 rounded-full bg-slate-300"></span>
+<span class="text-[10px] text-slate-500">01 Oct — 05 Oct</span>
+</div>
+</div>
+</div>
+<div class="relative h-16 flex items-center px-0 overflow-hidden">
+<div class="absolute left-0 w-[12%] h-8 bg-primary/20 border border-primary/40 rounded shadow-sm flex items-center px-2 group/bar">
+<div class="h-1 w-full bg-primary/20 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[100%]"></div>
+</div>
+<div class="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary border border-white rounded-full opacity-0 group-hover/bar:opacity-100 transition-opacity cursor-pointer"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-[320px_1fr] border-b border-slate-100 dark:border-slate-800 group bg-red-50/20 dark:bg-red-900/10 hover:bg-red-50/40 transition-colors">
+<div class="p-4 border-r border-slate-200 dark:border-slate-800 flex items-center gap-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-critical text-[18px] fill-1" style="font-variation-settings: 'FILL' 1">warning</span>
+<span class="text-sm font-bold text-slate-900 dark:text-slate-100">Steel Reinforcement L2</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[10px] font-mono font-bold text-critical bg-red-100 dark:bg-red-900/30 px-1 rounded">ACT-002</span>
+<span class="text-[10px] font-bold text-critical uppercase">Critical Path</span>
+</div>
+</div>
+</div>
+<div class="relative h-16 flex items-center px-0 overflow-hidden">
+<svg class="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+<path class="opacity-40" d="M 40 8 L 52 8 L 52 40 L 52 40" fill="none" stroke="#ef4444" stroke-dasharray="3 3" stroke-width="1.5"></path>
+</svg>
+<div class="absolute left-[13%] w-[18%] h-8 bg-critical/20 border-2 border-critical rounded shadow-sm flex items-center px-2">
+<div class="h-1 w-full bg-critical/20 rounded-full overflow-hidden">
+<div class="bg-critical h-full w-[35%]"></div>
+</div>
+<div class="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-critical border border-white rounded-full shadow"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-[320px_1fr] border-b border-slate-100 dark:border-slate-800 group bg-red-50/20 dark:bg-red-900/10 hover:bg-red-50/40 transition-colors">
+<div class="p-4 border-r border-slate-200 dark:border-slate-800 flex items-center gap-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-critical text-[18px]">alt_route</span>
+<span class="text-sm font-bold text-slate-900 dark:text-slate-100">Formwork Installation L2</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[10px] font-mono font-bold text-critical bg-red-100 dark:bg-red-900/30 px-1 rounded">ACT-003</span>
+<span class="text-[10px] font-bold text-critical uppercase">Critical Path</span>
+</div>
+</div>
+</div>
+<div class="relative h-16 flex items-center px-0 overflow-hidden">
+<div class="absolute left-[32%] w-[22%] h-8 bg-critical/20 border-2 border-critical rounded shadow-sm flex items-center px-2 group/bar">
+<div class="h-1 w-full bg-critical/20 rounded-full overflow-hidden">
+<div class="bg-critical h-full w-0"></div>
+</div>
+<div class="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-critical border border-white rounded-full opacity-0 group-hover/bar:opacity-100"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-[320px_1fr] border-b border-slate-100 dark:border-slate-800 group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<div class="p-4 border-r border-slate-200 dark:border-slate-800 flex items-center gap-4">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-300 text-[18px]">radio_button_unchecked</span>
+<span class="text-sm font-semibold text-slate-700 dark:text-slate-300">MEP Rough-in North Wing</span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-[10px] font-mono text-slate-400">ACT-004</span>
+<span class="size-1 rounded-full bg-slate-300"></span>
+<span class="text-[10px] text-slate-500">15 Oct — 28 Oct</span>
+</div>
+</div>
+</div>
+<div class="relative h-16 flex items-center px-0 overflow-hidden">
+<div class="absolute left-[38%] w-[35%] h-6 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded flex items-center px-2">
+<span class="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Pending Start</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

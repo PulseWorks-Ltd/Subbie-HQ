@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contract Intelligence - Subbie HQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+        .source-highlight-active {
+            @apply border-2 border-primary ring-4 ring-primary/10;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d141b] dark:text-slate-200 h-screen overflow-hidden">
+<div class="relative flex h-full w-full flex-col">
+<header class="flex h-16 shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 px-6">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-[#0d141b] dark:text-white">
+<div class="size-8 flex items-center justify-center bg-primary rounded-lg text-white">
+<span class="material-symbols-outlined filled-icon text-xl">deployed_code</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight">Subbie HQ</h2>
+</div>
+<div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<label class="flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#4c739a] flex border-none bg-[#f1f4f9] dark:bg-slate-800 items-center justify-center pl-4 rounded-l-lg">
+<span class="material-symbols-outlined text-lg">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d141b] dark:text-white focus:outline-0 focus:ring-0 border-none bg-[#f1f4f9] dark:bg-slate-800 placeholder:text-[#4c739a] px-4 rounded-l-none pl-2 text-sm font-normal" placeholder="Search data..."/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<div class="flex items-center gap-6">
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Projects</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Support</a>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-[#f1f4f9] dark:bg-slate-800 text-[#4c739a] dark:text-white hover:bg-slate-200 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-slate-200" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDhu4yTZO67oHRE-9uNeoC99cJ8ElkugFzFoHLRyDLwtyl_2ZhzSdL8xEpkX-92P_R3RSrBNURb8j0Wzv0CaGmNyXdVJtTwK_xuKTUkoJDl_jW6wDasZkk81wPGFB2VDpgh-aCatV7cZ8LOhfspMCvUr57XMW9bBnXmMQMyplaBILoz44BgZqrRqeoUFIUQeVAipG1tomOUQTi0s38Rm7dDI7sr2XydWSC525BOGE26InS6RX_bGfBTE6_1ae4a1IzHmC-4X89jJ9ms");'></div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<aside class="w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col gap-6">
+<div class="flex flex-col px-3">
+<h1 class="text-[#0d141b] dark:text-white text-base font-bold leading-normal truncate">Skyline Apartments</h1>
+<p class="text-[#4c739a] text-[11px] font-medium leading-normal tracking-wide">REF: #2024-882-AU</p>
+</div>
+<nav class="flex flex-col gap-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-primary">dashboard</span>
+<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Project Overview</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/5 text-primary border border-primary/10" href="#">
+<span class="material-symbols-outlined text-[22px] filled-icon">description</span>
+<p class="text-sm font-bold">Contract Intelligence</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-primary">content_cut</span>
+<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Scope Engine</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-primary">event_note</span>
+<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Programme</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-primary">receipt_long</span>
+<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Claims/Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-primary">folder_shared</span>
+<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Evidence Vault</p>
+</a>
+<div class="my-3 border-t border-slate-100 dark:border-slate-800 mx-3"></div>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group transition-all" href="#">
+<span class="material-symbols-outlined text-[22px] group-hover:text-primary">settings</span>
+<p class="text-sm font-medium group-hover:text-[#0d141b] dark:group-hover:text-white">Settings</p>
+</a>
+</nav>
+<div class="mt-auto pt-4">
+<div class="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-3">
+<div class="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
+<span class="material-symbols-outlined text-lg filled-icon">warning</span>
+<p class="text-xs font-bold uppercase tracking-wider">Critical Focus</p>
+</div>
+<p class="text-xs text-amber-800 dark:text-amber-300 font-medium">4 High-Risk Clauses detected in the latest scan.</p>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-hidden">
+<div class="flex-none bg-white dark:bg-slate-900 border-b border-[#e7edf3] dark:border-slate-800">
+<div class="flex items-center gap-2 px-8 py-3">
+<a class="text-[#4c739a] text-[11px] font-medium" href="#">Projects</a>
+<span class="text-[#cbd5e1] text-[11px]">/</span>
+<a class="text-[#4c739a] text-[11px] font-medium" href="#">Skyline Apartments</a>
+<span class="text-[#cbd5e1] text-[11px]">/</span>
+<span class="text-[#0d141b] dark:text-white text-[11px] font-bold">Contract Intelligence</span>
+</div>
+<div class="flex flex-wrap justify-between items-center gap-3 px-8 pb-4">
+<div class="flex flex-col">
+<h1 class="text-[#0d141b] dark:text-white text-2xl font-black tracking-tight">Contract Parser</h1>
+<p class="text-[#4c739a] text-sm">Reviewing Subcontract Agreement v2.pdf</p>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0d141b] dark:text-white text-xs font-bold hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined mr-2 text-lg">file_download</span> Export Report
+                        </button>
+<button class="flex items-center justify-center rounded-lg h-10 px-6 bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined mr-2 text-lg">verified</span> Finalize Analysis
+                        </button>
+</div>
+</div>
+</div>
+<div class="flex-1 flex overflow-hidden bg-slate-100 dark:bg-[#0b1219]">
+<div class="w-1/2 flex flex-col border-r border-[#e7edf3] dark:border-slate-800 overflow-hidden">
+<div class="h-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4">
+<div class="flex items-center gap-3">
+<span class="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Source PDF</span>
+<span class="h-3 w-px bg-slate-200"></span>
+<span class="text-xs font-medium text-slate-700 dark:text-slate-300">Page 12 of 48</span>
+</div>
+<div class="flex items-center gap-4 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full scale-90">
+<button class="material-symbols-outlined text-lg text-slate-500 hover:text-primary">zoom_out</button>
+<span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">100%</span>
+<button class="material-symbols-outlined text-lg text-slate-500 hover:text-primary">zoom_in</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-12 flex justify-center bg-slate-300/40 dark:bg-slate-900/40">
+<div class="w-full max-w-[580px] bg-white dark:bg-slate-800 shadow-2xl min-h-[800px] p-16 relative">
+<div class="flex justify-between mb-12">
+<div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+<div class="w-12 h-4 bg-slate-100 dark:bg-slate-700 rounded"></div>
+</div>
+<div class="space-y-4 mb-10">
+<div class="h-6 bg-slate-200 dark:bg-slate-700 w-3/4 rounded"></div>
+<div class="h-4 bg-slate-100 dark:bg-slate-700 w-full rounded"></div>
+<div class="h-4 bg-slate-100 dark:bg-slate-700 w-full rounded"></div>
+</div>
+<div class="relative group cursor-pointer mb-8">
+<div class="absolute -left-6 -right-6 -top-2 -bottom-2 bg-primary/5 border-l-4 border-primary rounded-r-lg ring-1 ring-primary/10"></div>
+<div class="relative">
+<div class="h-5 bg-slate-200 dark:bg-slate-700 w-1/3 mb-3 rounded"></div>
+<div class="h-3 bg-slate-100 dark:bg-slate-700 w-full mb-2 rounded"></div>
+<div class="h-3 bg-slate-100 dark:bg-slate-700 w-full mb-2 rounded"></div>
+<div class="h-3 bg-slate-100 dark:bg-slate-700 w-2/3 rounded"></div>
+</div>
+<div class="absolute -right-12 top-0 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg">NOTICE</div>
+</div>
+<div class="space-y-3 mb-10">
+<div class="h-3 bg-slate-50 dark:bg-slate-700/30 w-full rounded"></div>
+<div class="h-3 bg-slate-50 dark:bg-slate-700/30 w-full rounded"></div>
+</div>
+<div class="relative group cursor-pointer">
+<div class="absolute -left-6 -right-6 -top-2 -bottom-2 bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 rounded-r-lg ring-1 ring-red-500/20"></div>
+<div class="relative">
+<div class="h-5 bg-slate-200 dark:bg-slate-700 w-1/2 mb-3 rounded"></div>
+<div class="h-3 bg-slate-100 dark:bg-slate-700 w-full mb-2 rounded"></div>
+<div class="h-3 bg-slate-100 dark:bg-slate-700 w-3/4 mb-2 rounded"></div>
+</div>
+<div class="absolute -right-12 top-0 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg uppercase">Risk</div>
+</div>
+</div>
+</div>
+</div>
+<div class="w-1/2 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
+<div class="h-10 border-b border-slate-200 dark:border-slate-800 flex items-center px-6 gap-8">
+<button class="text-xs font-bold text-primary border-b-2 border-primary h-full px-2">Contract Clauses</button>
+<button class="text-xs font-semibold text-slate-500 h-full hover:text-slate-900 transition-colors">Action Items</button>
+<button class="text-xs font-semibold text-slate-500 h-full hover:text-slate-900 transition-colors">Dates &amp; Links</button>
+</div>
+<div class="flex-1 overflow-y-auto">
+<table class="w-full border-collapse">
+<thead class="sticky top-0 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-700">
+<tr>
+<th class="text-left py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Type &amp; Clause</th>
+<th class="text-left py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Detail &amp; AI Sentiment</th>
+<th class="text-right py-3 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary">
+<td class="py-5 px-6 align-top">
+<div class="flex flex-col gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 w-fit">NOTICE</span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Clause 14.1</span>
+<span class="text-[10px] font-medium text-slate-400">Page 12, Para 3</span>
+</div>
+</td>
+<td class="py-5 px-6">
+<div class="flex flex-col gap-2">
+<h4 class="text-xs font-bold text-slate-700 dark:text-slate-200">Extension of Time (EOT)</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
+                                                "Subcontractor must provide written notice of delay within <span class="bg-primary/10 text-primary font-bold px-1 rounded">5 business days</span> of occurrence."
+                                            </p>
+<div class="mt-2 flex items-center gap-2 text-[10px] font-bold text-slate-400">
+<span class="material-symbols-outlined text-sm">link</span>
+                                                LINKED TO PAGE 12
+                                            </div>
+</div>
+</td>
+<td class="py-5 px-6 text-right align-top">
+<span class="material-symbols-outlined text-green-500 filled-icon">check_circle</span>
+</td>
+</tr>
+<tr class="group bg-red-50/30 dark:bg-red-950/5 hover:bg-red-50 dark:hover:bg-red-950/10 transition-colors cursor-pointer border-l-4 border-red-500">
+<td class="py-5 px-6 align-top">
+<div class="flex flex-col gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 w-fit">RISK</span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Clause 18.2</span>
+<span class="text-[10px] font-medium text-slate-400">Page 12, Para 7</span>
+</div>
+</td>
+<td class="py-5 px-6">
+<div class="flex flex-col gap-3">
+<div>
+<h4 class="text-xs font-bold text-slate-900 dark:text-slate-200">Liquidated Damages</h4>
+<p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm italic">
+                                                    "Damages are <span class="font-bold underline">not capped</span> for delay in achieving practical completion."
+                                                </p>
+</div>
+<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-red-200 dark:border-red-900/40 shadow-sm">
+<div class="flex gap-2 items-start">
+<span class="material-symbols-outlined text-red-500 text-sm mt-0.5">psychology</span>
+<div>
+<p class="text-[11px] font-bold text-red-700 dark:text-red-400">AI ALERT: High Liability</p>
+<p class="text-[11px] text-red-600 dark:text-red-300 mt-0.5 leading-tight">Missing liability cap is non-standard and presents infinite financial exposure.</p>
+</div>
+</div>
+</div>
+</div>
+</td>
+<td class="py-5 px-6 text-right align-top">
+<button class="text-[10px] font-bold bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors">FLAG RFI</button>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border-l-4 border-transparent hover:border-slate-300">
+<td class="py-5 px-6 align-top">
+<div class="flex flex-col gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 w-fit uppercase tracking-tight">Standard</span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Clause 22.4</span>
+<span class="text-[10px] font-medium text-slate-400">Page 14, Para 2</span>
+</div>
+</td>
+<td class="py-5 px-6">
+<div class="flex flex-col gap-2">
+<h4 class="text-xs font-bold text-slate-700 dark:text-slate-200">Retention Sums</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm">
+                                                "Retention of 5% of the Subcontract Sum to be held until 12 months after Practical Completion."
+                                            </p>
+</div>
+</td>
+<td class="py-5 px-6 text-right align-top">
+<span class="material-symbols-outlined text-slate-200">circle</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-white bg-red-500 flex items-center justify-center text-[8px] text-white font-bold">1</div>
+<div class="w-6 h-6 rounded-full border-2 border-white bg-blue-500 flex items-center justify-center text-[8px] text-white font-bold">4</div>
+<div class="w-6 h-6 rounded-full border-2 border-white bg-slate-400 flex items-center justify-center text-[8px] text-white font-bold">7</div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">12 Total Clauses Parsed</span>
+</div>
+<div class="flex gap-2">
+<button class="text-xs font-bold text-slate-600 px-4 py-2 hover:bg-slate-200 rounded-lg transition-colors">Draft</button>
+<button class="text-xs font-bold text-white bg-primary px-6 py-2 rounded-lg hover:shadow-lg hover:shadow-primary/20 transition-all">Approve Set</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+
+</body></html>

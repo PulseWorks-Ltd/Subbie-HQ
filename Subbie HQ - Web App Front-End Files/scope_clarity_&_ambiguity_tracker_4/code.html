@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Payment Claims - Subbie HQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d141b] dark:text-slate-200">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<header class="flex flex-shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-[#0d141b] dark:text-white">
+<div class="size-6 text-primary">
+<span class="material-symbols-outlined filled-icon text-3xl">deployed_code</span>
+</div>
+<h2 class="text-lg font-black leading-tight tracking-tight">Subbie HQ</h2>
+</div>
+<div class="flex items-center gap-6">
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium" href="#">Projects</a>
+<a class="text-[#0d141b] dark:text-white text-sm font-bold border-b-2 border-primary py-1" href="#">Claims Engine</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium" href="#">Scope Engine</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-slate-100 dark:bg-slate-800 rounded-full px-3 py-1 flex items-center gap-2">
+<span class="size-2 bg-green-500 rounded-full"></span>
+<span class="text-[10px] font-bold uppercase tracking-wider">System Live</span>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-[#e7edf3] dark:bg-slate-800 text-[#0d141b] dark:text-white">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border border-slate-200" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAGwMkhtUDmxXUwBpIvg4TDT5nwjmHKgulFpuPfJOz6gNp5TAbSZZ17XxTKs_4N3xV7c7NYbCrVini7F58-bqb2slBvQFyDJ7ttu8wuIUW82AL4UzzhK7oryET-6WdGJk0fbQXkaqhAVqCSh-B0tJ9VHVrkFWTfYLSQv6ZtcxRoupwkMyH-WckuQxOu5kNnCgXz7cRX68cFqgSTv4VmjZZQzJ_RymiaJPOrJwdXY4y2JBGPQyCPZJz6hu4I-s5FapruxCfOv5Zz0xZX");'></div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<aside class="w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col justify-between">
+<div class="flex flex-col gap-6">
+<div class="flex flex-col px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+<h1 class="text-[#0d141b] dark:text-white text-sm font-bold leading-tight">Skyline Apartments</h1>
+<p class="text-[#4c739a] text-[10px] font-bold uppercase mt-1 tracking-wider">Contract #2024-882-AU</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<p class="text-sm font-medium">Project Overview</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">description</span>
+<p class="text-sm font-medium">Contract</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">content_cut</span>
+<p class="text-sm font-medium">Scope Engine</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">event_note</span>
+<p class="text-sm font-medium">Programme</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined filled-icon text-xl">receipt_long</span>
+<p class="text-sm font-bold">Claims/Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">shield</span>
+<p class="text-sm font-medium">Evidence Vault</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<p class="text-sm font-medium">Settings</p>
+</a>
+</nav>
+</div>
+<div class="pt-4 border-t border-slate-100 dark:border-slate-800">
+<div class="px-3 py-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30">
+<p class="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-500 tracking-wider">Next Ref Date</p>
+<p class="text-sm font-bold mt-1">28th October 2024</p>
+<p class="text-[10px] text-amber-600 dark:text-amber-500 mt-1">4 days remaining</p>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-y-auto bg-slate-50 dark:bg-slate-950">
+<div class="flex items-center justify-between px-8 py-6">
+<div>
+<h1 class="text-[#0d141b] dark:text-white text-2xl font-black tracking-tight">Payment Claims Engine</h1>
+<p class="text-[#4c739a] text-sm mt-1">Standardized SOP Act workflow and certification tracking.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0d141b] dark:text-white text-sm font-bold shadow-sm">
+<span class="material-symbols-outlined mr-2 text-lg">download</span> Statement of Account
+                    </button>
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined mr-2 text-lg">add_circle</span> Generate Payment Claim
+                    </button>
+</div>
+</div>
+<div class="px-8 pb-8 grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 sticky top-0">
+<h3 class="font-bold text-sm uppercase tracking-wider text-slate-500">Claim History</h3>
+<div class="flex gap-2">
+<span class="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] px-2 py-1 rounded font-bold">ALL STATES (CCA/SOP)</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50">
+<th class="px-6 py-3 text-[10px] font-bold text-[#4c739a] uppercase tracking-wider">Claim Details</th>
+<th class="px-6 py-3 text-[10px] font-bold text-[#4c739a] uppercase tracking-wider">Ref Date</th>
+<th class="px-6 py-3 text-[10px] font-bold text-[#4c739a] uppercase tracking-wider">Gross Claimed</th>
+<th class="px-6 py-3 text-[10px] font-bold text-[#4c739a] uppercase tracking-wider">Status</th>
+<th class="px-6 py-3 text-[10px] font-bold text-[#4c739a] uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<p class="text-sm font-bold">Claim #05</p>
+<p class="text-xs text-[#4c739a]">October 2024 Progress</p>
+</td>
+<td class="px-6 py-4 text-sm">25 Oct 2024</td>
+<td class="px-6 py-4">
+<p class="text-sm font-bold">$124,500.00</p>
+<p class="text-[10px] text-amber-600 font-medium">Ret. $6,225.00</p>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 uppercase">Awaiting Schedule</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary text-xs font-bold hover:underline">View</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<p class="text-sm font-bold">Claim #04</p>
+<p class="text-xs text-[#4c739a]">September 2024 Progress</p>
+</td>
+<td class="px-6 py-4 text-sm">25 Sep 2024</td>
+<td class="px-6 py-4">
+<p class="text-sm font-bold">$98,200.00</p>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 uppercase">Paid Full</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary text-xs font-bold hover:underline">Receipt</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<p class="text-sm font-bold">Claim #03</p>
+<p class="text-xs text-[#4c739a]">August 2024 Progress</p>
+</td>
+<td class="px-6 py-4 text-sm">25 Aug 2024</td>
+<td class="px-6 py-4">
+<p class="text-sm font-bold">$145,000.00</p>
+<p class="text-[10px] text-red-500 font-medium">Cert: $130,000.00</p>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 uppercase">Under-certified</span>
+</td>
+<td class="px-6 py-4 text-right flex justify-end gap-2">
+<button class="text-red-500 text-xs font-bold hover:underline">Notice</button>
+<span class="text-slate-300">|</span>
+<button class="text-primary text-xs font-bold hover:underline">View</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4">
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-[10px] font-bold text-[#4c739a] uppercase mb-1">Total Retained</p>
+<h4 class="text-xl font-black">$30,620.00</h4>
+<div class="mt-2 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-amber-500 h-full w-[42%]"></div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-[10px] font-bold text-[#4c739a] uppercase mb-1">Contract Balance</p>
+<h4 class="text-xl font-black">$837,600.00</h4>
+<p class="text-[10px] text-green-600 font-bold">42% Completed</p>
+</div>
+<div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-[10px] font-bold text-[#4c739a] uppercase mb-1">Days to Ref Date</p>
+<h4 class="text-xl font-black">4 Days</h4>
+<p class="text-[10px] text-[#4c739a]">Cycle: 25th of month</p>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 space-y-4">
+<div class="bg-white dark:bg-slate-900 rounded-xl border-2 border-primary shadow-xl overflow-hidden flex flex-col h-fit">
+<div class="p-4 border-b border-slate-100 dark:border-slate-800 bg-primary text-white">
+<h3 class="font-bold text-sm">Generate Payment Claim</h3>
+<p class="text-[11px] opacity-90">SOP Act Compliance Engine</p>
+</div>
+<div class="p-5 space-y-6">
+<div>
+<label class="text-[10px] font-black text-slate-500 uppercase flex justify-between items-center mb-2">
+                                    Reference Date Logic
+                                    <span class="material-symbols-outlined text-sm text-primary">info</span>
+</label>
+<div class="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-lg">
+<div class="flex justify-between items-center">
+<p class="text-xs font-bold text-blue-900 dark:text-blue-300">Target Date</p>
+<p class="text-sm font-black text-blue-700 dark:text-blue-400">28 Oct 2024</p>
+</div>
+<p class="text-[10px] text-blue-600 dark:text-blue-500 mt-1 italic leading-tight">
+                                        Calculated based on "End of month" clause in Clause 12.4.
+                                    </p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex flex-col gap-1.5">
+<label class="text-[10px] font-bold text-slate-500 uppercase">Valuation Method</label>
+<select class="form-select text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 w-full focus:ring-primary">
+<option>Percent of Bill of Quantities</option>
+<option>Milestone Based</option>
+<option>Time &amp; Materials (Cost Plus)</option>
+</select>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div class="flex flex-col gap-1.5">
+<label class="text-[10px] font-bold text-slate-500 uppercase">Claim Through</label>
+<input class="form-input text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 w-full" type="date" value="2024-10-31"/>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-[10px] font-bold text-slate-500 uppercase">Claim Number</label>
+<input class="form-input text-sm rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 w-full font-bold" disabled="" type="text" value="#06"/>
+</div>
+</div>
+</div>
+<div>
+<label class="text-[10px] font-black text-slate-500 uppercase mb-2 block">Statutory Compliance (NSW CCA 1999)</label>
+<div class="p-4 bg-slate-900 text-slate-300 rounded-lg text-[10px] font-mono leading-relaxed border border-slate-800">
+<span class="text-primary-400 text-blue-400 italic">// Preview: Statutory Wording</span><br/>
+                                    "This is a payment claim made under the Building and Construction Industry Security of Payment Act 1999 (NSW)."
+                                    <div class="mt-2 pt-2 border-t border-slate-800">
+<span class="text-green-500">✓ Auto-selected based on project location</span>
+</div>
+</div>
+</div>
+<button class="w-full py-3 bg-primary text-white rounded-lg font-bold text-sm shadow-lg shadow-primary/30 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">description</span>
+                                Finalize &amp; Sign Claim
+                            </button>
+</div>
+<div class="p-4 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-amber-500 text-lg">warning</span>
+<p class="text-[10px] text-slate-500 leading-tight">
+                                    Note: Generating this claim will finalize all variations linked to this period. This action is tracked for audit compliance.
+                                </p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-xs uppercase tracking-wider text-slate-500">Related Evidence</h3>
+<button class="text-primary text-[10px] font-bold">Add New</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+<span class="material-symbols-outlined text-blue-500">image</span>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-bold truncate">Level_4_Glazing_Oct.jpg</p>
+<p class="text-[10px] text-slate-500 tracking-tight">2.4MB • Linked to Variation #12</p>
+</div>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+<span class="material-symbols-outlined text-green-500">task</span>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-bold truncate">QS_Signed_Off_Inspection.pdf</p>
+<p class="text-[10px] text-slate-500 tracking-tight">1.1MB • Verified</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<footer class="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-2 flex justify-between items-center text-[10px] font-medium text-slate-500">
+<div class="flex gap-4">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">verified_user</span> CCA Compliant Engine v2.4</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">schedule</span> Last backup: 4 mins ago</span>
+</div>
+<div class="flex gap-4">
+<a class="hover:text-primary" href="#">Help Center</a>
+<a class="hover:text-primary" href="#">API Documentation</a>
+<span class="text-slate-300 dark:text-slate-700">|</span>
+<span class="font-bold text-slate-400">SUBBIE HQ PRO</span>
+</div>
+</footer>
+</div>
+
+</body></html>

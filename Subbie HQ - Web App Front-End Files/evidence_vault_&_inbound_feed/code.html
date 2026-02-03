@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Evidence Vault &amp; Inbound Feed | Subbie HQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.375rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer base {
+            .material-symbols-outlined {
+                font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+                font-size: 20px;
+            }
+            .nav-item-active {
+                @apply bg-primary text-white shadow-md shadow-primary/20;
+            }
+            .nav-item-active .material-symbols-outlined {
+                font-variation-settings: 'FILL' 1;
+            }
+            ::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #e2e8f0;
+                border-radius: 10px;
+            }
+            .dark ::-webkit-scrollbar-thumb {
+                background: #334155;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<aside class="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0">
+<div class="p-6">
+<div class="flex gap-3 items-center mb-10">
+<div class="bg-primary rounded-xl size-10 flex items-center justify-center text-white shadow-lg shadow-primary/30">
+<span class="material-symbols-outlined !text-2xl">shield_person</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-white text-lg font-bold leading-none tracking-tight">Subbie HQ</h1>
+<p class="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Contract Intelligence</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1.5">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">grid_view</span>
+<span class="text-sm font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">apartment</span>
+<span class="text-sm font-semibold">Projects</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg nav-item-active" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-sm font-semibold">Evidence Vault</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">request_quote</span>
+<span class="text-sm font-semibold">Payment Claims</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">settings</span>
+<span class="text-sm font-semibold">Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-4 border-t border-slate-100 dark:border-slate-800">
+<button class="w-full flex items-center justify-center gap-2 rounded-xl h-12 bg-slate-900 dark:bg-slate-800 text-white text-sm font-bold tracking-wide hover:bg-slate-800 dark:hover:bg-slate-700 transition-all shadow-sm">
+<span class="material-symbols-outlined">add_circle</span>
+<span>Upload Evidence</span>
+</button>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-hidden">
+<header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-8 py-4 shrink-0">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">apartment</span>
+</div>
+<div>
+<h2 class="text-slate-900 dark:text-white text-sm font-bold">Skyline Apartments</h2>
+<p class="text-[10px] text-slate-500 font-medium">Project ID: #SK-2024-01</p>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl pl-10 pr-4 h-10 text-sm focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-white" placeholder="Search evidence &amp; metadata..." type="text"/>
+</div>
+<div class="flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-6">
+<button class="size-10 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="size-10 flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGPp3rkj_6yCpYm9eFj4pmdFiPWY1zt4EbMfu78oC7Fqf6P-V4b5kx97onB-fA822_agT7sptgm7kdhKLgXOmNgQM8SGJJRdKM8ahTTtQBTmwisB7CHp9q4tH7zDPtetOLtLRp9IogLQXL_dLwt4te8iAnFCSpPFeKhWRYVEdCawGugasnJGbIrbX8FEiGsRwH5snsdfbNBzr27J9L-XSlB9XemSjolW7k7GHC7iGxyY_k00DJs3YjSt--o5Yqlzkq7iGlEUMfVLKj"/>
+</button>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-8 space-y-8">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<div>
+<h1 class="text-slate-900 dark:text-white text-3xl font-extrabold tracking-tight">Evidence Vault</h1>
+<p class="text-slate-500 dark:text-slate-400 mt-1 text-sm font-medium">Link inbound emails and project uploads to Scope and Payment Claims.</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="px-5 py-2.5 flex flex-col border-r border-slate-100 dark:border-slate-800">
+<span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Repository</span>
+<span class="text-lg font-bold text-slate-900 dark:text-white">1,248 <span class="text-xs font-normal text-slate-400 ml-1">Items</span></span>
+</div>
+<div class="px-5 py-2.5 flex flex-col">
+<span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Linked Status</span>
+<span class="text-lg font-bold text-green-600 flex items-center gap-2">
+                                68% 
+                                <span class="size-2 rounded-full bg-green-500 animate-pulse"></span>
+</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex gap-1">
+<button class="px-4 py-2 text-sm font-bold bg-primary text-white rounded-xl shadow-md shadow-primary/20">All Evidence</button>
+<button class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-2">
+<span class="material-symbols-outlined !text-lg">mail</span> Inbound Emails
+                    </button>
+<button class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-2">
+<span class="material-symbols-outlined !text-lg">photo_library</span> Photos
+                    </button>
+<button class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-2">
+<span class="material-symbols-outlined !text-lg">attachment</span> Documents
+                    </button>
+</div>
+<div class="flex items-center gap-2 pr-2">
+<button class="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hover:text-primary transition-colors">
+<span class="material-symbols-outlined !text-lg">filter_list</span> Filter
+                    </button>
+<button class="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hover:text-primary transition-colors border-l border-slate-100 dark:border-slate-800 ml-2">
+<span class="material-symbols-outlined !text-lg">sort</span> Sort
+                    </button>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-8">
+<section class="col-span-12 lg:col-span-4 flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+<div class="flex items-center gap-2">
+<div class="size-8 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined !text-xl">mark_email_unread</span>
+</div>
+<h3 class="font-bold text-slate-900 dark:text-white">Inbound Email Feed</h3>
+</div>
+<div class="text-[10px] font-bold text-slate-500 bg-slate-200/50 dark:bg-slate-800 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+<span class="size-1.5 rounded-full bg-green-500"></span>
+                            skyline@inbound.subbiehq.com
+                        </div>
+</div>
+<div class="space-y-3 overflow-y-auto max-h-[calc(100vh-420px)] pr-2">
+<div class="group bg-white dark:bg-slate-900 p-4 rounded-2xl border-2 border-transparent hover:border-primary/30 shadow-sm transition-all cursor-pointer ring-1 ring-slate-200/60 dark:ring-slate-800">
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] font-black text-primary uppercase tracking-widest">New Priority</span>
+<span class="text-[10px] text-slate-400 font-bold">2h ago</span>
+</div>
+<h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">Variation 04: External Cladding Change</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1.5 mb-3 leading-relaxed">Attached architectural drawings for Level 4 cladding. Please review and confirm the new route.</p>
+<div class="flex flex-wrap gap-2 pt-2 border-t border-slate-50 dark:border-slate-800">
+<div class="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+<span class="material-symbols-outlined !text-sm text-slate-400">picture_as_pdf</span>
+<span class="text-[10px] font-bold text-slate-600 dark:text-slate-300">cladding_v2.pdf</span>
+</div>
+<div class="flex items-center justify-center size-8 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg hover:text-primary transition-colors">
+<span class="material-symbols-outlined !text-sm">open_in_new</span>
+</div>
+</div>
+</div>
+<div class="group bg-white dark:bg-slate-900 p-4 rounded-2xl border-2 border-transparent hover:border-primary/30 shadow-sm transition-all cursor-pointer ring-1 ring-slate-200/60 dark:ring-slate-800">
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">General</span>
+<span class="text-[10px] text-slate-400 font-bold">5h ago</span>
+</div>
+<h4 class="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">RFI Response: Electrical Conduit</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">Confirmed: proposed route for conduit through the slab on L2 is acceptable...</p>
+</div>
+<div class="group bg-slate-50/50 dark:bg-slate-900/40 p-4 rounded-2xl border-2 border-transparent shadow-sm opacity-60 transition-all cursor-pointer ring-1 ring-slate-100 dark:ring-slate-800/50">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined !text-sm text-green-500" style="font-variation-settings: 'FILL' 1">check_circle</span>
+<span class="text-[10px] font-black text-green-600 uppercase tracking-widest">Linked</span>
+</div>
+<span class="text-[10px] text-slate-400 font-bold">Yesterday</span>
+</div>
+<h4 class="text-sm font-bold text-slate-400 dark:text-slate-500 line-through">Site Instruction #12 - Rain Delay</h4>
+<div class="mt-2 flex items-center gap-2">
+<span class="text-[9px] font-bold bg-green-50 dark:bg-green-900/20 text-green-600 px-1.5 py-0.5 rounded">Scope: Groundwork</span>
+</div>
+</div>
+</div>
+<button class="mt-2 w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-400 hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">sync</span>
+                        Refresh Feed
+                    </button>
+</section>
+<section class="col-span-12 lg:col-span-8 flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+<div class="flex items-center gap-2">
+<div class="size-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined !text-xl">cloud_queue</span>
+</div>
+<h3 class="font-bold text-slate-900 dark:text-white">Evidence Gallery</h3>
+</div>
+<div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+<button class="p-1.5 text-slate-400"><span class="material-symbols-outlined !text-lg">grid_view</span></button>
+<button class="p-1.5 bg-white dark:bg-slate-700 text-primary rounded shadow-sm"><span class="material-symbols-outlined !text-lg">format_list_bulleted</span></button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all flex flex-col">
+<div class="aspect-[16/9] relative overflow-hidden bg-slate-200 dark:bg-slate-950">
+<img alt="Site Inspection" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtwF_zS-H5B6KNnY4Jlt-MQ8BVNS0cW4pP_gFSNRAtNbs5-cwRR99-lLLeWIE2ObOZzN_qOG50zOLQigY8MdoL8FOnmF13HGUOYcLnvIqTi5oqHrSW_KhrPfe89YInUQmHYoBVpM3gqbnX2iTF2CuZ5gvK-iWYlbMF2-0oz6oisuTfY_q0nLTYkgDmcU2BCX-rZeCOjHGWW5rTAEjqOwFl1TC9dosDH3WzA44bcRG_vlAUYVunffp8UBGMupa2LKuShcVf5h2nZT1E"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
+<div class="absolute bottom-3 left-3 flex gap-2">
+<span class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-900 dark:text-white text-[9px] px-2 py-1 rounded-lg font-black uppercase tracking-wider shadow-sm">Photo</span>
+<span class="bg-blue-600 text-white text-[9px] px-2 py-1 rounded-lg font-black uppercase tracking-wider shadow-sm">Linked</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h5 class="text-sm font-bold text-slate-900 dark:text-white leading-snug">L4 Concrete Quality Control Check</h5>
+<span class="text-[10px] font-medium text-slate-400 whitespace-nowrap ml-4">Oct 24</span>
+</div>
+<div class="mt-4 space-y-2">
+<div class="group/link flex items-center justify-between bg-primary/5 dark:bg-primary/10 p-3 rounded-xl border border-primary/20">
+<div class="flex items-center gap-3">
+<div class="size-7 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined !text-base">account_tree</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[9px] font-black text-primary uppercase tracking-tighter leading-none mb-0.5">Linked to Scope</span>
+<span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">Struct_04 Concrete</span>
+</div>
+</div>
+<button class="text-primary opacity-0 group-hover/link:opacity-100 transition-opacity">
+<span class="material-symbols-outlined !text-lg">edit</span>
+</button>
+</div>
+<div class="group/link flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-200/50 dark:border-amber-800/50">
+<div class="flex items-center gap-3">
+<div class="size-7 bg-amber-500 rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined !text-base">receipt_long</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[9px] font-black text-amber-700 dark:text-amber-500 uppercase tracking-tighter leading-none mb-0.5">Linked to Claim</span>
+<span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">V_002 Exterior Work</span>
+</div>
+</div>
+<button class="text-amber-600 opacity-0 group-hover/link:opacity-100 transition-opacity">
+<span class="material-symbols-outlined !text-lg">edit</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-xl transition-all flex flex-col ring-1 ring-inset ring-transparent hover:ring-slate-200 dark:hover:ring-slate-700">
+<div class="aspect-[16/9] relative overflow-hidden bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center gap-3">
+<span class="material-symbols-outlined !text-5xl text-slate-200 dark:text-slate-800">picture_as_pdf</span>
+<span class="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">technical_spec_v3.pdf</span>
+<div class="absolute bottom-3 left-3">
+<span class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-900 dark:text-white text-[9px] px-2 py-1 rounded-lg font-black uppercase tracking-wider shadow-sm">Document</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h5 class="text-sm font-bold text-slate-900 dark:text-white leading-snug">Glazing Specifications Rev A</h5>
+<span class="text-[10px] font-medium text-slate-400 whitespace-nowrap ml-4">Oct 22</span>
+</div>
+<div class="mt-4 space-y-2">
+<div class="flex items-center gap-3 bg-primary/5 dark:bg-primary/10 p-3 rounded-xl border border-primary/10">
+<div class="size-7 bg-primary/20 text-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined !text-base">account_tree</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-[9px] font-black text-primary/70 uppercase tracking-tighter leading-none mb-0.5">Linked to Scope</span>
+<span class="text-[11px] font-bold text-slate-600 dark:text-slate-400 truncate">Ext_Windows_L04</span>
+</div>
+</div>
+<button class="w-full flex items-center gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-all text-slate-400 hover:text-amber-600 group/btn">
+<div class="size-7 bg-slate-50 dark:bg-slate-700 group-hover/btn:bg-amber-100 dark:group-hover/btn:bg-amber-900/30 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined !text-base">add_link</span>
+</div>
+<span class="text-[11px] font-black uppercase tracking-wider">Link to Claim</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden group hover:shadow-xl transition-all flex flex-col">
+<div class="aspect-[16/9] relative overflow-hidden bg-slate-200 dark:bg-slate-950">
+<img alt="Electrical Work" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzU7SMaI8UUtHvwZkbmEmw4Aonv3BUybwWCq2222q_ZKMbvhSPPpR7b2IVh9Ntb_im20Xpf6w2i1yh-RscoHIczH2TfDhOvy9n3BSIEG1IIPu3qj8zvDuU4_5duhJjyoDF-Qz_GBfUjcDfDNB1Sl3bUV2_vC44W4GAWst88DX2ubYIyZW0OQdyscqpThAaw_VTHYs3jWh9exOzKJ9h8yvYufrL368QMkQTlGl49_z1uc8nK8jZ-R2DhLX-lwSRk4tBeMZcNQ05w8DJ"/>
+<div class="absolute bottom-3 left-3">
+<span class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-900 dark:text-white text-[9px] px-2 py-1 rounded-lg font-black uppercase tracking-wider shadow-sm">Photo</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h5 class="text-sm font-bold text-slate-900 dark:text-white leading-snug">Electrical Conduit L2 Progress</h5>
+<span class="text-[10px] font-medium text-slate-400 whitespace-nowrap ml-4">Oct 18</span>
+</div>
+<div class="mt-4 grid grid-cols-2 gap-2">
+<button class="flex flex-col items-center justify-center gap-1 bg-white dark:bg-slate-800 p-3 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary hover:bg-primary/5 transition-all text-slate-400 hover:text-primary">
+<span class="material-symbols-outlined !text-xl">account_tree</span>
+<span class="text-[9px] font-black uppercase">Link Scope</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 bg-white dark:bg-slate-800 p-3 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-500 hover:bg-amber-50/30 transition-all text-slate-400 hover:text-amber-600">
+<span class="material-symbols-outlined !text-xl">receipt_long</span>
+<span class="text-[9px] font-black uppercase">Link Claim</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-slate-50/50 dark:bg-slate-900/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center p-8 text-slate-400 hover:text-primary hover:border-primary transition-all cursor-pointer group">
+<div class="size-16 bg-white dark:bg-slate-900 rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined !text-3xl">add_photo_alternate</span>
+</div>
+<span class="text-sm font-bold">Drop files here</span>
+<span class="text-[10px] font-medium text-slate-400 mt-1 uppercase tracking-widest">or click to browse</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

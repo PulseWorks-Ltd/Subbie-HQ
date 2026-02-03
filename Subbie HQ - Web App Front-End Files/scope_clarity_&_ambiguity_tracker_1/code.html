@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Project Overview - Subbie HQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#137fec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101922",
+            },
+            fontFamily: {
+              "display": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        aside .nav-item-active {
+            @apply bg-primary/10 text-primary;
+        }
+        aside .nav-item {
+            @apply flex items-center gap-3 px-3 py-2 text-[#4c739a] hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d141b] dark:text-slate-200">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 px-10 py-3 flex-shrink-0 z-10">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-[#0d141b] dark:text-white">
+<div class="size-6 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined filled-icon text-3xl">deployed_code</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Subbie HQ</h2>
+</div>
+<label class="flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#4c739a] flex border-none bg-[#e7edf3] dark:bg-slate-800 items-center justify-center pl-4 rounded-l-lg">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d141b] dark:text-white focus:outline-0 focus:ring-0 border-none bg-[#e7edf3] dark:bg-slate-800 placeholder:text-[#4c739a] px-4 rounded-l-none pl-2 text-base font-normal" placeholder="Search project data..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<div class="flex items-center gap-9">
+<a class="text-[#0d141b] dark:text-slate-300 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Projects</a>
+<a class="text-[#0d141b] dark:text-slate-300 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Claims</a>
+<a class="text-[#0d141b] dark:text-slate-300 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Reports</a>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-[#e7edf3] dark:bg-slate-800 text-[#0d141b] dark:text-white hover:bg-[#dbe4ee] transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-slate-200" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCOO2MRsmO3Au9zJNEP19TF6J8wIoJwduE2pWMyHUxHnBtoEk6JVSVZ4x9tKvmUHuDs1v0OwCepLl4JRQg9TIE1Mdng6c1WGmDQt1MTSDOkzFGmT2b8FZE1d8JGfDO8EBUmg8VVw5Ea6sVrd50JgsWOE1CN4nYOJj_WsG40OWsIAVRQGLrkOTA1XOYFA-hhTsWVQ47tQxpKk34OJS0XJV-uDHakh6Jf2HMK1C49ptNP4a9tnrCvv4hN0dsgLhYjHIjeAZV_IQ9XRX_a");'></div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<aside class="w-64 flex-shrink-0 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+<div class="p-6 flex flex-col gap-6 flex-1 overflow-y-auto">
+<div class="flex flex-col px-1">
+<h1 class="text-[#0d141b] dark:text-white text-lg font-bold leading-tight">Skyline Apartments</h1>
+<p class="text-[#4c739a] text-[10px] uppercase font-bold tracking-wider mt-1">Contract #2024-882-AU</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="nav-item nav-item-active" href="#">
+<span class="material-symbols-outlined filled-icon">dashboard</span>
+<p class="text-sm font-bold">Project Overview</p>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">description</span>
+<p class="text-sm font-medium">Contract</p>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<p class="text-sm font-medium">Scope Engine</p>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<p class="text-sm font-medium">Programme</p>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">payments</span>
+<p class="text-sm font-medium">Claims/Invoices</p>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">folder_shared</span>
+<p class="text-sm font-medium">Evidence Vault</p>
+</a>
+</nav>
+</div>
+<div class="p-4 border-t border-[#e7edf3] dark:border-slate-800">
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium">Settings</p>
+</a>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-y-auto bg-background-light dark:bg-background-dark">
+<div class="flex items-center gap-2 px-8 py-6">
+<a class="text-[#4c739a] text-xs font-medium hover:text-primary" href="#">Projects</a>
+<span class="text-[#4c739a] text-xs font-medium">/</span>
+<span class="text-[#4c739a] text-xs font-medium">Skyline Apartments</span>
+<span class="text-[#4c739a] text-xs font-medium">/</span>
+<span class="text-[#0d141b] dark:text-white text-xs font-bold">Project Overview</span>
+</div>
+<div class="flex flex-wrap justify-between items-end gap-3 px-8 pb-8">
+<div class="flex flex-col gap-2 max-w-2xl">
+<h1 class="text-[#0d141b] dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Project Dashboard</h1>
+<p class="text-[#4c739a] text-base font-normal">Real-time health indicators and commercial status for Skyline Apartments.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-white border border-[#e7edf3] dark:bg-slate-800 dark:border-slate-700 text-[#0d141b] dark:text-white text-sm font-bold shadow-sm hover:bg-slate-50">
+<span class="material-symbols-outlined mr-2 text-lg">download</span> Export PDF
+                    </button>
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90">
+<span class="material-symbols-outlined mr-2 text-lg">add</span> New Claim
+                    </button>
+</div>
+</div>
+<div class="px-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-white dark:bg-slate-900 rounded-xl border-l-4 border-red-500 border-y border-r border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-2 rounded-lg">
+<span class="material-symbols-outlined filled-icon">report</span>
+</div>
+<div>
+<h3 class="font-bold text-xs uppercase tracking-wider text-[#4c739a]">Contract Health</h3>
+<p class="text-xl font-black text-red-600">At Risk</p>
+</div>
+</div>
+</div>
+<p class="text-sm text-[#4c739a] mb-4 leading-relaxed">4 high-risk ambiguities detected in Section 4.2: Glass Specifications. Action required to avoid variation disputes.</p>
+<a class="text-sm font-bold text-primary flex items-center gap-1 hover:underline" href="#">
+                        Resolve Conflicts <span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border-l-4 border-amber-500 border-y border-r border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 p-2 rounded-lg">
+<span class="material-symbols-outlined filled-icon">pending_actions</span>
+</div>
+<div>
+<h3 class="font-bold text-xs uppercase tracking-wider text-[#4c739a]">Payment Health</h3>
+<p class="text-xl font-black text-amber-600">Attention</p>
+</div>
+</div>
+</div>
+<p class="text-sm text-[#4c739a] mb-4 leading-relaxed">Claim #04 ($42.5k) is 2 days overdue. No payment schedule received. Auto-reminder will trigger in 24h.</p>
+<a class="text-sm font-bold text-primary flex items-center gap-1 hover:underline" href="#">
+                        View Payment Ledger <span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border-l-4 border-green-500 border-y border-r border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 p-2 rounded-lg">
+<span class="material-symbols-outlined filled-icon">verified</span>
+</div>
+<div>
+<h3 class="font-bold text-xs uppercase tracking-wider text-[#4c739a]">Schedule Health</h3>
+<p class="text-xl font-black text-green-600">On Track</p>
+</div>
+</div>
+</div>
+<p class="text-sm text-[#4c739a] mb-4 leading-relaxed">Structural steel erection for Zones A &amp; B is 100% complete. Level 4 glass delivery confirmed for Monday.</p>
+<a class="text-sm font-bold text-primary flex items-center gap-1 hover:underline" href="#">
+                        Programme Details <span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+</div>
+<div class="flex flex-1 px-8 pb-8 gap-6 overflow-hidden">
+<div class="flex-1 flex flex-col gap-4 overflow-hidden">
+<div class="flex items-center justify-between flex-shrink-0">
+<h2 class="text-lg font-bold">Critical Activity</h2>
+<button class="text-sm font-medium text-primary hover:underline">See full log</button>
+</div>
+<div class="flex-1 overflow-y-auto space-y-4 pr-2">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 p-5 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="bg-primary/10 text-primary p-2 rounded-lg">
+<span class="material-symbols-outlined text-lg">auto_awesome</span>
+</div>
+<div>
+<h3 class="font-bold text-sm">Potential Variation Detected</h3>
+<p class="text-xs text-[#4c739a]">Subbie HQ AI • 15 mins ago</p>
+</div>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase">AI Insight</span>
+</div>
+<p class="text-sm text-[#4c739a] mb-4">Site Manager mentioned "Level 4 Glass Change" in email. AI mapped this to Scope Item 4.2. Estimated impact: <span class="font-bold text-[#0d141b] dark:text-white">$12,400</span>.</p>
+<div class="flex gap-2">
+<button class="text-xs font-bold text-white bg-primary px-4 py-2 rounded shadow-sm hover:bg-primary/90">Draft Notice</button>
+<button class="text-xs font-bold text-[#4c739a] bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded hover:bg-slate-200">Dismiss</button>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 p-5 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="bg-slate-100 dark:bg-slate-800 text-slate-500 p-2 rounded-lg">
+<span class="material-symbols-outlined text-lg">attachment</span>
+</div>
+<div>
+<h3 class="font-bold text-sm">New Evidence Uploaded</h3>
+<p class="text-xs text-[#4c739a]">Foreman John • 2 hours ago</p>
+</div>
+</div>
+</div>
+<p class="text-sm text-[#4c739a] mb-4">4 progress photos and 1 delivery docket attached to "Structural Steel - Zone A". Evidence verified by location metadata.</p>
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<div class="size-8 rounded bg-slate-200 border-2 border-white dark:border-slate-900"></div>
+<div class="size-8 rounded bg-slate-300 border-2 border-white dark:border-slate-900"></div>
+<div class="size-8 rounded bg-slate-400 border-2 border-white dark:border-slate-900"></div>
+</div>
+<button class="text-xs font-bold text-primary hover:underline">View in Vault</button>
+</div>
+</div>
+</div>
+</div>
+<div class="w-80 flex-shrink-0 flex flex-col gap-6">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 flex flex-col shadow-sm">
+<div class="p-4 border-b border-[#e7edf3] dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 rounded-t-xl">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">account_balance_wallet</span>
+<h2 class="font-bold text-sm">Commercial Summary</h2>
+</div>
+</div>
+<div class="p-5 space-y-5">
+<div>
+<div class="flex justify-between items-center mb-1">
+<p class="text-[10px] uppercase font-bold text-[#4c739a]">Contract Progress</p>
+<p class="text-[10px] font-bold text-primary">66% Complete</p>
+</div>
+<div class="flex justify-between items-end">
+<p class="text-2xl font-black">$1,420,000</p>
+<p class="text-xs text-green-600 font-bold flex items-center"><span class="material-symbols-outlined text-xs">trending_up</span> 2.4%</p>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full w-2/3"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] uppercase font-bold text-[#4c739a]">Claimed Total</p>
+<p class="text-lg font-bold">$940,000</p>
+</div>
+<div>
+<p class="text-[10px] uppercase font-bold text-[#4c739a]">Total Paid</p>
+<p class="text-lg font-bold text-green-600">$820,000</p>
+</div>
+</div>
+<div class="pt-4 border-t border-slate-100 dark:border-slate-800">
+<div class="flex justify-between items-center mb-1">
+<p class="text-[10px] uppercase font-bold text-[#4c739a]">Variations</p>
+<span class="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">4 Open</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-[#4c739a]">Estimated Exposure</span>
+<span class="font-bold">$34,200</span>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-[#e7edf3] dark:border-slate-800 text-center">
+<button class="text-xs font-bold text-primary hover:underline">Open Claims Ledger</button>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 p-5 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-bold text-xs uppercase text-[#4c739a]">Project Contacts</h2>
+<span class="material-symbols-outlined text-[#4c739a] text-sm">group</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">JD</div>
+<div>
+<p class="text-xs font-bold">John Doe</p>
+<p class="text-[10px] text-[#4c739a]">Site Manager • <span class="text-primary hover:underline cursor-pointer">Email</span></p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold">AS</div>
+<div>
+<p class="text-xs font-bold">Alice Smith</p>
+<p class="text-[10px] text-[#4c739a]">Contract Admin • <span class="text-primary hover:underline cursor-pointer">Email</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+
+</body></html>

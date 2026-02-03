@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Launchpad: All Projects Dashboard | Subbie HQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#0d141b] dark:text-slate-50 min-h-screen flex flex-col font-display">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark px-10 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-[#0d141b] dark:text-slate-50">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 18.4228L42 11.475V34.3663C42 34.7796 41.7457 35.1504 41.3601 35.2992L24 42V18.4228Z" fill="currentColor" fill-rule="evenodd"></path>
+<path clip-rule="evenodd" d="M24 8.18819L33.4123 11.574L24 15.2071L14.5877 11.574L24 8.18819ZM9 15.8487L21 20.4805V37.6263L9 32.9945V15.8487ZM27 37.6263V20.4805L39 15.8487V32.9945L27 37.6263ZM25.354 2.29885C24.4788 1.98402 23.5212 1.98402 22.646 2.29885L4.98454 8.65208C3.7939 9.08038 3 10.2097 3 11.475V34.3663C3 36.0196 4.01719 37.5026 5.55962 38.098L22.9197 44.7987C23.6149 45.0671 24.3851 45.0671 25.0803 44.7987L42.4404 38.098C43.9828 37.5026 45 36.0196 45 34.3663V11.475C45 10.2097 44.2061 9.08038 43.0155 8.65208L25.354 2.29885Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Subbie HQ</h2>
+</div>
+<label class="flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#4c739a] flex border-none bg-[#e7edf3] dark:bg-slate-800 items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d141b] dark:text-slate-50 focus:outline-0 focus:ring-0 border-none bg-[#e7edf3] dark:bg-slate-800 focus:border-none h-full placeholder:text-[#4c739a] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search projects..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-9">
+<a class="text-primary text-sm font-bold leading-normal border-b-2 border-primary pb-1" href="#">Launchpad</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Contracts</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Payments</a>
+<a class="text-[#4c739a] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Analytics</a>
+</nav>
+<div class="flex gap-2">
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-slate-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span class="truncate">Add New Project</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#e7edf3] dark:bg-slate-800 text-[#0d141b] dark:text-slate-50 gap-2 text-sm font-bold leading-normal min-w-0 px-2.5">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#e7edf3] dark:bg-slate-800 text-[#0d141b] dark:text-slate-50 gap-2 text-sm font-bold leading-normal min-w-0 px-2.5">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col items-center">
+<div class="max-w-[1200px] w-full px-10 py-8">
+<!-- PageHeading -->
+<div class="flex flex-wrap justify-between items-end gap-3 mb-6">
+<div class="flex min-w-72 flex-col gap-2">
+<p class="text-[#0d141b] dark:text-slate-50 text-4xl font-black leading-tight tracking-[-0.033em]">Launchpad</p>
+<p class="text-[#4c739a] dark:text-slate-400 text-base font-normal leading-normal max-w-xl">Manage and monitor your active construction projects across NZ and AU. Track claims, risk profiles, and project completion status.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex min-w-[120px] cursor-pointer items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-[#cfdbe7] dark:border-slate-700 text-[#0d141b] dark:text-slate-50 text-sm font-bold leading-normal hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-lg mr-2">filter_list</span>
+<span>Filter</span>
+</button>
+<button class="flex min-w-[140px] cursor-pointer items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-lg mr-2">add</span>
+<span class="truncate">Add New Project</span>
+</button>
+</div>
+</div>
+<!-- Tabs -->
+<div class="pb-3 mb-4">
+<div class="flex border-b border-[#cfdbe7] dark:border-slate-800 gap-8">
+<a class="flex items-center justify-center border-b-[3px] border-primary text-[#0d141b] dark:text-white pb-[13px] pt-4" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">All Projects</p>
+<span class="ml-2 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">12</span>
+</a>
+<a class="flex items-center justify-center border-b-[3px] border-transparent text-[#4c739a] dark:text-slate-400 pb-[13px] pt-4 hover:text-primary transition-colors" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Active</p>
+</a>
+<a class="flex items-center justify-center border-b-[3px] border-transparent text-[#4c739a] dark:text-slate-400 pb-[13px] pt-4 hover:text-primary transition-colors" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">In Review</p>
+</a>
+<a class="flex items-center justify-center border-b-[3px] border-transparent text-[#4c739a] dark:text-slate-400 pb-[13px] pt-4 hover:text-primary transition-colors" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Completed</p>
+</a>
+</div>
+</div>
+<!-- SectionHeader -->
+<div class="flex items-center justify-between mb-2">
+<h2 class="text-[#0d141b] dark:text-slate-50 text-[22px] font-bold leading-tight tracking-[-0.015em]">Project Portfolio Status</h2>
+<div class="flex gap-2">
+<button class="p-1 rounded bg-[#e7edf3] dark:bg-slate-800 text-primary">
+<span class="material-symbols-outlined">grid_view</span>
+</button>
+<button class="p-1 rounded text-[#4c739a]">
+<span class="material-symbols-outlined">list</span>
+</button>
+</div>
+</div>
+<!-- ImageGrid / Project Dashboard Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-4">
+<!-- Project Card 1: Low Risk -->
+<div class="flex flex-col bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-[#cfdbe7] dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover relative" data-alt="Modern waterfront development building project" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCwJDSdJQ6ivUlozfIkvI0g0kXWbpNEG0cqA2dDG6wdeM2DsMPy3V_THglvIeZrYjRdJQhChEhvPA3rA0s6lo2j66wn6CEj62-8aJI2qeDn1L_aMZuiEA6HbicKIJ1U48idjKyN3Zg87Zo-BI4R3YP123c4m1utZ8gaaDwL3ODUC9MbBrpvw-toUmHv-_S4SK4Tj1zsbmJj7EeNiJ_v1JTDB73ogcJWwnqcpJKFyVD_sKP7xCkT8-40VBgSKHgr1VIYzbGtqj8q2ffQ");'>
+<div class="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider">Low Risk</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-[#0d141b] dark:text-slate-50 text-lg font-bold leading-tight">Auckland Waterfront</h3>
+<span class="material-symbols-outlined text-[#4c739a] cursor-pointer">more_vert</span>
+</div>
+<div class="space-y-3 flex-1">
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-xs font-semibold text-[#4c739a] dark:text-slate-400">
+<span>SCOPE COMPLETENESS</span>
+<span>85%</span>
+</div>
+<div class="w-full bg-[#e7edf3] dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-green-500 h-full" style="width: 85%"></div>
+</div>
+</div>
+<div class="pt-2 flex flex-col gap-1">
+<p class="text-[#4c739a] dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Next Payment Claim</p>
+<div class="flex items-center gap-2 text-primary font-bold">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+<span class="text-base">25 Oct 2023</span>
+</div>
+</div>
+</div>
+<div class="mt-5 pt-4 border-t border-[#e7edf3] dark:border-slate-800">
+<button class="w-full py-2 bg-[#f0f7ff] dark:bg-primary/10 text-primary font-bold text-sm rounded-lg hover:bg-primary hover:text-white transition-all">View Project Details</button>
+</div>
+</div>
+</div>
+<!-- Project Card 2: High Risk -->
+<div class="flex flex-col bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-[#cfdbe7] dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover relative" data-alt="Underground tunnel construction site" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDXFaWtJW3eI8P9uuxy7hSyv1Yi1fXMicl4HtZcDIKl1SOmIpiLwF3Ht9xXBtnj4tZQn1s3QM21G6-bQNwJvvfhD3u81sGrUfQn-uY-iMH6btstBfY6ftyi8MJ7qGTFpuV80WvsYvxGS7xmsHSeRqgi8jTINjDGWJHuApzqyMPLbFpA-Vr21SgKqzGT-Da8QA_qdgSagG5fkndzTJW74M0ze2-xQS4Vy9yssk0BSV2ULYMHcscsLmIZl_9nrpJMzmN2XvBdEpVC4nFN");'>
+<div class="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider">High Risk</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-[#0d141b] dark:text-slate-50 text-lg font-bold leading-tight">Sydney Metro Extension</h3>
+<span class="material-symbols-outlined text-[#4c739a] cursor-pointer">more_vert</span>
+</div>
+<div class="space-y-3 flex-1">
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-xs font-semibold text-[#4c739a] dark:text-slate-400">
+<span>SCOPE COMPLETENESS</span>
+<span>40%</span>
+</div>
+<div class="w-full bg-[#e7edf3] dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-red-500 h-full" style="width: 40%"></div>
+</div>
+</div>
+<div class="pt-2 flex flex-col gap-1">
+<p class="text-[#4c739a] dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Next Payment Claim</p>
+<div class="flex items-center gap-2 text-primary font-bold">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+<span class="text-base">01 Nov 2023</span>
+</div>
+</div>
+</div>
+<div class="mt-5 pt-4 border-t border-[#e7edf3] dark:border-slate-800">
+<button class="w-full py-2 bg-[#f0f7ff] dark:bg-primary/10 text-primary font-bold text-sm rounded-lg hover:bg-primary hover:text-white transition-all">View Project Details</button>
+</div>
+</div>
+</div>
+<!-- Project Card 3: Medium Risk -->
+<div class="flex flex-col bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-[#cfdbe7] dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover relative" data-alt="Hospital building construction crane" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBndGHzEddDmfFk79h4Rfk-haQ7UsZSPJ364eKMSHS8mgcOATUyabBiUrKrqxSi0i80eauWQSjREhnNfab462BRdXnnfMhmBK4eZQETKfPRdnwijMy5Tk9wa8dxvpw42qVX6WvDAlic0a6CsTFEASP5WDERRIaWTdOOO7Yh-hR3NjMpBJvQcgWVPLvs6KBmd_-xQgDm2lJHk3gxiDi5TI7B0vXnnxm1RkZjTx2AUdY5e4SsaYeLl0ogBT-a8SChBh2I0XId8syembAw");'>
+<div class="absolute top-3 right-3 bg-amber-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider">Medium Risk</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-[#0d141b] dark:text-slate-50 text-lg font-bold leading-tight">Christchurch Hospital</h3>
+<span class="material-symbols-outlined text-[#4c739a] cursor-pointer">more_vert</span>
+</div>
+<div class="space-y-3 flex-1">
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-xs font-semibold text-[#4c739a] dark:text-slate-400">
+<span>SCOPE COMPLETENESS</span>
+<span>60%</span>
+</div>
+<div class="w-full bg-[#e7edf3] dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-amber-500 h-full" style="width: 60%"></div>
+</div>
+</div>
+<div class="pt-2 flex flex-col gap-1">
+<p class="text-[#4c739a] dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Next Payment Claim</p>
+<div class="flex items-center gap-2 text-primary font-bold">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+<span class="text-base">15 Nov 2023</span>
+</div>
+</div>
+</div>
+<div class="mt-5 pt-4 border-t border-[#e7edf3] dark:border-slate-800">
+<button class="w-full py-2 bg-[#f0f7ff] dark:bg-primary/10 text-primary font-bold text-sm rounded-lg hover:bg-primary hover:text-white transition-all">View Project Details</button>
+</div>
+</div>
+</div>
+<!-- Project Card 4: Low Risk -->
+<div class="flex flex-col bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-[#cfdbe7] dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover relative" data-alt="Tall residential apartment building construction" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDEP8ME8j2ozvlUw_rQE8IJSnzdM5voaD_VIjIKDqz9NQCTWF7jdGnF53S6AVCitNTsEDkuAOYsP-X6lSCP5qTnvNwjML2IH9c0dX9bpDdkovNETotpi-T8BqGcRcCEgyzX91yIkbDBz3_3y7hKhQJip8hI4dNmaY6O1GXDAqX0rWVJnxYsoVz2707TQpUtb_6NKo9BQdzbas9AVbRMBe4ie_1d4-2Zaoh1ts4dzVB7VF3bnUsp87eEvSnuqSAnAoFWkOzo17cygJM5");'>
+<div class="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider">Low Risk</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-[#0d141b] dark:text-slate-50 text-lg font-bold leading-tight">Melbourne Tower</h3>
+<span class="material-symbols-outlined text-[#4c739a] cursor-pointer">more_vert</span>
+</div>
+<div class="space-y-3 flex-1">
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-xs font-semibold text-[#4c739a] dark:text-slate-400">
+<span>SCOPE COMPLETENESS</span>
+<span>92%</span>
+</div>
+<div class="w-full bg-[#e7edf3] dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-green-500 h-full" style="width: 92%"></div>
+</div>
+</div>
+<div class="pt-2 flex flex-col gap-1">
+<p class="text-[#4c739a] dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Next Payment Claim</p>
+<div class="flex items-center gap-2 text-primary font-bold">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+<span class="text-base">10 Nov 2023</span>
+</div>
+</div>
+</div>
+<div class="mt-5 pt-4 border-t border-[#e7edf3] dark:border-slate-800">
+<button class="w-full py-2 bg-[#f0f7ff] dark:bg-primary/10 text-primary font-bold text-sm rounded-lg hover:bg-primary hover:text-white transition-all">View Project Details</button>
+</div>
+</div>
+</div>
+<!-- Project Card 5: Medium Risk -->
+<div class="flex flex-col bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-[#cfdbe7] dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover relative" data-alt="Industrial warehouse site" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAPED4qPD82gSp9Xx9zI2KWrtchsaLA9EPpFHpmNPfSbF4hQ8sIFwt68ifEWB8_wmI59GG4IZ9kbTGPvasLusp5PKKASQt9Qpw3IPaMLOYhaZ87AG3AawtS9hzcARH0hM_xPvPhde59o-A9asaes0xo6rjY_13pbNUboOxgZ0hyEbhxpSnyiEfIGAb0uxzKV1RYPK90Z5xsyFm-f04diNcEhaOZ7WfnTeNC-jcA0QQdTN5UGIs3odGD9H_M7b_x088c3R3LNlYTlAXR");'>
+<div class="absolute top-3 right-3 bg-amber-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider">Medium Risk</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-[#0d141b] dark:text-slate-50 text-lg font-bold leading-tight">Brisbane Logistics Hub</h3>
+<span class="material-symbols-outlined text-[#4c739a] cursor-pointer">more_vert</span>
+</div>
+<div class="space-y-3 flex-1">
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-xs font-semibold text-[#4c739a] dark:text-slate-400">
+<span>SCOPE COMPLETENESS</span>
+<span>25%</span>
+</div>
+<div class="w-full bg-[#e7edf3] dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-amber-500 h-full" style="width: 25%"></div>
+</div>
+</div>
+<div class="pt-2 flex flex-col gap-1">
+<p class="text-[#4c739a] dark:text-slate-400 text-xs font-bold uppercase tracking-wider">Next Payment Claim</p>
+<div class="flex items-center gap-2 text-primary font-bold">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+<span class="text-base">12 Nov 2023</span>
+</div>
+</div>
+</div>
+<div class="mt-5 pt-4 border-t border-[#e7edf3] dark:border-slate-800">
+<button class="w-full py-2 bg-[#f0f7ff] dark:bg-primary/10 text-primary font-bold text-sm rounded-lg hover:bg-primary hover:text-white transition-all">View Project Details</button>
+</div>
+</div>
+</div>
+<!-- Add New Placeholder Card -->
+<div class="flex flex-col items-center justify-center bg-transparent rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 min-h-[300px] hover:border-primary/50 hover:bg-white dark:hover:bg-slate-900 transition-all cursor-pointer group">
+<div class="size-16 rounded-full bg-[#e7edf3] dark:bg-slate-800 flex items-center justify-center text-[#4c739a] group-hover:bg-primary/10 group-hover:text-primary transition-colors mb-4">
+<span class="material-symbols-outlined text-4xl">add</span>
+</div>
+<p class="text-[#0d141b] dark:text-slate-50 font-bold">Start New Project</p>
+<p class="text-[#4c739a] dark:text-slate-400 text-sm mt-1">Import contract or claim</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Status Bar (Optional Extension) -->
+<footer class="bg-white dark:bg-background-dark border-t border-[#e7edf3] dark:border-slate-800 px-10 py-3 flex justify-between items-center text-xs text-[#4c739a] dark:text-slate-500">
+<div class="flex gap-6">
+<span class="flex items-center gap-1"><span class="size-2 rounded-full bg-green-500"></span> System Online</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span> Last sync: 2 mins ago</span>
+</div>
+<div class="flex gap-4">
+<a class="hover:underline" href="#">Support</a>
+<a class="hover:underline" href="#">Documentation</a>
+<a class="hover:underline" href="#">Terms of Service</a>
+</div>
+</footer>
+</body></html>

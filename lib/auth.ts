@@ -1,13 +1,14 @@
+import { auth } from "@/auth";
 import { prisma } from "./prisma";
 
-export async function getUserIdFromRequest(request: Request): Promise<string | null> {
-  // TODO: Replace with real session-based auth (e.g., NextAuth, Clerk, custom JWT)
-  return request.headers.get("x-user-id");
+export async function getUserIdFromRequest(): Promise<string | null> {
+  const session = await auth();
+  return session?.user?.id ?? null;
 }
 
 export async function requireUserId(request: Request): Promise<string | null> {
-  const userId = await getUserIdFromRequest(request);
-  return userId ?? null;
+  void request;
+  return getUserIdFromRequest();
 }
 
 export async function requireProjectAccess(projectId: string, userId: string) {

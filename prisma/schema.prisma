@@ -354,6 +354,7 @@ model Update {
   parent            Update?           @relation("UpdateReplies", fields: [parentId], references: [id])
   replies           Update[]          @relation("UpdateReplies")
   siteInstruction   SiteInstruction?  @relation(fields: [siteInstructionId], references: [id])
+  attachments       UpdateAttachment[]
 }
 
 model SiteInstruction {
@@ -382,4 +383,15 @@ model PushSubscription {
   createdAt  DateTime @default(now())
 
   user       User     @relation(fields: [userId], references: [id])
+}
+
+model UpdateAttachment {
+  id          String   @id @default(cuid())
+  updateId    String
+  fileName    String
+  storageKey  String
+  contentType String
+  createdAt   DateTime @default(now())
+
+  update      Update   @relation(fields: [updateId], references: [id])
 }

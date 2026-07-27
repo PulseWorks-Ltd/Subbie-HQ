@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Update } from "@prisma/client";
+import type { Update, UpdateAttachment } from "@prisma/client";
+import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 
 type Author = { id: string; name: string | null; email: string };
 type SiteInstructionRef = { id: string; reference: string; title: string };
 type UpdateWithReplies = Update & {
   author: Author;
   siteInstruction: SiteInstructionRef | null;
-  replies: (Update & { author: Author })[];
+  attachments: UpdateAttachment[];
+  replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
 
 function formatTimestamp(date: Date) {
@@ -29,6 +31,7 @@ export function UpdateThread({ projectId, update }: { projectId: string; update:
   const router = useRouter();
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleReply(event: React.FormEvent) {
@@ -36,14 +39,16 @@ export function UpdateThread({ projectId, update }: { projectId: string; update:
     if (!replyBody.trim()) return;
     setIsSubmitting(true);
 
-    await fetch(`/api/projects/${projectId}/updates`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: replyBody, parentId: update.id })
-    });
+    const formData = new FormData();
+    formData.set("body", replyBody);
+    formData.set("parentId", update.id);
+    replyFiles.forEach((file) => formData.append("files", file));
+
+    await fetch(`/api/projects/${projectId}/updates`, { method: "POST", body: formData });
 
     setIsSubmitting(false);
     setReplyBody("");
+    setReplyFiles([]);
     setIsReplying(false);
     router.refresh();
   }
@@ -61,9 +66,10 @@ export function UpdateThread({ projectId, update }: { projectId: string; update:
         </div>
         <p className="text-xs text-[#4c739a] dark:text-slate-400 shrink-0">{formatTimestamp(update.createdAt)}</p>
       </div>
-      <p className="text-sm text-[#0d141b] dark:text-slate-200 leading-relaxed whitespace-pre-wrap mb-3">
+      <p className="text-sm text-[#0d141b] dark:text-slate-200 leading-relaxed whitespace-pre-wrap mb-1">
         {update.body}
       </p>
+      <AttachmentThumbnails projectId={projectId} attachments={update.attachments} />
 
       {update.replies.length > 0 && (
         <div className="flex flex-col gap-3 mt-4 pl-4 border-l-2 border-[#e7edf3] dark:border-slate-800">
@@ -78,6 +84,7 @@ export function UpdateThread({ projectId, update }: { projectId: string; update:
               <p className="text-sm text-[#0d141b] dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                 {reply.body}
               </p>
+              <AttachmentThumbnails projectId={projectId} attachments={reply.attachments} />
             </div>
           ))}
         </div>
@@ -94,6 +101,17 @@ export function UpdateThread({ projectId, update }: { projectId: string; update:
               placeholder="Write a reply..."
               className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
+            <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400">
+              <span className="material-symbols-outlined text-base">photo_camera</span>
+              {replyFiles.length > 0 ? `${replyFiles.length} photo${replyFiles.length > 1 ? "s" : ""} attached` : "Attach photos"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => setReplyFiles(Array.from(event.target.files ?? []))}
+                className="hidden"
+              />
+            </label>
             <div className="flex gap-2 justify-end">
               <button
                 type="button"

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SiteInstruction, Update } from "@prisma/client";
+import type { SiteInstruction, Update, UpdateAttachment } from "@prisma/client";
 import { UpdateThread } from "@/components/updates/update-thread";
 import { SiteInstructionsPanel } from "@/components/updates/site-instructions-panel";
 
@@ -11,7 +11,8 @@ type SiteInstructionRef = { id: string; reference: string; title: string };
 type UpdateWithReplies = Update & {
   author: Author;
   siteInstruction: SiteInstructionRef | null;
-  replies: (Update & { author: Author })[];
+  attachments: UpdateAttachment[];
+  replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
 
 export function UpdatesView({
@@ -26,6 +27,7 @@ export function UpdatesView({
   const router = useRouter();
   const [body, setBody] = useState("");
   const [siteInstructionId, setSiteInstructionId] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const openSiteInstructions = siteInstructions.filter((si) => si.status === "open");
@@ -35,15 +37,17 @@ export function UpdatesView({
     if (!body.trim()) return;
     setIsSubmitting(true);
 
-    await fetch(`/api/projects/${projectId}/updates`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body, siteInstructionId: siteInstructionId || undefined })
-    });
+    const formData = new FormData();
+    formData.set("body", body);
+    if (siteInstructionId) formData.set("siteInstructionId", siteInstructionId);
+    files.forEach((file) => formData.append("files", file));
+
+    await fetch(`/api/projects/${projectId}/updates`, { method: "POST", body: formData });
 
     setIsSubmitting(false);
     setBody("");
     setSiteInstructionId("");
+    setFiles([]);
     router.refresh();
   }
 
@@ -69,6 +73,17 @@ export function UpdatesView({
               placeholder="Post an update for the team..."
               className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
+            <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400">
+              <span className="material-symbols-outlined text-lg">photo_camera</span>
+              {files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} attached` : "Attach photos"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+                className="hidden"
+              />
+            </label>
             <div className="flex items-center justify-between gap-3">
               {openSiteInstructions.length > 0 ? (
                 <select

@@ -10,8 +10,12 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
       include: {
         author: { select: { id: true, name: true, email: true } },
         siteInstruction: { select: { id: true, reference: true, title: true } },
+        attachments: true,
         replies: {
-          include: { author: { select: { id: true, name: true, email: true } } },
+          include: {
+            author: { select: { id: true, name: true, email: true } },
+            attachments: true
+          },
           orderBy: { createdAt: "asc" }
         }
       },

@@ -12,6 +12,10 @@ export default async function GetAppPage() {
   return (
     <main className="flex-1 flex flex-col items-center px-6 py-12">
       <div className="w-full max-w-md flex flex-col items-center text-center gap-6">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 dark:hidden" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 hidden dark:block" />
         <div>
           <h1 className="text-2xl font-black tracking-tight">Get Subbie Updates on your phone</h1>
           <p className="text-sm text-[#4c739a] dark:text-slate-400 mt-2">

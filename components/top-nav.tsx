@@ -13,11 +13,10 @@ export function TopNav({ userName, userEmail }: { userName: string | null; userE
     <header className="flex items-center justify-between border-b border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark px-8 py-3 sticky top-0 z-50">
       <div className="flex items-center gap-6">
         <Link href="/" className="flex items-center gap-3 text-[#0d141b] dark:text-slate-50">
-          <div className="size-8 flex items-center justify-center rounded-lg bg-primary text-white">
-            <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-              deployed_code
-            </span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-light.png" alt="" className="size-8 dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-dark.png" alt="" className="size-8 hidden dark:block" />
           <h2 className="text-lg font-bold leading-tight tracking-tight">Subbie HQ</h2>
         </Link>
         <Link

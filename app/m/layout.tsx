@@ -14,11 +14,10 @@ export default async function MobileLayout({ children }: { children: React.React
       <meta name="theme-color" content="#137fec" />
       <header className="sticky top-0 z-50 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-[#e7edf3] dark:border-slate-800 px-4 py-3">
         <a href="/m" className="flex items-center gap-2">
-          <div className="size-7 flex items-center justify-center rounded-lg bg-primary text-white">
-            <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
-              deployed_code
-            </span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-light.png" alt="" className="size-7 dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-dark.png" alt="" className="size-7 hidden dark:block" />
           <span className="text-base font-bold">Subbie Updates</span>
         </a>
         <div className="flex items-center gap-3">

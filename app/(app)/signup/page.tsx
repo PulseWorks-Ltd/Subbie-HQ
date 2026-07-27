@@ -47,6 +47,10 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 mb-6 dark:hidden" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 mb-6 hidden dark:block" />
         <h1 className="text-xl font-bold mb-1">Create your Subbie HQ account</h1>
         <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-6">
           Track contracts, scope, programme and payment claims in one place.

@@ -23,6 +23,8 @@ export async function sendReplyNotificationEmail(params: {
   const config = getConfiguredSendGrid();
   if (!config) return;
 
+  const baseUrl = process.env.AUTH_URL ?? "";
+
   await sgMail.send({
     to: params.to,
     from: { email: config.fromEmail, name: "Subbie HQ" },
@@ -31,7 +33,8 @@ export async function sendReplyNotificationEmail(params: {
       author_name: params.authorName,
       project_name: params.projectName,
       update_body: params.updateBody,
-      update_url: params.updateUrl
+      update_url: params.updateUrl,
+      logo_url: `${baseUrl}/icons/icon-512.png`
     }
   });
 }

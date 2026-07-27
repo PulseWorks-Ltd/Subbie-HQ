@@ -361,6 +361,10 @@ model SiteInstruction {
   reference   String
   title       String
   description String?
+  notifiedAt  DateTime?
+  dueAt       DateTime?
+  fileName    String?
+  storageKey  String?
   status      SiteInstructionStatus  @default(open)
   createdAt   DateTime               @default(now())
 

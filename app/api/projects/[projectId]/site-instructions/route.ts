@@ -6,7 +6,11 @@ import { requireProjectAccess, requireUserId } from "@/lib/auth";
 const createSiteInstructionSchema = z.object({
   reference: z.string().min(1),
   title: z.string().min(1),
-  description: z.string().optional()
+  description: z.string().optional(),
+  notifiedAt: z.string().date().optional(),
+  dueAt: z.string().date().optional(),
+  fileName: z.string().optional(),
+  storageKey: z.string().optional()
 });
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
@@ -46,7 +50,11 @@ export async function POST(request: Request, context: { params: { projectId: str
       projectId,
       reference: payload.reference,
       title: payload.title,
-      description: payload.description
+      description: payload.description,
+      notifiedAt: payload.notifiedAt ? new Date(payload.notifiedAt) : undefined,
+      dueAt: payload.dueAt ? new Date(payload.dueAt) : undefined,
+      fileName: payload.fileName,
+      storageKey: payload.storageKey
     }
   });
 

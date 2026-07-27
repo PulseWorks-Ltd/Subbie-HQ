@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SiteInstruction } from "@prisma/client";
+import { CountdownBadge } from "@/components/badges/countdown-badge";
 
 function toDateInputValue(date: Date | null) {
   if (!date) return "";
@@ -226,15 +227,20 @@ export function SiteInstructionsPanel({
                 </p>
               )}
               <div className="flex items-center justify-between mt-2">
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
-                    siteInstruction.status === "complete"
-                      ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                  }`}
-                >
-                  {siteInstruction.status === "complete" ? "Complete" : "Open"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
+                      siteInstruction.status === "complete"
+                        ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                    }`}
+                  >
+                    {siteInstruction.status === "complete" ? "Complete" : "Open"}
+                  </span>
+                  {siteInstruction.status === "open" && siteInstruction.dueAt && (
+                    <CountdownBadge date={siteInstruction.dueAt} />
+                  )}
+                </div>
                 <div className="flex items-center gap-3">
                   {siteInstruction.storageKey && (
                     <a

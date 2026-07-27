@@ -13,6 +13,7 @@ export type LaunchpadProject = {
   status: string;
   riskLevel: string;
   nextPaymentClaimDate: Date | null;
+  nextSiteInstructionDueDate: Date | null;
 };
 
 export async function getLaunchpadProjects(userId: string): Promise<LaunchpadProject[]> {
@@ -24,6 +25,7 @@ export async function getLaunchpadProjects(userId: string): Promise<LaunchpadPro
     nextClaimDate: Date | null;
     clauses: { riskLevel: string }[];
     paymentClaims: { referenceDate: Date }[];
+    siteInstructions: { dueAt: Date | null }[];
   };
 
   const projects = (await prisma.project.findMany({
@@ -40,6 +42,12 @@ export async function getLaunchpadProjects(userId: string): Promise<LaunchpadPro
         select: { referenceDate: true },
         orderBy: { referenceDate: "desc" },
         take: 1
+      },
+      siteInstructions: {
+        where: { status: "open", dueAt: { not: null } },
+        select: { dueAt: true },
+        orderBy: { dueAt: "asc" },
+        take: 1
       }
     },
     orderBy: { createdAt: "desc" }
@@ -48,6 +56,7 @@ export async function getLaunchpadProjects(userId: string): Promise<LaunchpadPro
   return projects.map((project) => {
     const riskLevel = computeRiskLevel(project.clauses.map((clause) => clause.riskLevel));
     const nextPaymentClaimDate = project.nextClaimDate ?? project.paymentClaims[0]?.referenceDate ?? null;
+    const nextSiteInstructionDueDate = project.siteInstructions[0]?.dueAt ?? null;
 
     return {
       id: project.id,
@@ -55,7 +64,8 @@ export async function getLaunchpadProjects(userId: string): Promise<LaunchpadPro
       code: project.code,
       status: project.status,
       riskLevel,
-      nextPaymentClaimDate
+      nextPaymentClaimDate,
+      nextSiteInstructionDueDate
     };
   });
 }

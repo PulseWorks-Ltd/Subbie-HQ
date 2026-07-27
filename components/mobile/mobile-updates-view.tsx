@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SiteInstruction, Update, UpdateAttachment } from "@prisma/client";
 import { MobileThread } from "@/components/mobile/mobile-thread";
+import { getCountdownInfo } from "@/lib/date-countdown";
 
 type Author = { id: string; name: string | null; email: string };
 type SiteInstructionRef = { id: string; reference: string; title: string };
@@ -100,18 +101,29 @@ export function MobileUpdatesView({
 
       {siteInstructions.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {siteInstructions.map((si) => (
-            <span
-              key={si.id}
-              className={`shrink-0 inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${
-                si.status === "complete"
-                  ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-              }`}
-            >
-              {si.reference}
-            </span>
-          ))}
+          {siteInstructions.map((si) => {
+            const urgency = si.status === "open" && si.dueAt ? getCountdownInfo(si.dueAt).urgency : null;
+            const urgentStyle =
+              urgency === "overdue"
+                ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                : urgency === "today" || urgency === "soon"
+                  ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                  : si.status === "complete"
+                    ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400";
+
+            return (
+              <span
+                key={si.id}
+                className={`shrink-0 inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${urgentStyle}`}
+              >
+                {si.reference}
+                {(urgency === "overdue" || urgency === "today" || urgency === "soon") &&
+                  si.dueAt &&
+                  ` · ${getCountdownInfo(si.dueAt).label}`}
+              </span>
+            );
+          })}
         </div>
       )}
 

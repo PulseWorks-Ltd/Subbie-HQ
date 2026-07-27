@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { getLaunchpadProjects } from "@/lib/launchpad";
+import { InstallPrompt } from "@/components/mobile/install-prompt";
 
 export default async function MobileProjectListPage() {
   const session = await auth();
@@ -7,6 +8,7 @@ export default async function MobileProjectListPage() {
 
   return (
     <div className="flex flex-col gap-3">
+      <InstallPrompt />
       <h1 className="text-lg font-bold">Your Projects</h1>
       {projects.length === 0 ? (
         <p className="text-sm text-[#4c739a] dark:text-slate-400">

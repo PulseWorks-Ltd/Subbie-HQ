@@ -31,6 +31,13 @@ export function TopNav({ userName, userEmail }: { userName: string | null; userE
       </div>
 
       <div className="flex items-center gap-3">
+        <Link
+          href="/get-app"
+          className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-medium hover:bg-[#e7edf3] dark:hover:bg-slate-800 flex items-center gap-1.5"
+        >
+          <span className="material-symbols-outlined text-lg">phone_iphone</span>
+          <span className="hidden sm:inline">Get the app</span>
+        </Link>
         <div className="hidden sm:flex flex-col items-end leading-tight">
           <span className="text-sm font-medium">{userName ?? userEmail}</span>
         </div>

@@ -48,6 +48,11 @@ enum EmailStatus {
   linked
 }
 
+enum SiteInstructionStatus {
+  open
+  complete
+}
+
 enum RiskLevel {
   low
   medium
@@ -69,6 +74,7 @@ model User {
   createdAt     DateTime        @default(now())
   memberships   ProjectMember[]
   organisations Organisation[]  @relation("OrganisationOwners")
+  updates       Update[]
 }
 
 model Organisation {
@@ -102,6 +108,8 @@ model Project {
   invoices           Invoice[]
   evidence           Evidence[]
   inboundEmails      InboundEmail[]
+  updates            Update[]
+  siteInstructions   SiteInstruction[]
 }
 
 model ProjectMember {
@@ -329,4 +337,33 @@ model EvidencePaymentClaim {
   paymentClaim  PaymentClaim @relation(fields: [paymentClaimId], references: [id])
 
   @@unique([evidenceId, paymentClaimId])
+}
+
+model Update {
+  id                String            @id @default(cuid())
+  projectId         String
+  authorId          String
+  parentId          String?
+  siteInstructionId String?
+  body              String
+  createdAt         DateTime          @default(now())
+
+  project           Project           @relation(fields: [projectId], references: [id])
+  author            User              @relation(fields: [authorId], references: [id])
+  parent            Update?           @relation("UpdateReplies", fields: [parentId], references: [id])
+  replies           Update[]          @relation("UpdateReplies")
+  siteInstruction   SiteInstruction?  @relation(fields: [siteInstructionId], references: [id])
+}
+
+model SiteInstruction {
+  id          String                 @id @default(cuid())
+  projectId   String
+  reference   String
+  title       String
+  description String?
+  status      SiteInstructionStatus  @default(open)
+  createdAt   DateTime               @default(now())
+
+  project     Project                @relation(fields: [projectId], references: [id])
+  updates     Update[]
 }

@@ -1,10 +1,14 @@
-import { PlaceholderSection } from "@/components/placeholder-section";
+import { prisma } from "@/lib/prisma";
+import { ContractView } from "@/components/contract/contract-view";
 
-export default function ContractPage() {
-  return (
-    <PlaceholderSection
-      title="Contract"
-      description="Contract documents and clauses are coming in the next build phase."
-    />
-  );
+export default async function ContractPage({ params }: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = await params;
+
+  const documents = await prisma.contractDocument.findMany({
+    where: { projectId },
+    include: { clauses: { orderBy: { createdAt: "desc" } } },
+    orderBy: { uploadedAt: "desc" }
+  });
+
+  return <ContractView projectId={projectId} documents={documents} />;
 }

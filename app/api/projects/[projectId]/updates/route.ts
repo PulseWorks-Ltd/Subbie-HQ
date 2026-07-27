@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireProjectAccess, requireUserId } from "@/lib/auth";
+import { sendPushToUser } from "@/lib/push";
 
 const createUpdateSchema = z.object({
   body: z.string().min(1),
@@ -49,8 +50,9 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const payload = createUpdateSchema.parse(await request.json());
 
+  let parent = null;
   if (payload.parentId) {
-    const parent = await prisma.update.findFirst({
+    parent = await prisma.update.findFirst({
       where: { id: payload.parentId, projectId, parentId: null }
     });
     if (!parent) {
@@ -81,6 +83,14 @@ export async function POST(request: Request, context: { params: { projectId: str
       siteInstruction: { select: { id: true, reference: true, title: true } }
     }
   });
+
+  if (parent && parent.authorId !== userId) {
+    await sendPushToUser(parent.authorId, {
+      title: `${update.author.name ?? update.author.email} replied`,
+      body: payload.body.slice(0, 140),
+      url: `/m/${projectId}`
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ update }, { status: 201 });
 }

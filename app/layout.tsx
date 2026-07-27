@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { auth } from "@/auth";
 import { AuthProvider } from "@/components/providers/auth-provider";
-import { TopNav } from "@/components/top-nav";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-display" });
@@ -12,9 +10,7 @@ export const metadata: Metadata = {
   description: "Contract, scope, programme and payment tracking for subcontractors."
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={inter.variable}>
       <head>
@@ -24,10 +20,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body className="bg-background-light text-[#0d141b] dark:bg-background-dark dark:text-slate-50 min-h-screen">
-        <AuthProvider>
-          {session?.user && <TopNav userName={session.user.name ?? null} userEmail={session.user.email ?? ""} />}
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

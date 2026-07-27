@@ -1,0 +1,114 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import type { Update } from "@prisma/client";
+
+type Author = { id: string; name: string | null; email: string };
+type SiteInstructionRef = { id: string; reference: string; title: string };
+type UpdateWithReplies = Update & {
+  author: Author;
+  siteInstruction: SiteInstructionRef | null;
+  replies: (Update & { author: Author })[];
+};
+
+function formatTimestamp(date: Date) {
+  return new Date(date).toLocaleString(undefined, {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function authorLabel(author: Author) {
+  return author.name ?? author.email;
+}
+
+export function MobileThread({ projectId, update }: { projectId: string; update: UpdateWithReplies }) {
+  const router = useRouter();
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyBody, setReplyBody] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleReply(event: React.FormEvent) {
+    event.preventDefault();
+    if (!replyBody.trim()) return;
+    setIsSubmitting(true);
+
+    await fetch(`/api/projects/${projectId}/updates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: replyBody, parentId: update.id })
+    });
+
+    setIsSubmitting(false);
+    setReplyBody("");
+    setIsReplying(false);
+    router.refresh();
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 p-4">
+      <div className="flex items-baseline justify-between gap-2 mb-1">
+        <p className="text-sm font-bold">{authorLabel(update.author)}</p>
+        <p className="text-[11px] text-[#4c739a] dark:text-slate-400 shrink-0">{formatTimestamp(update.createdAt)}</p>
+      </div>
+      {update.siteInstruction && (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary mb-1">
+          {update.siteInstruction.reference}
+        </span>
+      )}
+      <p className="text-sm leading-relaxed whitespace-pre-wrap mb-2">{update.body}</p>
+
+      {update.replies.length > 0 && (
+        <div className="flex flex-col gap-2 mt-3 pl-3 border-l-2 border-[#e7edf3] dark:border-slate-800">
+          {update.replies.map((reply) => (
+            <div key={reply.id}>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-xs font-bold">{authorLabel(reply.author)}</p>
+                <p className="text-[10px] text-[#4c739a] dark:text-slate-400">{formatTimestamp(reply.createdAt)}</p>
+              </div>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{reply.body}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 pt-2 border-t border-[#e7edf3] dark:border-slate-800">
+        {isReplying ? (
+          <form onSubmit={handleReply} className="flex flex-col gap-2">
+            <textarea
+              autoFocus
+              value={replyBody}
+              onChange={(event) => setReplyBody(event.target.value)}
+              rows={2}
+              placeholder="Write a reply..."
+              className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setIsReplying(false)}
+                className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-9 px-4 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-60"
+              >
+                {isSubmitting ? "Posting..." : "Post reply"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <button onClick={() => setIsReplying(true)} className="text-xs font-bold text-primary">
+            Reply
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

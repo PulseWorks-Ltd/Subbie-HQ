@@ -1,0 +1,157 @@
+import { prisma } from "./prisma";
+
+export type DashboardItemType = "programme" | "site-instruction" | "payment-claim" | "safety-document";
+export type DashboardRescheduleField = "startDate" | "endDate" | "dueAt" | "nextClaimDate" | "expiresAt";
+
+export type DashboardItem = {
+  id: string;
+  type: DashboardItemType;
+  projectId: string;
+  projectName: string;
+  headline: string;
+  detail: string;
+  date: Date;
+  isOverdue: boolean;
+  href: string;
+  canComplete: boolean;
+  rescheduleField: DashboardRescheduleField;
+};
+
+const WINDOW_DAYS = 7;
+
+function startOfDay(date: Date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function formatShortDate(date: Date, today: Date) {
+  const day = startOfDay(date);
+  const diffDays = Math.round((day.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "tomorrow";
+  if (diffDays === -1) return "yesterday";
+  return new Date(date).toLocaleDateString("en-NZ", { weekday: "short", day: "numeric", month: "short" });
+}
+
+export async function getDashboardFeed(userId: string): Promise<DashboardItem[]> {
+  const today = startOfDay(new Date());
+  const windowEnd = new Date(today);
+  windowEnd.setDate(windowEnd.getDate() + WINDOW_DAYS);
+
+  const projects = await prisma.project.findMany({
+    where: { members: { some: { userId } } },
+    include: {
+      programmeItems: { where: { completedAt: null } },
+      siteInstructions: { where: { status: "open", dueAt: { not: null } } },
+      safetyDocuments: { where: { expiresAt: { not: null } } }
+    }
+  });
+
+  const items: DashboardItem[] = [];
+
+  function inWindow(day: Date) {
+    return day.getTime() <= windowEnd.getTime();
+  }
+
+  for (const project of projects) {
+    for (const item of project.programmeItems) {
+      if (!item.startDate && !item.endDate) continue;
+
+      let anchor: Date;
+      let phase: "starting" | "due";
+      if (item.startDate && startOfDay(item.startDate).getTime() >= today.getTime()) {
+        anchor = item.startDate;
+        phase = "starting";
+      } else {
+        anchor = item.endDate ?? item.startDate!;
+        phase = "due";
+      }
+
+      const anchorDay = startOfDay(anchor);
+      if (!inWindow(anchorDay)) continue;
+
+      items.push({
+        id: item.id,
+        type: "programme",
+        projectId: project.id,
+        projectName: project.name,
+        headline: item.title,
+        detail: `${phase === "starting" ? "Starting" : "Due"} ${formatShortDate(anchor, today)}`,
+        date: anchor,
+        isOverdue: phase === "due" && anchorDay.getTime() < today.getTime(),
+        href: `/projects/${project.id}/programme`,
+        canComplete: true,
+        rescheduleField: phase === "starting" ? "startDate" : "endDate"
+      });
+    }
+
+    for (const siteInstruction of project.siteInstructions) {
+      const anchor = siteInstruction.dueAt!;
+      const anchorDay = startOfDay(anchor);
+      if (!inWindow(anchorDay)) continue;
+
+      items.push({
+        id: siteInstruction.id,
+        type: "site-instruction",
+        projectId: project.id,
+        projectName: project.name,
+        headline: `${siteInstruction.reference} — ${siteInstruction.title}`,
+        detail: `Response due ${formatShortDate(anchor, today)}`,
+        date: anchor,
+        isOverdue: anchorDay.getTime() < today.getTime(),
+        href: `/projects/${project.id}/updates`,
+        canComplete: true,
+        rescheduleField: "dueAt"
+      });
+    }
+
+    if (project.nextClaimDate) {
+      const anchor = project.nextClaimDate;
+      const anchorDay = startOfDay(anchor);
+      if (inWindow(anchorDay)) {
+        items.push({
+          id: `claim-${project.id}`,
+          type: "payment-claim",
+          projectId: project.id,
+          projectName: project.name,
+          headline: "Payment Claim due",
+          detail: `Due ${formatShortDate(anchor, today)}`,
+          date: anchor,
+          isOverdue: anchorDay.getTime() < today.getTime(),
+          href: `/projects/${project.id}/payment-claims`,
+          canComplete: false,
+          rescheduleField: "nextClaimDate"
+        });
+      }
+    }
+
+    for (const document of project.safetyDocuments) {
+      const anchor = document.expiresAt!;
+      const anchorDay = startOfDay(anchor);
+      if (!inWindow(anchorDay)) continue;
+
+      const isOverdue = anchorDay.getTime() < today.getTime();
+      items.push({
+        id: document.id,
+        type: "safety-document",
+        projectId: project.id,
+        projectName: project.name,
+        headline: document.title,
+        detail: `${isOverdue ? "Expired" : "Expiring"} ${formatShortDate(anchor, today)}`,
+        date: anchor,
+        isOverdue,
+        href: `/projects/${project.id}/health-safety`,
+        canComplete: false,
+        rescheduleField: "expiresAt"
+      });
+    }
+  }
+
+  items.sort((a, b) => {
+    if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+    return a.date.getTime() - b.date.getTime();
+  });
+
+  return items;
+}

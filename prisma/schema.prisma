@@ -117,6 +117,7 @@ model Project {
   inboundEmails      InboundEmail[]
   updates            Update[]
   siteInstructions   SiteInstruction[]
+  safetyDocuments    SafetyDocument[]
 }
 
 model ProjectMember {
@@ -380,6 +381,19 @@ model SiteInstruction {
 
   project     Project                @relation(fields: [projectId], references: [id])
   updates     Update[]
+}
+
+model SafetyDocument {
+  id         String    @id @default(cuid())
+  projectId  String
+  title      String
+  notes      String?
+  fileName   String?
+  storageKey String?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  project    Project   @relation(fields: [projectId], references: [id])
 }
 
 model PushSubscription {

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: "Programme", segment: "programme" },
   { label: "Payment Claims", segment: "payment-claims" },
   { label: "Evidence", segment: "evidence" },
+  { label: "Health & Safety", segment: "health-safety" },
   { label: "Settings", segment: "settings" }
 ];
 

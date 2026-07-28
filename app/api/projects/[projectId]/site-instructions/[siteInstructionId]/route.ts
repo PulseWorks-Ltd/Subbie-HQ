@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireProjectAccess, requireUserId } from "@/lib/auth";
 
 const updateSiteInstructionSchema = z.object({
-  status: z.enum(["open", "complete"])
+  status: z.enum(["open", "complete"]).optional(),
+  dueAt: z.string().datetime().optional()
 });
 
 export async function PATCH(
@@ -25,7 +26,10 @@ export async function PATCH(
 
   const siteInstruction = await prisma.siteInstruction.update({
     where: { id: siteInstructionId, projectId },
-    data: { status: payload.status }
+    data: {
+      status: payload.status,
+      dueAt: payload.dueAt ? new Date(payload.dueAt) : undefined
+    }
   });
 
   return NextResponse.json({ siteInstruction });

@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getLaunchpadProjects } from "@/lib/launchpad";
-import { LaunchpadView } from "@/components/launchpad/launchpad-view";
+import { getDashboardFeed } from "@/lib/dashboard";
+import { DashboardView } from "@/components/dashboard/dashboard-view";
 
-export default async function HomePage() {
+export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
   }
 
-  const projects = await getLaunchpadProjects(session.user.id);
+  const items = await getDashboardFeed(session.user.id);
 
-  return <LaunchpadView initialProjects={projects} />;
+  return <DashboardView initialItems={items} />;
 }

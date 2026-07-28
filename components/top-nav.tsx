@@ -6,7 +6,8 @@ import { signOut } from "next-auth/react";
 
 export function TopNav({ userName, userEmail }: { userName: string | null; userEmail: string }) {
   const pathname = usePathname();
-  const isLaunchpad = pathname === "/";
+  const isDashboard = pathname === "/";
+  const isProjects = pathname === "/projects";
   const initial = (userName ?? userEmail).charAt(0).toUpperCase();
 
   return (
@@ -22,10 +23,19 @@ export function TopNav({ userName, userEmail }: { userName: string | null; userE
         <Link
           href="/"
           className={`text-sm font-bold pb-1 border-b-2 ${
-            isLaunchpad ? "text-primary border-primary" : "text-[#4c739a] dark:text-slate-400 border-transparent hover:text-primary"
+            isDashboard ? "text-primary border-primary" : "text-[#4c739a] dark:text-slate-400 border-transparent hover:text-primary"
           }`}
         >
-          Launchpad
+          Dashboard
+        </Link>
+        <Link
+          href="/projects"
+          className={`text-sm font-bold pb-1 border-b-2 flex items-center gap-1.5 ${
+            isProjects ? "text-primary border-primary" : "text-[#4c739a] dark:text-slate-400 border-transparent hover:text-primary"
+          }`}
+        >
+          <span className="material-symbols-outlined text-lg">apartment</span>
+          Projects
         </Link>
       </div>
 

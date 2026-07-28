@@ -1,0 +1,31 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireProjectAccess, requireUserId } from "@/lib/auth";
+import { getSignedDownloadUrl } from "@/lib/s3";
+
+export async function GET(
+  request: Request,
+  context: { params: { projectId: string; safetyDocumentId: string } }
+) {
+  const userId = await requireUserId(request);
+  const { projectId, safetyDocumentId } = context.params;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const hasAccess = await requireProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const safetyDocument = await prisma.safetyDocument.findFirst({
+    where: { id: safetyDocumentId, projectId }
+  });
+
+  if (!safetyDocument?.storageKey) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const signedUrl = await getSignedDownloadUrl(safetyDocument.storageKey);
+
+  return NextResponse.redirect(signedUrl);
+}

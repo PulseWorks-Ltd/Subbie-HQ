@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { StagingBanner } from "@/components/staging-banner";
 import { themeInitScript } from "@/lib/theme-script";
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-background-light text-[#0d141b] dark:bg-background-dark dark:text-slate-50 min-h-screen">
+        <StagingBanner />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

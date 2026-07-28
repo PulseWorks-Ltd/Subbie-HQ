@@ -78,7 +78,8 @@ model User {
   name          String?
   createdAt     DateTime        @default(now())
   memberships   ProjectMember[]
-  organisations Organisation[]  @relation("OrganisationOwners")
+  organisationMemberships OrganisationMember[]
+  sentInvites   OrganisationInvite[]
   updates       Update[]
   pushSubscriptions PushSubscription[]
 }
@@ -87,8 +88,41 @@ model Organisation {
   id        String     @id @default(cuid())
   name      String
   createdAt DateTime   @default(now())
-  owners    User[]     @relation("OrganisationOwners")
+  members   OrganisationMember[]
+  invites   OrganisationInvite[]
   projects  Project[]
+}
+
+model OrganisationMember {
+  id             String       @id @default(cuid())
+  organisationId String
+  userId         String
+  title          String?
+  isAdmin        Boolean      @default(false)
+  modules        Json         @default("{}")
+  createdAt      DateTime     @default(now())
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([organisationId, userId])
+}
+
+model OrganisationInvite {
+  id              String       @id @default(cuid())
+  organisationId  String
+  email           String
+  title           String?
+  isAdmin         Boolean      @default(false)
+  modules         Json         @default("{}")
+  token           String       @unique @default(cuid())
+  invitedByUserId String
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime     @default(now())
+
+  organisation    Organisation @relation(fields: [organisationId], references: [id])
+  invitedBy       User         @relation(fields: [invitedByUserId], references: [id])
 }
 
 model Project {

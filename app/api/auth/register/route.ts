@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { PRESETS } from "@/lib/permissions";
 
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -24,7 +25,19 @@ export async function POST(request: Request) {
     data: {
       email,
       name: payload.name,
-      passwordHash
+      passwordHash,
+      organisationMemberships: {
+        create: {
+          isAdmin: true,
+          title: PRESETS.admin.label,
+          modules: PRESETS.admin.modules,
+          organisation: {
+            create: {
+              name: `${payload.name}'s Organisation`
+            }
+          }
+        }
+      }
     },
     select: { id: true, email: true, name: true }
   });

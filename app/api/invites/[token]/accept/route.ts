@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/auth";
+
+const acceptInviteSchema = z.object({
+  name: z.string().min(1).optional(),
+  password: z.string().min(8).optional()
+});
+
+export async function POST(request: Request, context: { params: { token: string } }) {
+  const invite = await prisma.organisationInvite.findUnique({
+    where: { token: context.params.token }
+  });
+
+  if (!invite || invite.acceptedAt || invite.expiresAt < new Date()) {
+    return NextResponse.json({ error: "This invite link is invalid or has expired." }, { status: 404 });
+  }
+
+  const payload = acceptInviteSchema.parse(await request.json().catch(() => ({})));
+  const existingUser = await prisma.user.findUnique({ where: { email: invite.email } });
+
+  let userId: string;
+
+  if (existingUser) {
+    const sessionUserId = await requireUserId(request);
+    if (sessionUserId !== existingUser.id) {
+      return NextResponse.json(
+        { error: "An account already exists for this email. Please log in first, then open this invite link again." },
+        { status: 409 }
+      );
+    }
+    userId = existingUser.id;
+  } else {
+    if (!payload.name || !payload.password) {
+      return NextResponse.json({ error: "Name and password are required." }, { status: 400 });
+    }
+    const passwordHash = await bcrypt.hash(payload.password, 10);
+    const user = await prisma.user.create({
+      data: { email: invite.email, name: payload.name, passwordHash }
+    });
+    userId = user.id;
+  }
+
+  const existingMembership = await prisma.organisationMember.findUnique({
+    where: { organisationId_userId: { organisationId: invite.organisationId, userId } }
+  });
+
+  if (!existingMembership) {
+    await prisma.organisationMember.create({
+      data: {
+        organisationId: invite.organisationId,
+        userId,
+        title: invite.title,
+        isAdmin: invite.isAdmin,
+        modules: invite.modules as object
+      }
+    });
+  }
+
+  await prisma.organisationInvite.update({
+    where: { id: invite.id },
+    data: { acceptedAt: new Date() }
+  });
+
+  return NextResponse.json({ ok: true, isNewAccount: !existingUser });
+}

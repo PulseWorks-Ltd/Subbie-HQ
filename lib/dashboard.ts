@@ -108,7 +108,7 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
         detail: `${phase === "starting" ? "Starting" : "Due"} ${formatShortDate(anchor, today)}`,
         date: anchor,
         isOverdue: phase === "due" && anchorDay.getTime() < today.getTime(),
-        href: `/projects/${project.id}/programme`,
+        href: `/projects/${project.id}/scope-programme?tab=programme`,
         canComplete: true,
         rescheduleField: phase === "starting" ? "startDate" : "endDate"
       });

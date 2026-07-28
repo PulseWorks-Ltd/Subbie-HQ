@@ -33,6 +33,11 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   // lib/dashboard.ts / variation-items routes) — no nav item uses this module today,
   // since Pictures + Correspondence replaced the old Evidence placeholder page.
   evidence: "Evidence",
+  // Gates the global, organisation-level Insurance page (app/(app)/insurance)
+  // — not any project route. Company insurance certificates apply across
+  // every project, so this module isn't checked via requireModuleAccess
+  // (which is project-scoped); it's checked directly against the
+  // OrganisationMember row via hasModuleAccess.
   insurance: "Insurance",
   quoting: "Quoting"
 };

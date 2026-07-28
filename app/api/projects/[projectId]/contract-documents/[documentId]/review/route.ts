@@ -229,37 +229,6 @@ export async function POST(
       }
     });
 
-    // Replace any not-yet-confirmed suggestions from a prior review of this
-    // same document — never touch rows the human has already confirmed, and
-    // never re-suggest a type that already has a confirmed row for this
-    // project (avoids a duplicate card for the same insurance type).
-    const confirmedTypes = await prisma.insuranceRequirement.findMany({
-      where: { projectId, status: "confirmed" },
-      select: { type: true }
-    });
-    const confirmedTypeSet = new Set(confirmedTypes.map((r) => r.type));
-
-    await prisma.insuranceRequirement.deleteMany({
-      where: { projectId, sourceDocumentId: documentId, status: "parsed" }
-    });
-    const newInsuranceRequirements = extractedTerms.insuranceRequirements.filter((r) => !confirmedTypeSet.has(r.type));
-    if (newInsuranceRequirements.length > 0) {
-      await prisma.insuranceRequirement.createMany({
-        data: newInsuranceRequirements.map((r) => ({
-          projectId,
-          type: r.type,
-          label: r.label,
-          required: r.required,
-          minimumAmount: r.minimumAmount ?? undefined,
-          status: "parsed",
-          confidence: 0.7,
-          sourceDocumentId: documentId,
-          sourceContractReviewId: review.id,
-          sourcePage: r.sourcePage
-        }))
-      });
-    }
-
     const fullReview = await prisma.contractReview.findUnique({
       where: { id: review.id },
       include: { deviations: { orderBy: { priorityScore: "desc" } } }

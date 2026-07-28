@@ -354,20 +354,6 @@ export async function synthesizeContractReview(
   return SynthesisResultSchema.parse(JSON.parse(raw));
 }
 
-const ExtractedInsuranceRequirementSchema = z.object({
-  type: z.enum([
-    "contract_works",
-    "plant_and_equipment",
-    "public_liability",
-    "motor_vehicle_liability",
-    "professional_indemnity",
-    "other"
-  ]),
-  label: z.string(),
-  required: z.boolean(),
-  minimumAmount: z.number().nullable(),
-  sourcePage: z.number().int().nullable()
-});
 const ExtractedContractTermsSchema = z.object({
   paymentClaimMethod: z.string().nullable(),
   paymentClaimDay: z.number().int().nullable(),
@@ -376,15 +362,18 @@ const ExtractedContractTermsSchema = z.object({
   retentionPercent: z.number().nullable(),
   defectsLiabilityPeriodDays: z.number().int().nullable(),
   disputeNoticeMethod: z.string().nullable(),
-  generalNoticeMethod: z.string().nullable(),
-  insuranceRequirements: z.array(ExtractedInsuranceRequirementSchema)
+  generalNoticeMethod: z.string().nullable()
 });
 
 export type ExtractedContractTerms = z.infer<typeof ExtractedContractTermsSchema>;
 
 // Runs on the already-extracted Clause[] from Step 0 (no new PDF parsing) —
 // pure fact extraction, not comparison, so one call is enough (matches
-// extractProgrammeFromText's complexity level).
+// extractProgrammeFromText's complexity level). Insurance requirements
+// (types/minimum amounts) are deliberately not extracted here — they're
+// already surfaced as part of the deviation report's indemnity_insurance
+// bucket comparison, and there's no InsuranceRequirement model to store a
+// separate structured extraction in (see subbie_hq_insurance_and_nav memory).
 export async function extractContractTermsFromClauses(
   clauses: { clauseRef: string; title: string | null; body: string; pageNumber: number | null }[]
 ): Promise<ExtractedContractTerms> {
@@ -401,7 +390,7 @@ export async function extractContractTermsFromClauses(
         content:
           "You extract actionable reference data from a construction subcontract agreement's clauses, for a subcontractor's project settings. " +
           "Respond with only a JSON object matching this exact shape: " +
-          '{"paymentClaimMethod": string | null, "paymentClaimDay": number | null, "variationNoticePeriodDays": number | null, "variationNoticeMethod": string | null, "retentionPercent": number | null, "defectsLiabilityPeriodDays": number | null, "disputeNoticeMethod": string | null, "generalNoticeMethod": string | null, "insuranceRequirements": [{"type": "contract_works" | "plant_and_equipment" | "public_liability" | "motor_vehicle_liability" | "professional_indemnity" | "other", "label": string, "required": boolean, "minimumAmount": number | null, "sourcePage": number | null}]}. ' +
+          '{"paymentClaimMethod": string | null, "paymentClaimDay": number | null, "variationNoticePeriodDays": number | null, "variationNoticeMethod": string | null, "retentionPercent": number | null, "defectsLiabilityPeriodDays": number | null, "disputeNoticeMethod": string | null, "generalNoticeMethod": string | null}. ' +
           "paymentClaimMethod: how/where payment claims must be submitted (e.g. 'email to accounts@...', 'post to registered office'), or null if not stated. " +
           "paymentClaimDay: the day of the month payment claims are due, if a fixed day is stated, else null. " +
           "variationNoticePeriodDays: the number of days' notice required for a variation claim/instruction, if stated, else null. " +
@@ -409,8 +398,7 @@ export async function extractContractTermsFromClauses(
           "retentionPercent: the retention percentage withheld from payments, if stated, else null. " +
           "defectsLiabilityPeriodDays: the defects liability period in days, if stated (convert months/years to days), else null. " +
           "disputeNoticeMethod: how a notice of dispute must be given, if stated, else null. " +
-          "generalNoticeMethod: the default/general method for serving notices under the contract (e.g. post, fax, hand delivery, email), if stated, else null. " +
-          "insuranceRequirements: every distinct insurance requirement stated (Contract Works, Plant & Equipment, Public Liability, Motor Vehicle Liability, Professional Indemnity, or other) — type: the closest matching category; label: a short description as stated in the document; required: whether it's mandatory; minimumAmount: the minimum cover amount in dollars if stated (numeric, no currency symbol), else null; sourcePage: the page it's stated on if known, else null. Only include requirements actually stated in the clauses provided — do not invent typical amounts."
+          "generalNoticeMethod: the default/general method for serving notices under the contract (e.g. post, fax, hand delivery, email), if stated, else null."
       },
       { role: "user", content: documentText }
     ]

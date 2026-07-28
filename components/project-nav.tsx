@@ -13,15 +13,13 @@ const NAV_ITEMS: {
 }[] = [
   { label: "Overview", segment: "", module: null },
   { label: "Updates", segment: "updates", module: "updates" },
-  { label: "Contract", segment: "contract", module: "contract" },
-  { label: "Scope", segment: "scope", module: "scope" },
-  { label: "Programme", segment: "programme", module: "programme" },
+  { label: "Scope & Programme", segment: "scope-programme", module: null, anyOfModules: ["scope", "programme"] },
   { label: "Variations", segment: "variations", module: null, anyOfModules: ["variations", "site_instructions"] },
   { label: "Payment Claims", segment: "payment-claims", module: "payment_claims" },
-  { label: "Insurance", segment: "insurance", module: "insurance" },
+  { label: "Health & Safety", segment: "health-safety", module: "health_safety" },
   { label: "Pictures", segment: "pictures", module: "pictures" },
   { label: "Correspondence", segment: "correspondence", module: "correspondence" },
-  { label: "Health & Safety", segment: "health-safety", module: "health_safety" },
+  { label: "Contract", segment: "contract", module: "contract" },
   { label: "Settings", segment: "settings", module: null, adminOnly: true }
 ];
 

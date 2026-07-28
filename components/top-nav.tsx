@@ -8,16 +8,19 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export function TopNav({
   userName,
   userEmail,
-  isOrganisationAdmin
+  isOrganisationAdmin,
+  canSeeInsurance
 }: {
   userName: string | null;
   userEmail: string;
   isOrganisationAdmin: boolean;
+  canSeeInsurance: boolean;
 }) {
   const pathname = usePathname();
   const isDashboard = pathname === "/";
   const isProjects = pathname === "/projects";
   const isTeam = pathname === "/team";
+  const isInsurance = pathname === "/insurance";
   const initial = (userName ?? userEmail).charAt(0).toUpperCase();
 
   return (
@@ -56,6 +59,17 @@ export function TopNav({
           >
             <span className="material-symbols-outlined text-lg">group</span>
             Team
+          </Link>
+        )}
+        {canSeeInsurance && (
+          <Link
+            href="/insurance"
+            className={`text-sm font-bold pb-1 border-b-2 flex items-center gap-1.5 ${
+              isInsurance ? "text-primary border-primary" : "text-[#4c739a] dark:text-slate-400 border-transparent hover:text-primary"
+            }`}
+          >
+            <span className="material-symbols-outlined text-lg">shield</span>
+            Insurance
           </Link>
         )}
       </div>

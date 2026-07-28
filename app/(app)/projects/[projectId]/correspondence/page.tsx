@@ -51,7 +51,11 @@ export default async function CorrespondencePage({ params }: { params: Promise<{
       title: item.title,
       subtitle: item.fileName,
       body: null,
-      fileHref: item.storageKey ? `/api/projects/${projectId}/correspondence/${item.id}/file` : null,
+      fileHref: item.storageKey
+        ? `/api/projects/${projectId}/correspondence/${item.id}/file`
+        : item.sourceInsuranceCertificateId
+          ? `/api/organisation/insurance-certificates/${item.sourceInsuranceCertificateId}/file`
+          : null,
       linkedItem: item.variationItem,
       date: item.createdAt,
       deletable: true

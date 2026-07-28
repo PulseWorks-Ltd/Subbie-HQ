@@ -104,21 +104,28 @@ enum ContractReviewStatus {
   failed
 }
 
+enum InsuranceCertificateType {
+  public_liability
+  contract_works
+  professional_indemnity
+  vehicle
+  other
+}
+
+// Separate from ReminderStage (which models 4-stage due-date countdowns) —
+// certificate expiry only needs a single "renewal needed soon" heads-up plus
+// a distinct "now expired" state if it lapses unrenewed.
+enum InsuranceReminderStage {
+  six_week
+  expired
+}
+
 enum DeviationClassification {
   matches_standard
   minor_deviation
   major_deviation
   missing_from_subcontract
   additional_in_subcontract
-}
-
-enum InsuranceRequirementType {
-  contract_works
-  plant_and_equipment
-  public_liability
-  motor_vehicle_liability
-  professional_indemnity
-  other
 }
 
 model User {
@@ -142,6 +149,7 @@ model Organisation {
   members   OrganisationMember[]
   invites   OrganisationInvite[]
   projects  Project[]
+  insuranceCertificates InsuranceCertificate[]
 }
 
 model OrganisationMember {
@@ -206,7 +214,7 @@ model Project {
   correspondence     Correspondence[]
   contractReviews    ContractReview[]
   contractTerms      ContractTerms?
-  insuranceRequirements InsuranceRequirement[]
+  insuranceDistributions InsuranceDistribution[]
 }
 
 model ProjectMember {
@@ -240,7 +248,6 @@ model ContractDocument {
   programmeItems ProgrammeItem[]
   reviews     ContractReview[]
   contractTermsSourced ContractTerms[]
-  insuranceRequirementsSourced InsuranceRequirement[]
 }
 
 model Clause {
@@ -336,32 +343,39 @@ model ContractTerms {
   sourceDocument ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
 }
 
-// Insurance requirements extracted from the contract (or entered manually).
-// AI-created rows start "parsed" and a human confirms them, same
-// status-lifecycle pattern as ProgrammeItem — this is a list of rows, not
-// scalar fields, so shadow-value doesn't fit here.
-model InsuranceRequirement {
-  id                     String    @id @default(cuid())
+// Company-level insurance — deliberately NOT project-scoped. A subcontractor
+// holds one Public Liability/Contract Works/etc. policy that applies across
+// every project they work on, not a separate one per project.
+model InsuranceCertificate {
+  id             String                   @id @default(cuid())
+  organisationId String
+  type           InsuranceCertificateType
+  provider       String
+  policyNumber   String?
+  expiryAt       DateTime?
+  fileName       String?
+  storageKey     String?
+  lastReminderStage InsuranceReminderStage?
+  createdAt      DateTime                 @default(now())
+
+  organisation  Organisation             @relation(fields: [organisationId], references: [id])
+  distributions InsuranceDistribution[]
+  correspondence Correspondence[]
+}
+
+// Tracks which projects have received a given certificate — the "paper
+// trail" record. The certificate file itself is never copied per-project;
+// distributing it just creates this record (+ a referencing Correspondence
+// row in that project, see Correspondence.sourceInsuranceCertificateId).
+model InsuranceDistribution {
+  id                     String   @id @default(cuid())
+  insuranceCertificateId String
   projectId              String
-  type                   InsuranceRequirementType
-  label                  String
-  required               Boolean   @default(true)
-  minimumAmount          Decimal?
-  status                 ItemStatus @default(parsed)
-  confidence             Float?    @default(0)
-  sourceDocumentId       String?
-  sourceContractReviewId String?
-  sourcePage             Int?
+  sentAt                 DateTime @default(now())
+  note                   String?
 
-  certificateFileName    String?
-  certificateStorageKey  String?
-  certificateExpiresAt   DateTime?
-  lastReminderStage      ReminderStage?
-
-  createdAt DateTime @default(now())
-
-  project        Project           @relation(fields: [projectId], references: [id])
-  sourceDocument ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
+  insuranceCertificate InsuranceCertificate @relation(fields: [insuranceCertificateId], references: [id])
+  project              Project              @relation(fields: [projectId], references: [id])
 }
 
 model ScopeItem {
@@ -623,11 +637,16 @@ model Correspondence {
   storageKey      String?
   source          CorrespondenceSource @default(upload)
   inboundEmailId  String?              @unique
+  // Set when this row records an Insurance certificate being sent to the
+  // project — references the certificate rather than duplicating its file
+  // (see InsuranceCertificate). fileName/storageKey stay null on these rows.
+  sourceInsuranceCertificateId String?
   createdAt       DateTime             @default(now())
 
   project         Project              @relation(fields: [projectId], references: [id])
   variationItem   VariationItem?       @relation(fields: [variationItemId], references: [id])
   inboundEmail    InboundEmail?        @relation(fields: [inboundEmailId], references: [id])
+  sourceInsuranceCertificate InsuranceCertificate? @relation(fields: [sourceInsuranceCertificateId], references: [id])
 }
 
 model SafetyDocument {

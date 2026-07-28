@@ -1,8 +1,9 @@
-import type { ReminderStage } from "@prisma/client";
+import type { InsuranceReminderStage, ReminderStage } from "@prisma/client";
 import { prisma } from "./prisma";
 import { sendReminderEmail } from "./email";
 import { sendPushToUser } from "./push";
 import { hasModuleAccess, type ModuleKey } from "./permissions";
+import { INSURANCE_TYPE_LABELS } from "./insurance-labels";
 
 // Stage order matters: a run only sends a reminder if the newly-computed
 // stage ranks strictly higher than the last one sent, so a nightly run never
@@ -48,6 +49,27 @@ function daysBetween(from: Date, to: Date) {
 
 function baseUrl() {
   return process.env.AUTH_URL ?? "";
+}
+
+// Insurance certificates get their own, simpler 2-stage schedule (6 weeks
+// out, then expired) rather than the 4-stage due-date countdown above —
+// company-level renewal only needs a heads-up and a "this has now lapsed"
+// state, not a daily countdown.
+const INSURANCE_STAGE_ORDER: InsuranceReminderStage[] = ["six_week", "expired"];
+
+function insuranceStageRank(stage: InsuranceReminderStage | null): number {
+  if (!stage) return -1;
+  return INSURANCE_STAGE_ORDER.indexOf(stage);
+}
+
+function insuranceStageForDaysUntil(daysUntil: number): InsuranceReminderStage | null {
+  if (daysUntil < 0) return "expired";
+  if (daysUntil <= 42) return "six_week";
+  return null;
+}
+
+function insuranceStageLabel(stage: InsuranceReminderStage): string {
+  return stage === "six_week" ? "renewal needed soon" : "expired";
 }
 
 type RecipientTarget = { userId: string; email: string };
@@ -101,6 +123,7 @@ async function notifyRecipients(
 export type ReminderRunSummary = {
   checkedVariationItems: number;
   checkedSafetyDocuments: number;
+  checkedInsuranceCertificates: number;
   remindersSent: number;
   details: string[];
 };
@@ -110,6 +133,7 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
   const summary: ReminderRunSummary = {
     checkedVariationItems: 0,
     checkedSafetyDocuments: 0,
+    checkedInsuranceCertificates: 0,
     remindersSent: 0,
     details: []
   };
@@ -123,6 +147,10 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
       // here too, gated by the "payment_claims" module — same staged
       // 3-day/1-day/due-today/overdue pattern, needs its own
       // lastReminderStage-equivalent field on whatever tracks claim due dates.
+      // TODO: Payment Claims may also eventually want to reference "is our
+      // insurance currently up to date" as a compliance check before a claim
+      // is submitted — query Organisation.insuranceCertificates for any
+      // expired/expiring-soon rows at claim-generation time. Not built now.
       variationItems: {
         where: { dueAt: { not: null }, status: { not: "complete" } },
         select: { id: true, type: true, reference: true, title: true, dueAt: true, lastReminderStage: true }
@@ -189,8 +217,48 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
     }
   }
 
+  // Insurance certificates are company-level, not project-scoped — looped
+  // over organisations directly rather than via the project list above, and
+  // notified straight to org Admins (not gated by any project module).
+  const organisations = await prisma.organisation.findMany({
+    select: {
+      id: true,
+      name: true,
+      insuranceCertificates: { where: { expiryAt: { not: null } } },
+      members: { where: { isAdmin: true }, include: { user: { select: { id: true, email: true } } } }
+    }
+  });
+
+  for (const organisation of organisations) {
+    const admins: RecipientTarget[] = organisation.members.map((member) => ({
+      userId: member.user.id,
+      email: member.user.email
+    }));
+
+    for (const certificate of organisation.insuranceCertificates) {
+      summary.checkedInsuranceCertificates++;
+      if (!certificate.expiryAt) continue;
+
+      const stage = insuranceStageForDaysUntil(daysBetween(today, certificate.expiryAt));
+      if (!stage || insuranceStageRank(stage) <= insuranceStageRank(certificate.lastReminderStage)) continue;
+
+      const typeLabel = INSURANCE_TYPE_LABELS[certificate.type] ?? certificate.type;
+      const headline = `${typeLabel} insurance — ${certificate.provider}`;
+      const detail = `Certificate ${insuranceStageLabel(stage)}`;
+      const itemUrl = `${baseUrl()}/insurance`;
+
+      await notifyRecipients(admins, { subject: headline, headline, detail, projectName: organisation.name, itemUrl });
+      await prisma.insuranceCertificate.update({ where: { id: certificate.id }, data: { lastReminderStage: stage } });
+
+      summary.remindersSent += admins.length;
+      summary.details.push(
+        `InsuranceCertificate ${certificate.id} (${typeLabel} — ${certificate.provider}): stage=${stage}, recipients=${admins.length}`
+      );
+    }
+  }
+
   console.log(
-    `[reminders] checked ${summary.checkedVariationItems} variation items, ${summary.checkedSafetyDocuments} safety documents; sent ${summary.remindersSent} notifications`
+    `[reminders] checked ${summary.checkedVariationItems} variation items, ${summary.checkedSafetyDocuments} safety documents, ${summary.checkedInsuranceCertificates} insurance certificates; sent ${summary.remindersSent} notifications`
   );
   for (const line of summary.details) {
     console.log(`[reminders] ${line}`);

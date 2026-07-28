@@ -1,4 +1,13 @@
 import { prisma } from "./prisma";
+import { getOrganisationMembership } from "./organisation";
+import { hasModuleAccess, type ModuleKey } from "./permissions";
+
+const MODULE_FOR_TYPE: Record<DashboardItemType, ModuleKey> = {
+  programme: "programme",
+  "site-instruction": "site_instructions",
+  "payment-claim": "payment_claims",
+  "safety-document": "health_safety"
+};
 
 export type DashboardItemType = "programme" | "site-instruction" | "payment-claim" | "safety-document";
 export type DashboardRescheduleField = "startDate" | "endDate" | "dueAt" | "nextClaimDate" | "expiresAt";
@@ -39,8 +48,15 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
   const windowEnd = new Date(today);
   windowEnd.setDate(windowEnd.getDate() + WINDOW_DAYS);
 
+  const membership = await getOrganisationMembership(userId);
+
   const projects = await prisma.project.findMany({
-    where: { members: { some: { userId } } },
+    where: {
+      OR: [
+        ...(membership ? [{ organisationId: membership.organisationId }] : []),
+        { organisationId: null, members: { some: { userId } } }
+      ]
+    },
     include: {
       programmeItems: { where: { completedAt: null } },
       siteInstructions: { where: { status: "open", dueAt: { not: null } } },
@@ -54,8 +70,18 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
     return day.getTime() <= windowEnd.getTime();
   }
 
+  function canSeeType(project: { organisationId: string | null }, type: DashboardItemType) {
+    if (!project.organisationId) return true;
+    return hasModuleAccess(membership, MODULE_FOR_TYPE[type]);
+  }
+
   for (const project of projects) {
-    for (const item of project.programmeItems) {
+    const canSeeProgramme = canSeeType(project, "programme");
+    const canSeeSiteInstructions = canSeeType(project, "site-instruction");
+    const canSeePaymentClaims = canSeeType(project, "payment-claim");
+    const canSeeSafetyDocuments = canSeeType(project, "safety-document");
+
+    for (const item of canSeeProgramme ? project.programmeItems : []) {
       if (!item.startDate && !item.endDate) continue;
 
       let anchor: Date;
@@ -86,7 +112,7 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
       });
     }
 
-    for (const siteInstruction of project.siteInstructions) {
+    for (const siteInstruction of canSeeSiteInstructions ? project.siteInstructions : []) {
       const anchor = siteInstruction.dueAt!;
       const anchorDay = startOfDay(anchor);
       if (!inWindow(anchorDay)) continue;
@@ -106,7 +132,7 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
       });
     }
 
-    if (project.nextClaimDate) {
+    if (project.nextClaimDate && canSeePaymentClaims) {
       const anchor = project.nextClaimDate;
       const anchorDay = startOfDay(anchor);
       if (inWindow(anchorDay)) {
@@ -126,7 +152,7 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
       }
     }
 
-    for (const document of project.safetyDocuments) {
+    for (const document of canSeeSafetyDocuments ? project.safetyDocuments : []) {
       const anchor = document.expiresAt!;
       const anchorDay = startOfDay(anchor);
       if (!inWindow(anchorDay)) continue;

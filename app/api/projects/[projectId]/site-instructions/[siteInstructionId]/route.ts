@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireProjectAccess, requireUserId } from "@/lib/auth";
+import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 
 const updateSiteInstructionSchema = z.object({
   status: z.enum(["open", "complete"]).optional(),
@@ -19,6 +19,11 @@ export async function PATCH(
   }
   const hasAccess = await requireProjectAccess(projectId, userId);
   if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const canAccessModule = await requireModuleAccess(projectId, userId, "site_instructions");
+  if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

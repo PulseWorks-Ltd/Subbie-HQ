@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireProjectAccess, requireUserId } from "@/lib/auth";
+import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { generateInvoicePdf } from "@/lib/pdf";
 import { uploadToS3 } from "@/lib/s3";
 
@@ -19,6 +19,11 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
   const hasAccess = await requireProjectAccess(projectId, userId);
   if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const canAccessModule = await requireModuleAccess(projectId, userId, "payment_claims");
+  if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

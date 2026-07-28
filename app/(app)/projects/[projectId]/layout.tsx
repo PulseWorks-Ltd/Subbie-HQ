@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { requireProjectAccess } from "@/lib/auth";
+import { getOrganisationMembership } from "@/lib/organisation";
 import { ProjectNav } from "@/components/project-nav";
 
 export default async function ProjectLayout({
@@ -17,13 +19,17 @@ export default async function ProjectLayout({
 
   const { projectId } = await params;
 
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, members: { some: { userId: session.user.id } } }
-  });
-
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) {
     notFound();
   }
+
+  const hasAccess = await requireProjectAccess(projectId, session.user.id);
+  if (!hasAccess) {
+    notFound();
+  }
+
+  const membership = project.organisationId ? await getOrganisationMembership(session.user.id) : null;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
@@ -35,7 +41,12 @@ export default async function ProjectLayout({
       </header>
 
       <div className="flex gap-8">
-        <ProjectNav projectId={project.id} />
+        <ProjectNav
+          projectId={project.id}
+          unrestricted={!project.organisationId}
+          isAdmin={membership?.isAdmin ?? false}
+          modules={(membership?.modules as Record<string, boolean> | undefined) ?? {}}
+        />
         <div className="flex-1 min-w-0">{children}</div>
       </div>
     </div>

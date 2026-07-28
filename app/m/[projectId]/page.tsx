@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { requireModuleAccess, requireProjectAccess } from "@/lib/auth";
 import { MobileUpdatesView } from "@/components/mobile/mobile-updates-view";
 
 export default async function MobileProjectUpdatesPage({
@@ -11,10 +12,13 @@ export default async function MobileProjectUpdatesPage({
   const session = await auth();
   const { projectId } = await params;
 
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, members: { some: { userId: session!.user.id } } }
-  });
+  const hasAccess = await requireProjectAccess(projectId, session!.user.id);
+  const canAccessUpdates = hasAccess && (await requireModuleAccess(projectId, session!.user.id, "updates"));
+  if (!canAccessUpdates) {
+    notFound();
+  }
 
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) {
     notFound();
   }

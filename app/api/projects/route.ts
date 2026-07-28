@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
+import { getOrganisationMembership, getVisibleProjectsWhere } from "@/lib/organisation";
 
 const createProjectSchema = z.object({
   name: z.string().min(1),
-  code: z.string().optional(),
-  organisationId: z.string().optional()
+  code: z.string().optional()
 });
 
 export async function GET(request: Request) {
@@ -16,11 +16,7 @@ export async function GET(request: Request) {
   }
 
   const projects = await prisma.project.findMany({
-    where: {
-      members: {
-        some: { userId }
-      }
-    },
+    where: await getVisibleProjectsWhere(userId),
     orderBy: { createdAt: "desc" }
   });
 
@@ -34,11 +30,16 @@ export async function POST(request: Request) {
   }
   const payload = createProjectSchema.parse(await request.json());
 
+  const membership = await getOrganisationMembership(userId);
+  if (membership && !membership.isAdmin) {
+    return NextResponse.json({ error: "Only an organisation Admin can create new projects." }, { status: 403 });
+  }
+
   const project = await prisma.project.create({
     data: {
       name: payload.name,
       code: payload.code,
-      organisationId: payload.organisationId,
+      organisationId: membership?.organisationId,
       members: {
         create: {
           userId,

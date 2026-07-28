@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { getVisibleProjectsWhere } from "./organisation";
 
 function computeRiskLevel(levels: string[]) {
   if (levels.includes("high")) return "high";
@@ -29,11 +30,7 @@ export async function getLaunchpadProjects(userId: string): Promise<LaunchpadPro
   };
 
   const projects = (await prisma.project.findMany({
-    where: {
-      members: {
-        some: { userId }
-      }
-    },
+    where: await getVisibleProjectsWhere(userId),
     include: {
       clauses: {
         select: { riskLevel: true }

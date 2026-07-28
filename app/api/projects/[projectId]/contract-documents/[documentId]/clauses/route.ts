@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireProjectAccess, requireUserId } from "@/lib/auth";
+import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 
 const createClauseSchema = z.object({
   clauseRef: z.string().min(1),
@@ -27,6 +27,11 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const canAccessModule = await requireModuleAccess(projectId, userId, "contract");
+  if (!canAccessModule) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const clauses = await prisma.clause.findMany({
     where: { projectId, documentId },
     orderBy: { createdAt: "desc" }
@@ -46,6 +51,11 @@ export async function POST(
   }
   const hasAccess = await requireProjectAccess(projectId, userId);
   if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const canAccessModule = await requireModuleAccess(projectId, userId, "contract");
+  if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

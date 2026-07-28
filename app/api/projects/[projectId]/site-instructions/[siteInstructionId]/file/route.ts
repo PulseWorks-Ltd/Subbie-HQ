@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireProjectAccess, requireUserId } from "@/lib/auth";
+import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { getSignedDownloadUrl } from "@/lib/s3";
 
 export async function GET(
@@ -14,6 +14,11 @@ export async function GET(
   }
   const hasAccess = await requireProjectAccess(projectId, userId);
   if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const canAccessModule = await requireModuleAccess(projectId, userId, "site_instructions");
+  if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireProjectAccess, requireUserId } from "@/lib/auth";
+import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 
 const createSiteInstructionSchema = z.object({
   reference: z.string().min(1),
@@ -24,6 +24,11 @@ export async function GET(request: Request, context: { params: { projectId: stri
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const canAccessModule = await requireModuleAccess(projectId, userId, "site_instructions");
+  if (!canAccessModule) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const siteInstructions = await prisma.siteInstruction.findMany({
     where: { projectId },
     orderBy: { createdAt: "desc" }
@@ -40,6 +45,11 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
   const hasAccess = await requireProjectAccess(projectId, userId);
   if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const canAccessModule = await requireModuleAccess(projectId, userId, "site_instructions");
+  if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

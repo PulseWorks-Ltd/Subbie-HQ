@@ -18,11 +18,13 @@ type UpdateWithReplies = Update & {
 export function UpdatesView({
   projectId,
   updates,
-  siteInstructions
+  siteInstructions,
+  canManageSiteInstructions
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   siteInstructions: SiteInstruction[];
+  canManageSiteInstructions: boolean;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -127,7 +129,9 @@ export function UpdatesView({
           )}
         </div>
 
-        <SiteInstructionsPanel projectId={projectId} siteInstructions={siteInstructions} />
+        {canManageSiteInstructions && (
+          <SiteInstructionsPanel projectId={projectId} siteInstructions={siteInstructions} />
+        )}
       </div>
     </div>
   );

@@ -2,25 +2,43 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ModuleKey } from "@/lib/permissions";
 
-const NAV_ITEMS = [
-  { label: "Overview", segment: "" },
-  { label: "Updates", segment: "updates" },
-  { label: "Contract", segment: "contract" },
-  { label: "Scope", segment: "scope" },
-  { label: "Programme", segment: "programme" },
-  { label: "Payment Claims", segment: "payment-claims" },
-  { label: "Evidence", segment: "evidence" },
-  { label: "Health & Safety", segment: "health-safety" },
-  { label: "Settings", segment: "settings" }
+const NAV_ITEMS: { label: string; segment: string; module: ModuleKey | null; adminOnly?: boolean }[] = [
+  { label: "Overview", segment: "", module: null },
+  { label: "Updates", segment: "updates", module: "updates" },
+  { label: "Contract", segment: "contract", module: "contract" },
+  { label: "Scope", segment: "scope", module: "scope" },
+  { label: "Programme", segment: "programme", module: "programme" },
+  { label: "Payment Claims", segment: "payment-claims", module: "payment_claims" },
+  { label: "Evidence", segment: "evidence", module: "evidence" },
+  { label: "Health & Safety", segment: "health-safety", module: "health_safety" },
+  { label: "Settings", segment: "settings", module: null, adminOnly: true }
 ];
 
-export function ProjectNav({ projectId }: { projectId: string }) {
+export function ProjectNav({
+  projectId,
+  unrestricted,
+  isAdmin,
+  modules
+}: {
+  projectId: string;
+  unrestricted: boolean;
+  isAdmin: boolean;
+  modules: Record<string, boolean>;
+}) {
   const pathname = usePathname();
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (unrestricted || isAdmin) return true;
+    if (item.adminOnly) return false;
+    if (!item.module) return true;
+    return Boolean(modules[item.module]);
+  });
 
   return (
     <nav className="flex flex-col gap-1 w-48 shrink-0">
-      {NAV_ITEMS.map((item) => {
+      {visibleItems.map((item) => {
         const href = `/projects/${projectId}${item.segment ? `/${item.segment}` : ""}`;
         const isActive = pathname === href;
 

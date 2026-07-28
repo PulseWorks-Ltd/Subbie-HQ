@@ -1,10 +1,37 @@
 import Link from "next/link";
-import type { DashboardItem } from "@/lib/dashboard";
-import { DashboardItemRow } from "@/components/dashboard/dashboard-item-row";
+import type { DashboardItem, DashboardItemType } from "@/lib/dashboard";
+import { DashboardSection } from "@/components/dashboard/dashboard-section";
+
+const SECTIONS: { key: DashboardItemType; label: string; icon: string }[] = [
+  { key: "site-instruction", label: "Site Instructions", icon: "assignment" },
+  { key: "programme", label: "Programme", icon: "construction" },
+  { key: "safety-document", label: "Health & Safety", icon: "health_and_safety" },
+  { key: "payment-claim", label: "Payment Claims", icon: "payments" }
+];
+
+function sortItems(items: DashboardItem[]) {
+  return [...items].sort((a, b) => {
+    if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+    return a.date.getTime() - b.date.getTime();
+  });
+}
 
 export function DashboardView({ initialItems }: { initialItems: DashboardItem[] }) {
-  const overdueItems = initialItems.filter((item) => item.isOverdue);
-  const upcomingItems = initialItems.filter((item) => !item.isOverdue);
+  const sections = SECTIONS.map((section) => {
+    const items = sortItems(initialItems.filter((item) => item.type === section.key));
+    const overdueCount = items.filter((item) => item.isOverdue).length;
+    return {
+      ...section,
+      items,
+      overdueCount,
+      upcomingCount: items.length - overdueCount
+    };
+  })
+    .filter((section) => section.items.length > 0)
+    .sort((a, b) => {
+      if (a.overdueCount > 0 !== b.overdueCount > 0) return a.overdueCount > 0 ? -1 : 1;
+      return 0;
+    });
 
   return (
     <main className="flex-1 flex flex-col items-center">
@@ -27,7 +54,7 @@ export function DashboardView({ initialItems }: { initialItems: DashboardItem[] 
           </Link>
         </div>
 
-        {initialItems.length === 0 ? (
+        {sections.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-20">
             <div className="size-16 rounded-full bg-[#e7edf3] dark:bg-slate-800 flex items-center justify-center text-[#4c739a] mb-4">
               <span className="material-symbols-outlined text-4xl">check</span>
@@ -38,32 +65,19 @@ export function DashboardView({ initialItems }: { initialItems: DashboardItem[] 
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
-            {overdueItems.length > 0 && (
-              <div className="flex flex-col gap-3">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-red-600 dark:text-red-400">
-                  Needs attention ({overdueItems.length})
-                </h2>
-                <div className="flex flex-col gap-2">
-                  {overdueItems.map((item) => (
-                    <DashboardItemRow key={`${item.type}-${item.id}`} item={item} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {upcomingItems.length > 0 && (
-              <div className="flex flex-col gap-3">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">
-                  Next 7 days ({upcomingItems.length})
-                </h2>
-                <div className="flex flex-col gap-2">
-                  {upcomingItems.map((item) => (
-                    <DashboardItemRow key={`${item.type}-${item.id}`} item={item} />
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="flex flex-col gap-4">
+            {sections.map((section) => (
+              <DashboardSection
+                key={section.key}
+                sectionKey={section.key}
+                label={section.label}
+                icon={section.icon}
+                items={section.items}
+                overdueCount={section.overdueCount}
+                upcomingCount={section.upcomingCount}
+                defaultExpanded={section.overdueCount > 0}
+              />
+            ))}
           </div>
         )}
       </div>

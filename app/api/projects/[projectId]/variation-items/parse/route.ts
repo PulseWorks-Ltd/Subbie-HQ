@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { PDFParse } from "pdf-parse";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
-import { extractSiteInstructionFromText } from "@/lib/grok";
+import { extractVariationItemFromText } from "@/lib/grok";
+
+function moduleForType(type: "variation" | "site_instruction") {
+  return type === "variation" ? ("variations" as const) : ("site_instructions" as const);
+}
 
 export async function POST(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
@@ -15,13 +19,15 @@ export async function POST(request: Request, context: { params: { projectId: str
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const canAccessModule = await requireModuleAccess(projectId, userId, "site_instructions");
+  const formData = await request.formData();
+  const file = formData.get("file");
+  const typeRaw = formData.get("type");
+  const type = typeRaw === "variation" ? "variation" : "site_instruction";
+
+  const canAccessModule = await requireModuleAccess(projectId, userId, moduleForType(type));
   if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
-  const formData = await request.formData();
-  const file = formData.get("file");
 
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
@@ -32,7 +38,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());
-  const uploadKey = `projects/${projectId}/site-instructions/${Date.now()}-${file.name}`;
+  const uploadKey = `projects/${projectId}/variation-items/${Date.now()}-${file.name}`;
 
   const { storageKey } = await uploadToS3({
     key: uploadKey,
@@ -50,7 +56,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       throw new Error("No extractable text in PDF.");
     }
 
-    extracted = await extractSiteInstructionFromText(text);
+    extracted = await extractVariationItemFromText(text, type);
   } catch {
     return NextResponse.json(
       {

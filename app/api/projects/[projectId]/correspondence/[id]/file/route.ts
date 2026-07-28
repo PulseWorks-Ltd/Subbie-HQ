@@ -3,12 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { getSignedDownloadUrl } from "@/lib/s3";
 
-export async function GET(
-  request: Request,
-  context: { params: { projectId: string; siteInstructionId: string } }
-) {
+export async function GET(request: Request, context: { params: { projectId: string; id: string } }) {
   const userId = await requireUserId(request);
-  const { projectId, siteInstructionId } = context.params;
+  const { projectId, id } = context.params;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -17,20 +14,16 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const canAccessModule = await requireModuleAccess(projectId, userId, "site_instructions");
+  const canAccessModule = await requireModuleAccess(projectId, userId, "correspondence");
   if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const siteInstruction = await prisma.siteInstruction.findFirst({
-    where: { id: siteInstructionId, projectId }
-  });
-
-  if (!siteInstruction?.storageKey) {
+  const correspondence = await prisma.correspondence.findFirst({ where: { id, projectId } });
+  if (!correspondence?.storageKey) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const signedUrl = await getSignedDownloadUrl(siteInstruction.storageKey);
-
+  const signedUrl = await getSignedDownloadUrl(correspondence.storageKey);
   return NextResponse.redirect(signedUrl);
 }

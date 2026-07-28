@@ -3,7 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 
-const createSiteInstructionSchema = z.object({
+const createVariationItemSchema = z.object({
+  type: z.enum(["variation", "site_instruction"]),
   reference: z.string().min(1),
   title: z.string().min(1),
   description: z.string().optional(),
@@ -12,6 +13,10 @@ const createSiteInstructionSchema = z.object({
   fileName: z.string().optional(),
   storageKey: z.string().optional()
 });
+
+function moduleForType(type: "variation" | "site_instruction") {
+  return type === "variation" ? ("variations" as const) : ("site_instructions" as const);
+}
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
@@ -24,17 +29,24 @@ export async function GET(request: Request, context: { params: { projectId: stri
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const canAccessModule = await requireModuleAccess(projectId, userId, "site_instructions");
-  if (!canAccessModule) {
+  const canSeeVariations = await requireModuleAccess(projectId, userId, "variations");
+  const canSeeSiteInstructions = await requireModuleAccess(projectId, userId, "site_instructions");
+
+  if (!canSeeVariations && !canSeeSiteInstructions) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const siteInstructions = await prisma.siteInstruction.findMany({
-    where: { projectId },
+  const visibleTypes: ("variation" | "site_instruction")[] = [
+    ...(canSeeVariations ? (["variation"] as const) : []),
+    ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
+  ];
+
+  const variationItems = await prisma.variationItem.findMany({
+    where: { projectId, type: { in: visibleTypes } },
     orderBy: { createdAt: "desc" }
   });
 
-  return NextResponse.json({ siteInstructions });
+  return NextResponse.json({ variationItems });
 }
 
 export async function POST(request: Request, context: { params: { projectId: string } }) {
@@ -48,16 +60,17 @@ export async function POST(request: Request, context: { params: { projectId: str
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const canAccessModule = await requireModuleAccess(projectId, userId, "site_instructions");
+  const payload = createVariationItemSchema.parse(await request.json());
+
+  const canAccessModule = await requireModuleAccess(projectId, userId, moduleForType(payload.type));
   if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const payload = createSiteInstructionSchema.parse(await request.json());
-
-  const siteInstruction = await prisma.siteInstruction.create({
+  const variationItem = await prisma.variationItem.create({
     data: {
       projectId,
+      type: payload.type,
       reference: payload.reference,
       title: payload.title,
       description: payload.description,
@@ -68,5 +81,5 @@ export async function POST(request: Request, context: { params: { projectId: str
     }
   });
 
-  return NextResponse.json({ siteInstruction }, { status: 201 });
+  return NextResponse.json({ variationItem }, { status: 201 });
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { OrganisationInvite, OrganisationMember } from "@prisma/client";
+import type { OrganisationInvite, OrganisationMember, VariationCompletionMode } from "@prisma/client";
 import { MODULE_LABELS, type ModuleKey, type ModulePermissions } from "@/lib/permissions";
 import { MemberPermissionsDialog } from "@/components/team/member-permissions-dialog";
 
@@ -23,16 +23,32 @@ export function TeamView({
   organisationName,
   currentUserId,
   members,
-  invites
+  invites,
+  variationCompletionMode
 }: {
   organisationName: string;
   currentUserId: string;
   members: MemberWithUser[];
   invites: OrganisationInvite[];
+  variationCompletionMode: VariationCompletionMode;
 }) {
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberWithUser | null>(null);
+  const [completionMode, setCompletionMode] = useState(variationCompletionMode);
+  const [isSavingMode, setIsSavingMode] = useState(false);
+
+  async function handleCompletionModeChange(mode: VariationCompletionMode) {
+    setCompletionMode(mode);
+    setIsSavingMode(true);
+    await fetch("/api/organisation", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variationCompletionMode: mode })
+    });
+    setIsSavingMode(false);
+    router.refresh();
+  }
 
   function openInviteDialog() {
     setEditingMember(null);
@@ -75,6 +91,43 @@ export function TeamView({
           >
             Invite Team Member
           </button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">
+            Preferences
+          </h2>
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 p-4">
+            <p className="text-sm font-bold mb-1">Variation/SI completion updates</p>
+            <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-3">
+              When someone tags a % complete on an Update against a Variation or Site Instruction, should it update
+              immediately, or wait for an Admin/PM to confirm it?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleCompletionModeChange("auto")}
+                disabled={isSavingMode}
+                className={`h-9 px-3 rounded-lg text-xs font-bold border ${
+                  completionMode === "auto"
+                    ? "bg-primary text-white border-primary"
+                    : "border-[#e7edf3] dark:border-slate-700 hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+                }`}
+              >
+                Auto-update
+              </button>
+              <button
+                onClick={() => handleCompletionModeChange("requires_confirmation")}
+                disabled={isSavingMode}
+                className={`h-9 px-3 rounded-lg text-xs font-bold border ${
+                  completionMode === "requires_confirmation"
+                    ? "bg-primary text-white border-primary"
+                    : "border-[#e7edf3] dark:border-slate-700 hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+                }`}
+              >
+                Requires confirmation
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">

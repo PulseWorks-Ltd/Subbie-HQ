@@ -7,6 +7,7 @@ import type { DashboardItem } from "@/lib/dashboard";
 
 const TYPE_ICONS: Record<DashboardItem["type"], string> = {
   programme: "construction",
+  variation: "request_quote",
   "site-instruction": "assignment",
   "payment-claim": "payments",
   "safety-document": "health_and_safety"
@@ -30,8 +31,8 @@ export function DashboardItemRow({ item }: { item: DashboardItem }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completedAt: new Date().toISOString() })
       });
-    } else if (item.type === "site-instruction") {
-      await fetch(`/api/projects/${item.projectId}/site-instructions/${item.id}`, {
+    } else if (item.type === "variation" || item.type === "site-instruction") {
+      await fetch(`/api/projects/${item.projectId}/variation-items/${item.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "complete" })
@@ -52,8 +53,8 @@ export function DashboardItemRow({ item }: { item: DashboardItem }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [item.rescheduleField]: isoDate })
       });
-    } else if (item.type === "site-instruction") {
-      await fetch(`/api/projects/${item.projectId}/site-instructions/${item.id}`, {
+    } else if (item.type === "variation" || item.type === "site-instruction") {
+      await fetch(`/api/projects/${item.projectId}/variation-items/${item.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dueAt: isoDate })

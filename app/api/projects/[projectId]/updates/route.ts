@@ -11,7 +11,8 @@ const MAX_ATTACHMENTS = 4;
 const createUpdateSchema = z.object({
   body: z.string().min(1),
   parentId: z.string().optional(),
-  siteInstructionId: z.string().optional()
+  variationItemId: z.string().optional(),
+  percentComplete: z.number().min(0).max(100).optional()
 });
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
@@ -34,7 +35,7 @@ export async function GET(request: Request, context: { params: { projectId: stri
     where: { projectId, parentId: null },
     include: {
       author: { select: { id: true, name: true, email: true } },
-      siteInstruction: { select: { id: true, reference: true, title: true } },
+      variationItem: { select: { id: true, reference: true, title: true } },
       attachments: true,
       replies: {
         include: {
@@ -67,10 +68,12 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
 
   const formData = await request.formData();
+  const percentCompleteRaw = formData.get("percentComplete");
   const payload = createUpdateSchema.parse({
     body: formData.get("body"),
     parentId: formData.get("parentId") || undefined,
-    siteInstructionId: formData.get("siteInstructionId") || undefined
+    variationItemId: formData.get("variationItemId") || undefined,
+    percentComplete: percentCompleteRaw ? Number(percentCompleteRaw) : undefined
   });
 
   const files = formData.getAll("files").filter((entry): entry is File => entry instanceof File && entry.size > 0);
@@ -92,12 +95,13 @@ export async function POST(request: Request, context: { params: { projectId: str
     }
   }
 
-  if (payload.siteInstructionId) {
-    const siteInstruction = await prisma.siteInstruction.findFirst({
-      where: { id: payload.siteInstructionId, projectId }
+  let variationItem = null;
+  if (payload.variationItemId) {
+    variationItem = await prisma.variationItem.findFirst({
+      where: { id: payload.variationItemId, projectId }
     });
-    if (!siteInstruction) {
-      return NextResponse.json({ error: "Site instruction not found" }, { status: 400 });
+    if (!variationItem) {
+      return NextResponse.json({ error: "Variation/Site Instruction not found" }, { status: 400 });
     }
   }
 
@@ -106,15 +110,40 @@ export async function POST(request: Request, context: { params: { projectId: str
       projectId,
       authorId: userId,
       parentId: payload.parentId,
-      // Replies inherit their parent thread's site instruction context rather than carrying their own.
-      siteInstructionId: payload.parentId ? undefined : payload.siteInstructionId,
+      // Replies inherit their parent thread's tagged item rather than carrying their own.
+      variationItemId: payload.parentId ? undefined : payload.variationItemId,
+      percentComplete: payload.parentId ? undefined : payload.percentComplete,
       body: payload.body
     },
     include: {
       author: { select: { id: true, name: true, email: true } },
-      siteInstruction: { select: { id: true, reference: true, title: true } }
+      variationItem: { select: { id: true, reference: true, title: true } }
     }
   });
+
+  // Applying a tagged % complete depends on the organisation's completion-update
+  // setting: auto-apply straight to percentComplete, or park it as a suggestion
+  // pending Admin/PM confirmation. Projects with no organisation (legacy/personal)
+  // default to auto, consistent with how every other org-gated behavior in this
+  // app treats org-less projects as unrestricted.
+  if (variationItem && payload.percentComplete !== undefined && !payload.parentId) {
+    const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
+    const organisation = project?.organisationId
+      ? await prisma.organisation.findUnique({ where: { id: project.organisationId }, select: { variationCompletionMode: true } })
+      : null;
+
+    if (organisation?.variationCompletionMode === "requires_confirmation") {
+      await prisma.variationItem.update({
+        where: { id: variationItem.id },
+        data: { suggestedPercentComplete: payload.percentComplete }
+      });
+    } else {
+      await prisma.variationItem.update({
+        where: { id: variationItem.id },
+        data: { percentComplete: payload.percentComplete }
+      });
+    }
+  }
 
   for (const file of files) {
     const buffer = new Uint8Array(await file.arrayBuffer());

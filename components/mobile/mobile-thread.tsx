@@ -6,10 +6,10 @@ import type { Update, UpdateAttachment } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 
 type Author = { id: string; name: string | null; email: string };
-type SiteInstructionRef = { id: string; reference: string; title: string };
+type VariationItemRef = { id: string; reference: string; title: string };
 type UpdateWithReplies = Update & {
   author: Author;
-  siteInstruction: SiteInstructionRef | null;
+  variationItem: VariationItemRef | null;
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
@@ -59,9 +59,9 @@ export function MobileThread({ projectId, update }: { projectId: string; update:
         <p className="text-sm font-bold">{authorLabel(update.author)}</p>
         <p className="text-[11px] text-[#4c739a] dark:text-slate-400 shrink-0">{formatTimestamp(update.createdAt)}</p>
       </div>
-      {update.siteInstruction && (
+      {update.variationItem && (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary mb-1">
-          {update.siteInstruction.reference}
+          {update.variationItem.reference}
         </span>
       )}
       <p className="text-sm leading-relaxed whitespace-pre-wrap mb-1">{update.body}</p>

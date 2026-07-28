@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Update, UpdateAttachment } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 
 type Author = { id: string; name: string | null; email: string };
-type SiteInstructionRef = { id: string; reference: string; title: string };
+type VariationItemRef = { id: string; reference: string; title: string };
 type UpdateWithReplies = Update & {
   author: Author;
-  siteInstruction: SiteInstructionRef | null;
+  variationItem: VariationItemRef | null;
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
@@ -58,9 +59,17 @@ export function UpdateThread({ projectId, update }: { projectId: string; update:
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold">{authorLabel(update.author)}</p>
-          {update.siteInstruction && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
-              {update.siteInstruction.reference}
+          {update.variationItem && (
+            <Link
+              href={`/projects/${projectId}/variations/${update.variationItem.id}`}
+              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary hover:bg-primary/20"
+            >
+              {update.variationItem.reference}
+            </Link>
+          )}
+          {update.percentComplete != null && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              {Math.round(update.percentComplete)}% tagged
             </span>
           )}
         </div>

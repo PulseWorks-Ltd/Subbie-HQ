@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SiteInstruction, Update, UpdateAttachment } from "@prisma/client";
+import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { UpdateThread } from "@/components/updates/update-thread";
-import { SiteInstructionsPanel } from "@/components/updates/site-instructions-panel";
 
 type Author = { id: string; name: string | null; email: string };
-type SiteInstructionRef = { id: string; reference: string; title: string };
+type VariationItemRef = { id: string; reference: string; title: string };
 type UpdateWithReplies = Update & {
   author: Author;
-  siteInstruction: SiteInstructionRef | null;
+  variationItem: VariationItemRef | null;
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
@@ -18,21 +17,18 @@ type UpdateWithReplies = Update & {
 export function UpdatesView({
   projectId,
   updates,
-  siteInstructions,
-  canManageSiteInstructions
+  taggableItems
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
-  siteInstructions: SiteInstruction[];
-  canManageSiteInstructions: boolean;
+  taggableItems: VariationItem[];
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
-  const [siteInstructionId, setSiteInstructionId] = useState("");
+  const [variationItemId, setVariationItemId] = useState("");
+  const [percentComplete, setPercentComplete] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const openSiteInstructions = siteInstructions.filter((si) => si.status === "open");
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -41,14 +37,16 @@ export function UpdatesView({
 
     const formData = new FormData();
     formData.set("body", body);
-    if (siteInstructionId) formData.set("siteInstructionId", siteInstructionId);
+    if (variationItemId) formData.set("variationItemId", variationItemId);
+    if (variationItemId && percentComplete) formData.set("percentComplete", percentComplete);
     files.forEach((file) => formData.append("files", file));
 
     await fetch(`/api/projects/${projectId}/updates`, { method: "POST", body: formData });
 
     setIsSubmitting(false);
     setBody("");
-    setSiteInstructionId("");
+    setVariationItemId("");
+    setPercentComplete("");
     setFiles([]);
     router.refresh();
   }
@@ -62,75 +60,82 @@ export function UpdatesView({
         </p>
       </div>
 
-      <div className="flex gap-6 items-start">
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5 flex flex-col gap-3"
-          >
-            <textarea
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              rows={3}
-              placeholder="Post an update for the team..."
-              className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+      <div className="flex-1 min-w-0 flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5 flex flex-col gap-3"
+        >
+          <textarea
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            rows={3}
+            placeholder="Post an update for the team..."
+            className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400">
+            <span className="material-symbols-outlined text-lg">photo_camera</span>
+            {files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} attached` : "Attach photos"}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+              className="hidden"
             />
-            <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400">
-              <span className="material-symbols-outlined text-lg">photo_camera</span>
-              {files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} attached` : "Attach photos"}
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
-                className="hidden"
-              />
-            </label>
-            <div className="flex items-center justify-between gap-3">
-              {openSiteInstructions.length > 0 ? (
+          </label>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              {taggableItems.length > 0 ? (
                 <select
-                  value={siteInstructionId}
-                  onChange={(event) => setSiteInstructionId(event.target.value)}
+                  value={variationItemId}
+                  onChange={(event) => setVariationItemId(event.target.value)}
                   className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                 >
-                  <option value="">Not tied to a Site Instruction</option>
-                  {openSiteInstructions.map((si) => (
-                    <option key={si.id} value={si.id}>
-                      {si.reference} · {si.title}
+                  <option value="">Not tied to a Variation/SI</option>
+                  {taggableItems.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.reference} · {item.title}
                     </option>
                   ))}
                 </select>
               ) : (
                 <span />
               )}
-              <button
-                type="submit"
-                disabled={isSubmitting || !body.trim()}
-                className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
-              >
-                {isSubmitting ? "Posting..." : "Post Update"}
-              </button>
+              {variationItemId && (
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={percentComplete}
+                  onChange={(event) => setPercentComplete(event.target.value)}
+                  placeholder="% complete"
+                  className="h-9 w-28 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              )}
             </div>
-          </form>
+            <button
+              type="submit"
+              disabled={isSubmitting || !body.trim()}
+              className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
+            >
+              {isSubmitting ? "Posting..." : "Post Update"}
+            </button>
+          </div>
+        </form>
 
-          {updates.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">
-              <p className="font-bold mb-1">No updates yet</p>
-              <p className="text-sm text-[#4c739a] dark:text-slate-400">
-                Post the first update to start the project's communication trail.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {updates.map((update) => (
-                <UpdateThread key={update.id} projectId={projectId} update={update} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {canManageSiteInstructions && (
-          <SiteInstructionsPanel projectId={projectId} siteInstructions={siteInstructions} />
+        {updates.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">
+            <p className="font-bold mb-1">No updates yet</p>
+            <p className="text-sm text-[#4c739a] dark:text-slate-400">
+              Post the first update to start the project's communication trail.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {updates.map((update) => (
+              <UpdateThread key={update.id} projectId={projectId} update={update} />
+            ))}
+          </div>
         )}
       </div>
     </div>

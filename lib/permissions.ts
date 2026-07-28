@@ -4,6 +4,9 @@ export const MODULES = [
   "programme",
   "updates",
   "site_instructions",
+  "variations",
+  "pictures",
+  "correspondence",
   "health_safety",
   "payment_claims",
   "evidence",
@@ -20,8 +23,14 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   programme: "Programme",
   updates: "Updates",
   site_instructions: "Site Instructions",
+  variations: "Variations",
+  pictures: "Pictures",
+  correspondence: "Correspondence",
   health_safety: "Health & Safety",
   payment_claims: "Payment Claims",
+  // Retained for the future Payment Claims evidence-bundle feature (see TODOs in
+  // lib/dashboard.ts / variation-items routes) — no nav item uses this module today,
+  // since Pictures + Correspondence replaced the old Evidence placeholder page.
   evidence: "Evidence",
   quoting: "Quoting"
 };
@@ -43,6 +52,9 @@ export const PRESETS: Record<PresetKey, { label: string; isAdmin: boolean; modul
       programme: true,
       updates: true,
       site_instructions: true,
+      variations: true,
+      pictures: true,
+      correspondence: true,
       health_safety: true,
       payment_claims: true,
       evidence: true,
@@ -55,6 +67,7 @@ export const PRESETS: Record<PresetKey, { label: string; isAdmin: boolean; modul
     modules: {
       updates: true,
       site_instructions: true,
+      pictures: true,
       health_safety: true,
       programme: true
     }

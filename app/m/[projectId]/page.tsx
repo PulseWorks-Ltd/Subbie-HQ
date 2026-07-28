@@ -23,12 +23,19 @@ export default async function MobileProjectUpdatesPage({
     notFound();
   }
 
-  const [updates, siteInstructions] = await Promise.all([
+  const canSeeVariations = await requireModuleAccess(projectId, session!.user.id, "variations");
+  const canSeeSiteInstructions = await requireModuleAccess(projectId, session!.user.id, "site_instructions");
+  const visibleTypes: ("variation" | "site_instruction")[] = [
+    ...(canSeeVariations ? (["variation"] as const) : []),
+    ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
+  ];
+
+  const [updates, taggableItems] = await Promise.all([
     prisma.update.findMany({
       where: { projectId, parentId: null },
       include: {
         author: { select: { id: true, name: true, email: true } },
-        siteInstruction: { select: { id: true, reference: true, title: true } },
+        variationItem: { select: { id: true, reference: true, title: true } },
         attachments: true,
         replies: {
           include: {
@@ -40,10 +47,9 @@ export default async function MobileProjectUpdatesPage({
       },
       orderBy: { createdAt: "desc" }
     }),
-    prisma.siteInstruction.findMany({
-      where: { projectId },
-      orderBy: { createdAt: "desc" }
-    })
+    visibleTypes.length > 0
+      ? prisma.variationItem.findMany({ where: { projectId, type: { in: visibleTypes } }, orderBy: { createdAt: "desc" } })
+      : Promise.resolve([])
   ]);
 
   return (
@@ -54,7 +60,7 @@ export default async function MobileProjectUpdatesPage({
         </a>
         <h1 className="text-lg font-bold">{project.name}</h1>
       </div>
-      <MobileUpdatesView projectId={projectId} updates={updates} siteInstructions={siteInstructions} />
+      <MobileUpdatesView projectId={projectId} updates={updates} taggableItems={taggableItems} />
     </div>
   );
 }

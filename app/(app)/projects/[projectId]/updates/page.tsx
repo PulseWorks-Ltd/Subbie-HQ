@@ -13,14 +13,20 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
   if (!canAccess) {
     redirect(`/projects/${projectId}`);
   }
-  const canManageSiteInstructions = userId ? await requireModuleAccess(projectId, userId, "site_instructions") : false;
 
-  const [updates, siteInstructions] = await Promise.all([
+  const canSeeVariations = userId ? await requireModuleAccess(projectId, userId, "variations") : false;
+  const canSeeSiteInstructions = userId ? await requireModuleAccess(projectId, userId, "site_instructions") : false;
+  const visibleTypes: ("variation" | "site_instruction")[] = [
+    ...(canSeeVariations ? (["variation"] as const) : []),
+    ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
+  ];
+
+  const [updates, taggableItems] = await Promise.all([
     prisma.update.findMany({
       where: { projectId, parentId: null },
       include: {
         author: { select: { id: true, name: true, email: true } },
-        siteInstruction: { select: { id: true, reference: true, title: true } },
+        variationItem: { select: { id: true, reference: true, title: true } },
         attachments: true,
         replies: {
           include: {
@@ -32,18 +38,13 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
       },
       orderBy: { createdAt: "desc" }
     }),
-    prisma.siteInstruction.findMany({
-      where: { projectId },
-      orderBy: { createdAt: "desc" }
-    })
+    visibleTypes.length > 0
+      ? prisma.variationItem.findMany({
+          where: { projectId, type: { in: visibleTypes }, status: { not: "complete" } },
+          orderBy: { createdAt: "desc" }
+        })
+      : Promise.resolve([])
   ]);
 
-  return (
-    <UpdatesView
-      projectId={projectId}
-      updates={updates}
-      siteInstructions={siteInstructions}
-      canManageSiteInstructions={canManageSiteInstructions}
-    />
-  );
+  return <UpdatesView projectId={projectId} updates={updates} taggableItems={taggableItems} />;
 }

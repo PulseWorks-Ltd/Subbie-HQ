@@ -56,6 +56,55 @@ export async function extractSiteInstructionFromText(documentText: string): Prom
   return ExtractedSiteInstructionSchema.parse(JSON.parse(raw));
 }
 
+const ExtractedVariationItemSchema = z.object({
+  reference: z.string(),
+  title: z.string(),
+  notifiedAt: z.string().nullable(),
+  dueAt: z.string().nullable(),
+  summary: z.string()
+});
+
+export type ExtractedVariationItem = z.infer<typeof ExtractedVariationItemSchema>;
+
+export async function extractVariationItemFromText(
+  documentText: string,
+  itemType: "variation" | "site_instruction"
+): Promise<ExtractedVariationItem> {
+  const documentKind =
+    itemType === "variation"
+      ? "a construction Variation notice or priced Variation quote"
+      : "a construction Site Instruction / Notice to Subcontractor / Advice to Subcontractor document";
+
+  const response = await getClient().chat.completions.create({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          `You extract structured data from ${documentKind}. Respond with only a JSON object matching this exact shape: ` +
+          '{"reference": string, "title": string, "notifiedAt": string | null, "dueAt": string | null, "summary": string}. ' +
+          "reference: the instruction/notice/variation reference number exactly as printed, e.g. 'NTS 10055/500', 'ATS 4022/1280', 'SI-103', 'V44', 'VAR-012'. " +
+          "title: a short heading summarizing what the document is about. " +
+          "notifiedAt: the date the document was issued/dated (e.g. 'NTS Date', 'Issued Date', 'Created Date'), as an ISO 8601 date (YYYY-MM-DD), or null if not stated. " +
+          "dueAt: the date a response, commencement, or completion is required by (e.g. 'Response Required', 'Due Date'), as an ISO 8601 date (YYYY-MM-DD), or null if not stated. " +
+          "summary: a concise 1-3 sentence summary of what work or response is required."
+      },
+      {
+        role: "user",
+        content: documentText
+      }
+    ]
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return ExtractedVariationItemSchema.parse(JSON.parse(raw));
+}
+
 const ExtractedProgrammeItemSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),

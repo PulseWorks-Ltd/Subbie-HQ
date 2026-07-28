@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function TopNav({
   userName,
@@ -60,6 +61,7 @@ export function TopNav({
       </div>
 
       <div className="flex items-center gap-3">
+        <ThemeToggle />
         <Link
           href="/get-app"
           className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-medium hover:bg-[#e7edf3] dark:hover:bg-slate-800 flex items-center gap-1.5"

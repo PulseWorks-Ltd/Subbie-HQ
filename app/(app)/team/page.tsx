@@ -33,6 +33,7 @@ export default async function TeamPage() {
       currentUserId={session.user.id}
       members={members}
       invites={invites}
+      variationCompletionMode={admin.organisation.variationCompletionMode}
     />
   );
 }

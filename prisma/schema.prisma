@@ -53,11 +53,6 @@ enum EmailStatus {
   linked
 }
 
-enum SiteInstructionStatus {
-  open
-  complete
-}
-
 enum RiskLevel {
   low
   medium
@@ -69,6 +64,28 @@ enum VariationStatus {
   submitted
   approved
   rejected
+}
+
+enum VariationItemType {
+  variation
+  site_instruction
+}
+
+enum VariationItemStatus {
+  draft
+  open
+  submitted_for_claim
+  complete
+}
+
+enum CorrespondenceSource {
+  upload
+  inbound_email
+}
+
+enum VariationCompletionMode {
+  auto
+  requires_confirmation
 }
 
 model User {
@@ -85,9 +102,10 @@ model User {
 }
 
 model Organisation {
-  id        String     @id @default(cuid())
-  name      String
-  createdAt DateTime   @default(now())
+  id                      String     @id @default(cuid())
+  name                    String
+  variationCompletionMode VariationCompletionMode @default(requires_confirmation)
+  createdAt               DateTime   @default(now())
   members   OrganisationMember[]
   invites   OrganisationInvite[]
   projects  Project[]
@@ -150,8 +168,9 @@ model Project {
   evidence           Evidence[]
   inboundEmails      InboundEmail[]
   updates            Update[]
-  siteInstructions   SiteInstruction[]
   safetyDocuments    SafetyDocument[]
+  variationItems     VariationItem[]
+  correspondence     Correspondence[]
 }
 
 model ProjectMember {
@@ -348,6 +367,7 @@ model InboundEmail {
 
   project    Project     @relation(fields: [projectId], references: [id])
   evidence   Evidence[]
+  correspondence Correspondence?
 }
 
 model EvidenceScopeItem {
@@ -388,7 +408,8 @@ model Update {
   projectId         String
   authorId          String
   parentId          String?
-  siteInstructionId String?
+  variationItemId   String?
+  percentComplete   Float?
   body              String
   createdAt         DateTime          @default(now())
 
@@ -396,25 +417,73 @@ model Update {
   author            User              @relation(fields: [authorId], references: [id])
   parent            Update?           @relation("UpdateReplies", fields: [parentId], references: [id])
   replies           Update[]          @relation("UpdateReplies")
-  siteInstruction   SiteInstruction?  @relation(fields: [siteInstructionId], references: [id])
+  variationItem     VariationItem?    @relation(fields: [variationItemId], references: [id])
   attachments       UpdateAttachment[]
 }
 
-model SiteInstruction {
-  id          String                 @id @default(cuid())
-  projectId   String
-  reference   String
-  title       String
-  description String?
-  notifiedAt  DateTime?
-  dueAt       DateTime?
-  fileName    String?
-  storageKey  String?
-  status      SiteInstructionStatus  @default(open)
-  createdAt   DateTime               @default(now())
+model VariationItem {
+  id              String               @id @default(cuid())
+  projectId       String
+  type            VariationItemType
+  reference       String
+  title           String
+  description     String?
+  status          VariationItemStatus  @default(open)
+  percentComplete Float?
+  // Set when the org's completion mode is "requires_confirmation" and someone
+  // tags an Update with a % complete — sits here until an Admin/PM confirms it,
+  // at which point it's copied into percentComplete and cleared.
+  suggestedPercentComplete Float?
+  notifiedAt      DateTime?
+  dueAt           DateTime?
+  fileName        String?
+  storageKey      String?
+  quoteFileName   String?
+  quoteStorageKey String?
+  createdAt       DateTime             @default(now())
 
-  project     Project                @relation(fields: [projectId], references: [id])
-  updates     Update[]
+  project         Project              @relation(fields: [projectId], references: [id])
+  updates         Update[]
+  dayWorksSheets  DayWorksSheet[]
+  photos          VariationPhoto[]
+  correspondence  Correspondence[]
+}
+
+model DayWorksSheet {
+  id              String        @id @default(cuid())
+  variationItemId String
+  fileName        String
+  storageKey      String
+  createdAt       DateTime      @default(now())
+
+  variationItem   VariationItem @relation(fields: [variationItemId], references: [id])
+}
+
+model VariationPhoto {
+  id              String        @id @default(cuid())
+  variationItemId String
+  fileName        String
+  storageKey      String
+  contentType     String
+  createdAt       DateTime      @default(now())
+
+  variationItem   VariationItem @relation(fields: [variationItemId], references: [id])
+}
+
+model Correspondence {
+  id              String               @id @default(cuid())
+  projectId       String
+  variationItemId String?
+  title           String
+  fileName        String?
+  storageKey      String?
+  source          CorrespondenceSource @default(upload)
+  inboundEmailId  String?              @unique
+  createdAt       DateTime             @default(now())
+
+  project         Project              @relation(fields: [projectId], references: [id])
+  variationItem   VariationItem?       @relation(fields: [variationItemId], references: [id])
+  inboundEmail    InboundEmail?        @relation(fields: [inboundEmailId], references: [id])
 }
 
 model SafetyDocument {

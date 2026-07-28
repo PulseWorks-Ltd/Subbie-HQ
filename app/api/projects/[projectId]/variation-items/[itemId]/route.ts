@@ -1,0 +1,116 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
+import { deleteFromS3 } from "@/lib/s3";
+
+const updateVariationItemSchema = z.object({
+  title: z.string().min(1).optional(),
+  reference: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  status: z.enum(["draft", "open", "submitted_for_claim", "complete"]).optional(),
+  percentComplete: z.number().min(0).max(100).nullable().optional(),
+  notifiedAt: z.string().datetime().optional(),
+  dueAt: z.string().datetime().optional(),
+  // Admin/PM-only: applies the pending suggested % (from an Update tag under
+  // "requires confirmation" mode) as the real percentComplete.
+  confirmSuggested: z.boolean().optional()
+});
+
+async function moduleForItem(projectId: string, itemId: string) {
+  const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
+  if (!item) return null;
+  return item.type === "variation" ? ("variations" as const) : ("site_instructions" as const);
+}
+
+export async function PATCH(request: Request, context: { params: { projectId: string; itemId: string } }) {
+  const userId = await requireUserId(request);
+  const { projectId, itemId } = context.params;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const hasAccess = await requireProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const module_ = await moduleForItem(projectId, itemId);
+  if (!module_) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const canAccessModule = await requireModuleAccess(projectId, userId, module_);
+  if (!canAccessModule) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const payload = updateVariationItemSchema.parse(await request.json());
+
+  if (payload.confirmSuggested) {
+    const current = await prisma.variationItem.findFirst({ where: { id: itemId, projectId } });
+    const variationItem = await prisma.variationItem.update({
+      where: { id: itemId, projectId },
+      data: {
+        percentComplete: current?.suggestedPercentComplete ?? current?.percentComplete,
+        suggestedPercentComplete: null
+      }
+    });
+    return NextResponse.json({ variationItem });
+  }
+
+  const variationItem = await prisma.variationItem.update({
+    where: { id: itemId, projectId },
+    data: {
+      title: payload.title,
+      reference: payload.reference,
+      description: payload.description ?? undefined,
+      status: payload.status,
+      percentComplete: payload.percentComplete === undefined ? undefined : payload.percentComplete,
+      notifiedAt: payload.notifiedAt ? new Date(payload.notifiedAt) : undefined,
+      dueAt: payload.dueAt ? new Date(payload.dueAt) : undefined
+    }
+  });
+
+  return NextResponse.json({ variationItem });
+}
+
+export async function DELETE(request: Request, context: { params: { projectId: string; itemId: string } }) {
+  const userId = await requireUserId(request);
+  const { projectId, itemId } = context.params;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const hasAccess = await requireProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const module_ = await moduleForItem(projectId, itemId);
+  if (!module_) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const canAccessModule = await requireModuleAccess(projectId, userId, module_);
+  if (!canAccessModule) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId } });
+  if (item?.storageKey) await deleteFromS3(item.storageKey).catch(() => {});
+  if (item?.quoteStorageKey) await deleteFromS3(item.quoteStorageKey).catch(() => {});
+
+  const [dayWorksSheets, photos] = await Promise.all([
+    prisma.dayWorksSheet.findMany({ where: { variationItemId: itemId } }),
+    prisma.variationPhoto.findMany({ where: { variationItemId: itemId } })
+  ]);
+  await Promise.all([
+    ...dayWorksSheets.map((sheet) => deleteFromS3(sheet.storageKey).catch(() => {})),
+    ...photos.map((photo) => deleteFromS3(photo.storageKey).catch(() => {}))
+  ]);
+
+  await prisma.dayWorksSheet.deleteMany({ where: { variationItemId: itemId } });
+  await prisma.variationPhoto.deleteMany({ where: { variationItemId: itemId } });
+  await prisma.correspondence.updateMany({ where: { variationItemId: itemId }, data: { variationItemId: null } });
+  await prisma.update.updateMany({ where: { variationItemId: itemId }, data: { variationItemId: null } });
+  await prisma.variationItem.delete({ where: { id: itemId, projectId } });
+
+  return NextResponse.json({ ok: true });
+}

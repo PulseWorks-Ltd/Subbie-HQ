@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { PushNotificationsButton } from "@/components/mobile/push-notifications-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function MobileLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -21,6 +22,7 @@ export default async function MobileLayout({ children }: { children: React.React
           <span className="text-base font-bold">Subbie Updates</span>
         </a>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <PushNotificationsButton />
           <form
             action={async () => {

@@ -4,14 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ModuleKey } from "@/lib/permissions";
 
-const NAV_ITEMS: { label: string; segment: string; module: ModuleKey | null; adminOnly?: boolean }[] = [
+const NAV_ITEMS: {
+  label: string;
+  segment: string;
+  module: ModuleKey | null;
+  anyOfModules?: ModuleKey[];
+  adminOnly?: boolean;
+}[] = [
   { label: "Overview", segment: "", module: null },
   { label: "Updates", segment: "updates", module: "updates" },
   { label: "Contract", segment: "contract", module: "contract" },
   { label: "Scope", segment: "scope", module: "scope" },
   { label: "Programme", segment: "programme", module: "programme" },
+  { label: "Variations", segment: "variations", module: null, anyOfModules: ["variations", "site_instructions"] },
   { label: "Payment Claims", segment: "payment-claims", module: "payment_claims" },
-  { label: "Evidence", segment: "evidence", module: "evidence" },
+  { label: "Pictures", segment: "pictures", module: "pictures" },
+  { label: "Correspondence", segment: "correspondence", module: "correspondence" },
   { label: "Health & Safety", segment: "health-safety", module: "health_safety" },
   { label: "Settings", segment: "settings", module: null, adminOnly: true }
 ];
@@ -32,6 +40,7 @@ export function ProjectNav({
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (unrestricted || isAdmin) return true;
     if (item.adminOnly) return false;
+    if (item.anyOfModules) return item.anyOfModules.some((module) => Boolean(modules[module]));
     if (!item.module) return true;
     return Boolean(modules[item.module]);
   });
@@ -40,7 +49,7 @@ export function ProjectNav({
     <nav className="flex flex-col gap-1 w-48 shrink-0">
       {visibleItems.map((item) => {
         const href = `/projects/${projectId}${item.segment ? `/${item.segment}` : ""}`;
-        const isActive = pathname === href;
+        const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
         return (
           <Link

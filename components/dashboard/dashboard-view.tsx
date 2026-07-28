@@ -4,6 +4,7 @@ import { DashboardSection } from "@/components/dashboard/dashboard-section";
 
 const SECTIONS: { key: DashboardItemType; label: string; icon: string }[] = [
   { key: "site-instruction", label: "Site Instructions", icon: "assignment" },
+  { key: "variation", label: "Variations", icon: "request_quote" },
   { key: "programme", label: "Programme", icon: "construction" },
   { key: "safety-document", label: "Health & Safety", icon: "health_and_safety" },
   { key: "payment-claim", label: "Payment Claims", icon: "payments" }

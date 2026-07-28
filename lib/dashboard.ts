@@ -4,12 +4,13 @@ import { hasModuleAccess, type ModuleKey } from "./permissions";
 
 const MODULE_FOR_TYPE: Record<DashboardItemType, ModuleKey> = {
   programme: "programme",
+  variation: "variations",
   "site-instruction": "site_instructions",
   "payment-claim": "payment_claims",
   "safety-document": "health_safety"
 };
 
-export type DashboardItemType = "programme" | "site-instruction" | "payment-claim" | "safety-document";
+export type DashboardItemType = "programme" | "variation" | "site-instruction" | "payment-claim" | "safety-document";
 export type DashboardRescheduleField = "startDate" | "endDate" | "dueAt" | "nextClaimDate" | "expiresAt";
 
 export type DashboardItem = {
@@ -59,7 +60,7 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
     },
     include: {
       programmeItems: { where: { completedAt: null } },
-      siteInstructions: { where: { status: "open", dueAt: { not: null } } },
+      variationItems: { where: { status: { not: "complete" }, dueAt: { not: null } } },
       safetyDocuments: { where: { expiresAt: { not: null } } }
     }
   });
@@ -77,6 +78,7 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
 
   for (const project of projects) {
     const canSeeProgramme = canSeeType(project, "programme");
+    const canSeeVariations = canSeeType(project, "variation");
     const canSeeSiteInstructions = canSeeType(project, "site-instruction");
     const canSeePaymentClaims = canSeeType(project, "payment-claim");
     const canSeeSafetyDocuments = canSeeType(project, "safety-document");
@@ -112,21 +114,25 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
       });
     }
 
-    for (const siteInstruction of canSeeSiteInstructions ? project.siteInstructions : []) {
-      const anchor = siteInstruction.dueAt!;
+    for (const variationItem of project.variationItems) {
+      const isVariation = variationItem.type === "variation";
+      if (isVariation && !canSeeVariations) continue;
+      if (!isVariation && !canSeeSiteInstructions) continue;
+
+      const anchor = variationItem.dueAt!;
       const anchorDay = startOfDay(anchor);
       if (!inWindow(anchorDay)) continue;
 
       items.push({
-        id: siteInstruction.id,
-        type: "site-instruction",
+        id: variationItem.id,
+        type: isVariation ? "variation" : "site-instruction",
         projectId: project.id,
         projectName: project.name,
-        headline: `${siteInstruction.reference} — ${siteInstruction.title}`,
-        detail: `Response due ${formatShortDate(anchor, today)}`,
+        headline: `${variationItem.reference} — ${variationItem.title}`,
+        detail: `${isVariation ? "Due" : "Response due"} ${formatShortDate(anchor, today)}`,
         date: anchor,
         isOverdue: anchorDay.getTime() < today.getTime(),
-        href: `/projects/${project.id}/updates`,
+        href: `/projects/${project.id}/variations/${variationItem.id}`,
         canComplete: true,
         rescheduleField: "dueAt"
       });

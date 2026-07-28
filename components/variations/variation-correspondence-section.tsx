@@ -1,0 +1,72 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import type { Correspondence } from "@prisma/client";
+
+export function VariationCorrespondenceSection({
+  projectId,
+  itemId,
+  correspondence
+}: {
+  projectId: string;
+  itemId: string;
+  correspondence: Correspondence[];
+}) {
+  const router = useRouter();
+  const [isUploading, setIsUploading] = useState(false);
+
+  async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = "";
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.set("title", file.name);
+    formData.set("variationItemId", itemId);
+    formData.set("file", file);
+    await fetch(`/api/projects/${projectId}/correspondence`, { method: "POST", body: formData });
+    setIsUploading(false);
+    router.refresh();
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold">Correspondence</h3>
+        <label className="text-xs font-bold text-primary hover:underline cursor-pointer">
+          {isUploading ? "Uploading..." : "+ Add"}
+          <input type="file" onChange={handleUpload} disabled={isUploading} className="hidden" />
+        </label>
+      </div>
+
+      {correspondence.length === 0 ? (
+        <p className="text-sm text-[#4c739a] dark:text-slate-400">No correspondence linked yet.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {correspondence.map((item) => (
+            <a
+              key={item.id}
+              href={`/api/projects/${projectId}/correspondence/${item.id}/file`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 text-sm text-primary hover:underline truncate"
+            >
+              <span className="material-symbols-outlined text-lg shrink-0">mail</span>
+              <span className="truncate">{item.title}</span>
+            </a>
+          ))}
+        </div>
+      )}
+
+      <Link
+        href={`/projects/${projectId}/correspondence`}
+        className="inline-block mt-3 text-xs font-bold text-[#4c739a] dark:text-slate-400 hover:text-primary"
+      >
+        View all Correspondence →
+      </Link>
+    </div>
+  );
+}

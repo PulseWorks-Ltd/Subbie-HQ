@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SiteInstruction, Update, UpdateAttachment } from "@prisma/client";
+import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { MobileThread } from "@/components/mobile/mobile-thread";
 import { getCountdownInfo } from "@/lib/date-countdown";
 
 type Author = { id: string; name: string | null; email: string };
-type SiteInstructionRef = { id: string; reference: string; title: string };
+type VariationItemRef = { id: string; reference: string; title: string };
 type UpdateWithReplies = Update & {
   author: Author;
-  siteInstruction: SiteInstructionRef | null;
+  variationItem: VariationItemRef | null;
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
@@ -18,19 +18,19 @@ type UpdateWithReplies = Update & {
 export function MobileUpdatesView({
   projectId,
   updates,
-  siteInstructions
+  taggableItems
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
-  siteInstructions: SiteInstruction[];
+  taggableItems: VariationItem[];
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
-  const [siteInstructionId, setSiteInstructionId] = useState("");
+  const [variationItemId, setVariationItemId] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const openSiteInstructions = siteInstructions.filter((si) => si.status === "open");
+  const openItems = taggableItems.filter((item) => item.status !== "complete");
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -39,14 +39,14 @@ export function MobileUpdatesView({
 
     const formData = new FormData();
     formData.set("body", body);
-    if (siteInstructionId) formData.set("siteInstructionId", siteInstructionId);
+    if (variationItemId) formData.set("variationItemId", variationItemId);
     files.forEach((file) => formData.append("files", file));
 
     await fetch(`/api/projects/${projectId}/updates`, { method: "POST", body: formData });
 
     setIsSubmitting(false);
     setBody("");
-    setSiteInstructionId("");
+    setVariationItemId("");
     setFiles([]);
     router.refresh();
   }
@@ -76,16 +76,16 @@ export function MobileUpdatesView({
             className="hidden"
           />
         </label>
-        {openSiteInstructions.length > 0 && (
+        {openItems.length > 0 && (
           <select
-            value={siteInstructionId}
-            onChange={(event) => setSiteInstructionId(event.target.value)}
+            value={variationItemId}
+            onChange={(event) => setVariationItemId(event.target.value)}
             className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
-            <option value="">Not tied to a Site Instruction</option>
-            {openSiteInstructions.map((si) => (
-              <option key={si.id} value={si.id}>
-                {si.reference} · {si.title}
+            <option value="">Not tied to a Variation/SI</option>
+            {openItems.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.reference} · {item.title}
               </option>
             ))}
           </select>
@@ -99,28 +99,28 @@ export function MobileUpdatesView({
         </button>
       </form>
 
-      {siteInstructions.length > 0 && (
+      {taggableItems.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {siteInstructions.map((si) => {
-            const urgency = si.status === "open" && si.dueAt ? getCountdownInfo(si.dueAt).urgency : null;
+          {taggableItems.map((item) => {
+            const urgency = item.status !== "complete" && item.dueAt ? getCountdownInfo(item.dueAt).urgency : null;
             const urgentStyle =
               urgency === "overdue"
                 ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                 : urgency === "today" || urgency === "soon"
                   ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                  : si.status === "complete"
+                  : item.status === "complete"
                     ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                     : "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400";
 
             return (
               <span
-                key={si.id}
+                key={item.id}
                 className={`shrink-0 inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${urgentStyle}`}
               >
-                {si.reference}
+                {item.reference}
                 {(urgency === "overdue" || urgency === "today" || urgency === "soon") &&
-                  si.dueAt &&
-                  ` · ${getCountdownInfo(si.dueAt).label}`}
+                  item.dueAt &&
+                  ` · ${getCountdownInfo(item.dueAt).label}`}
               </span>
             );
           })}

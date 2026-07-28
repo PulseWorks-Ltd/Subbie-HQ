@@ -78,10 +78,14 @@ export async function extractProgrammeFromText(
 ): Promise<ExtractedProgrammeResult> {
   const filterInstruction = tradeReference
     ? "This programme may cover multiple trades/subcontractors, not just one. " +
-      `Only extract activities that belong to the trade/subcontractor referenced as "${tradeReference}" in this document — ` +
-      "look for that code, abbreviation, or name against each activity (e.g. in a 'Trade', 'Responsible', or 'Contractor' column, in the activity's own text, or in a legend/key mapping codes to companies). " +
-      `Set "filterApplied" to true if you were able to identify and filter to "${tradeReference}"'s activities. ` +
-      `If the document does not tag activities by trade at all (e.g. it is already a single-trade programme), extract every activity instead and set "filterApplied" to false.`
+      `Only extract activities belonging to the trade referenced as "${tradeReference}" — use judgement, not literal text matching. ` +
+      `"${tradeReference}" could appear in the document in any of these forms, and you should recognise all of them as the same trade: ` +
+      `(a) a short code or abbreviation against each activity, e.g. in a 'Trade', 'Responsible', or 'Contractor' column, or resolved via a legend/key mapping codes to company names; ` +
+      `(b) a word with a different form, tense, or spelling than what was typed — e.g. if given "Scaffold", also match "Scaffolding", "Scaffolded", "Scaffold Erection", "Scaffold Hire" and similar variants; ` +
+      `(c) a section or sub-heading in the document (e.g. a bold row reading "SCAFFOLDING") under which several unlabelled activity rows are grouped until the next heading — in that case every activity under the matching heading belongs to this trade, even though the individual rows don't repeat the trade name; ` +
+      `(d) a synonym or closely related trade term a person in the industry would recognise as the same trade, even if the exact word differs. ` +
+      `Set "filterApplied" to true if you found and used any of these signals to identify "${tradeReference}"'s activities. ` +
+      `If the document gives no usable signal to attribute activities to a trade at all (e.g. it is already a single-trade programme with no headings or codes), extract every activity instead and set "filterApplied" to false.`
     : "Extract every distinct activity/milestone in the document, regardless of trade, and set \"filterApplied\" to false.";
 
   const response = await getClient().chat.completions.create({

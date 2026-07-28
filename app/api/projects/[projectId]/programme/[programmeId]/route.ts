@@ -10,6 +10,7 @@ const updateProgrammeSchema = z.object({
   endDate: z.string().datetime().optional(),
   status: z.enum(["draft", "parsed", "confirmed"]).optional(),
   confidence: z.number().min(0).max(1).optional(),
+  completedAt: z.string().datetime().nullable().optional(),
   scopeItemIds: z.array(z.string()).optional()
 });
 
@@ -37,7 +38,9 @@ export async function PATCH(
       startDate: payload.startDate ? new Date(payload.startDate) : undefined,
       endDate: payload.endDate ? new Date(payload.endDate) : undefined,
       status: payload.status,
-      confidence: payload.confidence
+      confidence: payload.confidence,
+      completedAt:
+        payload.completedAt === undefined ? undefined : payload.completedAt ? new Date(payload.completedAt) : null
     }
   });
 

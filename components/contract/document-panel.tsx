@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Clause, ContractDocument } from "@prisma/client";
+import type { Clause, ContractDeviation, ContractDocument, ContractReview } from "@prisma/client";
 import { StatusBadge } from "@/components/badges/status-badge";
 import { RiskBadge } from "@/components/badges/risk-badge";
 import { ClauseFormDialog } from "@/components/contract/clause-form-dialog";
+import { ContractReviewSection } from "@/components/contract/contract-review-section";
 
 export function DocumentPanel({
   projectId,
   document
 }: {
   projectId: string;
-  document: ContractDocument & { clauses: Clause[] };
+  document: ContractDocument & {
+    clauses: Clause[];
+    reviews: (ContractReview & { deviations: ContractDeviation[] })[];
+  };
 }) {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -112,6 +116,12 @@ export function DocumentPanel({
               ))}
             </div>
           )}
+
+          <ContractReviewSection
+            projectId={projectId}
+            documentId={document.id}
+            initialReview={document.reviews[0] ?? null}
+          />
         </div>
       )}
 

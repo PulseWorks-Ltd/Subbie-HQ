@@ -18,6 +18,7 @@ const NAV_ITEMS: {
   { label: "Programme", segment: "programme", module: "programme" },
   { label: "Variations", segment: "variations", module: null, anyOfModules: ["variations", "site_instructions"] },
   { label: "Payment Claims", segment: "payment-claims", module: "payment_claims" },
+  { label: "Insurance", segment: "insurance", module: "insurance" },
   { label: "Pictures", segment: "pictures", module: "pictures" },
   { label: "Correspondence", segment: "correspondence", module: "correspondence" },
   { label: "Health & Safety", segment: "health-safety", module: "health_safety" },

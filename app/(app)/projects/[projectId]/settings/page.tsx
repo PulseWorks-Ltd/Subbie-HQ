@@ -2,25 +2,32 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getOrganisationMembership } from "@/lib/organisation";
-import { PlaceholderSection } from "@/components/placeholder-section";
+import { SettingsView } from "@/components/settings/settings-view";
 
 export default async function SettingsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
 
   const session = await auth();
-  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { organisationId: true, riskLevel: true, invoiceModeEnabled: true }
+  });
   const membership = session?.user?.id ? await getOrganisationMembership(session.user.id) : null;
 
   const canAccess =
     !project?.organisationId || (membership?.isAdmin && membership.organisationId === project.organisationId);
-  if (!canAccess) {
+  if (!project || !canAccess) {
     redirect(`/projects/${projectId}`);
   }
 
+  const contractTerms = await prisma.contractTerms.findUnique({ where: { projectId } });
+
   return (
-    <PlaceholderSection
-      title="Settings"
-      description="Project settings and configuration are coming in a later build phase."
+    <SettingsView
+      projectId={projectId}
+      riskLevel={project.riskLevel}
+      invoiceModeEnabled={project.invoiceModeEnabled}
+      contractTerms={contractTerms}
     />
   );
 }

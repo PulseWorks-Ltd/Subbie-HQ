@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Clause, ContractDocument } from "@prisma/client";
+import type { Clause, ContractDeviation, ContractDocument, ContractReview } from "@prisma/client";
 import { UploadDocumentDialog } from "@/components/contract/upload-document-dialog";
 import { DocumentPanel } from "@/components/contract/document-panel";
 
@@ -10,7 +10,10 @@ export function ContractView({
   documents
 }: {
   projectId: string;
-  documents: (ContractDocument & { clauses: Clause[] })[];
+  documents: (ContractDocument & {
+    clauses: Clause[];
+    reviews: (ContractReview & { deviations: ContractDeviation[] })[];
+  })[];
 }) {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 

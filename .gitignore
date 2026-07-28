@@ -7,3 +7,7 @@ node_modules/
 !.env.staging.example
 .DS_Store
 *.tsbuildinfo
+
+# Licensed, copyrighted third-party reference document — parsed once into
+# lib/standard-forms/sa-2017.json (which IS committed), never the raw PDF.
+docs/Standard Documents/

@@ -10,6 +10,7 @@ export const MODULES = [
   "health_safety",
   "payment_claims",
   "evidence",
+  "insurance",
   "quoting"
 ] as const;
 
@@ -32,6 +33,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   // lib/dashboard.ts / variation-items routes) — no nav item uses this module today,
   // since Pictures + Correspondence replaced the old Evidence placeholder page.
   evidence: "Evidence",
+  insurance: "Insurance",
   quoting: "Quoting"
 };
 
@@ -58,6 +60,7 @@ export const PRESETS: Record<PresetKey, { label: string; isAdmin: boolean; modul
       health_safety: true,
       payment_claims: true,
       evidence: true,
+      insurance: true,
       quoting: true
     }
   },

@@ -15,7 +15,14 @@ export default async function ContractPage({ params }: { params: Promise<{ proje
 
   const documents = await prisma.contractDocument.findMany({
     where: { projectId },
-    include: { clauses: { orderBy: { createdAt: "desc" } } },
+    include: {
+      clauses: { orderBy: { createdAt: "desc" } },
+      reviews: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: { deviations: { orderBy: { priorityScore: "desc" } } }
+      }
+    },
     orderBy: { uploadedAt: "desc" }
   });
 

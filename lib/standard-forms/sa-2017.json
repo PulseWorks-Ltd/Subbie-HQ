@@ -1,0 +1,3947 @@
+{
+  "version": "SA-2017",
+  "sourceTitle": "SA-2017 Subcontract Agreement (Registered Master Builders Association of New Zealand Inc / New Zealand Specialist Trade Contractors Federation Inc)",
+  "generatedAt": "2026-07-28T20:13:57.464Z",
+  "clauses": [
+    {
+      "clauseRef": "1",
+      "title": null,
+      "body": "They will carry out and fulfil all obligations imposed on them by this Subcontract Agreement.",
+      "pageNumber": 4,
+      "isFillIn": false,
+      "part": "Subcontract Agreement",
+      "section": "Subcontract Agreement",
+      "topicBucket": "subcontract_agreement"
+    },
+    {
+      "clauseRef": "2",
+      "title": null,
+      "body": "For the Subcontract Sum of \t$ \t(GST excl.),\nor such greater or less sum as may become payable under the terms of this Subcontract, the\nSubcontractor will carry out and complete the Subcontract Works (and remedy all defects in the\nSubcontract Works) as required by this Subcontract and the conditions of the Head Contract that apply\nto the Subcontract Works.",
+      "pageNumber": 4,
+      "isFillIn": false,
+      "part": "Subcontract Agreement",
+      "section": "Subcontract Agreement",
+      "topicBucket": "subcontract_agreement"
+    },
+    {
+      "clauseRef": "3",
+      "title": null,
+      "body": "Unless otherwise stated in this Subcontract, the Subcontractor will provide all labour, materials,\nservices, equipment and plant required for the proper completion of the Subcontract Works.",
+      "pageNumber": 4,
+      "isFillIn": false,
+      "part": "Subcontract Agreement",
+      "section": "Subcontract Agreement",
+      "topicBucket": "subcontract_agreement"
+    },
+    {
+      "clauseRef": "4",
+      "title": null,
+      "body": "The following items constitute the Subcontract (“Subcontract Documents”)\na)\tThis Subcontract Agreement;\nb)\tThe Subcontract Specific Conditions including Additional Documents and Special Conditions;\nc)\tThe Subcontract General Conditions;\nd)\tThe contract documents (as defined under the Head Contract), which relate to the\nSubcontract Works.",
+      "pageNumber": 4,
+      "isFillIn": false,
+      "part": "Subcontract Agreement",
+      "section": "Subcontract Agreement",
+      "topicBucket": "subcontract_agreement"
+    },
+    {
+      "clauseRef": "5",
+      "title": null,
+      "body": "The Subcontract Documents are the entire contract between the Contractor and the Subcontractor.\nThis Subcontract supersedes all negotiations, representations and warranties.",
+      "pageNumber": 4,
+      "isFillIn": false,
+      "part": "Subcontract Agreement",
+      "section": "Subcontract Agreement",
+      "topicBucket": "subcontract_agreement"
+    },
+    {
+      "clauseRef": "2",
+      "title": "THE CONTRACT",
+      "body": "The general conditions of the Head Contract are \tas\nmay have been modified by other documents in the Head Contract",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3",
+      "title": "SUBCONTRACTOR’S BONDS AND GUARANTEES",
+      "body": "",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3.1.1",
+      "title": null,
+      "body": "Performance bond \tYes/No",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3.1.1",
+      "title": null,
+      "body": "Value of performance bond \t$",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3.2",
+      "title": null,
+      "body": "Bonds in lieu of retentions \tYes/No",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3.2.1",
+      "title": null,
+      "body": "Value of bond in lieu of retentions for contract \t$",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3.2.1",
+      "title": null,
+      "body": "Value of bond in lieu of retentions for defects \t$",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3.3",
+      "title": null,
+      "body": "Trade guarantees or warranties required \tYes/No\nWhen required\nDuration \tPeriod\nCopies attached \tYes/No",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3.3.1",
+      "title": null,
+      "body": "Continuity guarantee required \tYes/No\nCopy attached \tYes/No",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8",
+      "title": "INSURANCE",
+      "body": "",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.1.1",
+      "title": null,
+      "body": "Contract Works Insurance by: \tPrincipal/Contractor\nDeductible for Contract Works insurance under \t$",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.2.2",
+      "title": null,
+      "body": "Insurance of Subcontract Works by Subcontractor \tYes/No\nIf Yes",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.2.3",
+      "title": null,
+      "body": "Value of Subcontract Works insurance by \t$\nSubcontract Value \t$\nPlus allowances for:\nDemolition and removal of debris \t% \t$\nFees \t% \t$\nIncrease in costs \t% \t$\nVariations \t% \t$\nTotal Value to be Insured \t$\nSubcontract Works insurance required by \tPractical Completion of Head\nSubcontractor until: \tContract Works\n(Delete those that do not apply) \tCompletion of the Subcontract\nWorks\nOther:",
+      "pageNumber": 5,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.3",
+      "title": null,
+      "body": "Plant and equipment – list of items to be insured for\nmarket value of each item",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.4.2",
+      "title": null,
+      "body": "Public Liability – amount not less than \tMinimum $5,000,000 or\n$",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.4.4",
+      "title": null,
+      "body": "Use of aircraft or watercraft to be insured \tYes/No\n$",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.4.5",
+      "title": null,
+      "body": "Vibration removal of support insurance \tYes/No\n$",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.5.2",
+      "title": null,
+      "body": "Motor vehicle liability – amount not less than \tMinimum $5,000,000 or\n$\nSpecial extension required for “airside” or other \tYes/No",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "8.6.2",
+      "title": null,
+      "body": "Professional indemnity insurance required \tYes/No\nProfessional indemnity insurance required \t$",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "9",
+      "title": "VARIATIONS",
+      "body": "",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "9.1.3",
+      "title": null,
+      "body": "Time for notification of intention to claim that work \t5 Working Days\ninvolves a variation",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "9.2.2",
+      "title": null,
+      "body": "Time for submission of price and details of a \t5 Working Days from request\nvariation",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "10",
+      "title": "TIME",
+      "body": "",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "10.1.1",
+      "title": null,
+      "body": "Due dates for practical completion of the Head\nContract",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "10.1.1",
+      "title": null,
+      "body": "Due dates for practical completion of separable\nportions",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "10.4.1",
+      "title": null,
+      "body": "Liquidated damages applicable under the Head \t$\nContract\nPer calendar month/day/week\n(delete all but one)",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "10.4.1",
+      "title": null,
+      "body": "Liquidated damages applicable under separable \t$\nportions\nPer calendar month/day/week\n(delete all but one)",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "11",
+      "title": "DEFECTS",
+      "body": "",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "11.1.2",
+      "title": null,
+      "body": "Defects liability period \tWeeks/months (delete one)\nfrom the date of the notice of\ncompletion \tof \tthe \tSubcontract\nWorks under clause 10.4.2(a)",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "11.1.2",
+      "title": null,
+      "body": "Defects liability period of separable portions \tWeeks/months (delete one)\nfrom the date of the notice of\ncompletion \tof \tthe \tSubcontract\nWorks under clause 10.4.2(a)",
+      "pageNumber": 6,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12",
+      "title": "PAYMENTS",
+      "body": "The due dates and details are as follows:",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.1.1",
+      "title": null,
+      "body": "Frequency for submission of payment claims",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.1.1",
+      "title": null,
+      "body": "Due date for payment claims \t5 Working Days before end of month\nfor work to the end of that month",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.1.1",
+      "title": null,
+      "body": "Due date for variation claims \t5 Working Days before the due date\nfor payment claims",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.2.1",
+      "title": null,
+      "body": "Due date for payment schedules \t22 Working Days after the end of the\nclaim month",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.2.1",
+      "title": null,
+      "body": "Due date for payments \t22 Working Days after the end of the\nclaim month",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.3.1",
+      "title": null,
+      "body": "Due date for final account \t20 Working Days after the date of\nHead Contract practical completion",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.4.1",
+      "title": null,
+      "body": "Percentage of total amount certified to be held as \tUp \tuntil \tcompletion \tof \tthe\nretention (only if retention bond not provided see \tSubcontract Works\n3.2.1)\n% \tof the first \t$\n% \tof the next \t$\n% \tof the remainder",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.4.2",
+      "title": null,
+      "body": "Percentage to be retained for defects liability period \tFor defects liability period \t%\n(after the initial release of retentions and only if \tof total retentions\nretention bond not provided, see 3.2.1)",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.4.2",
+      "title": null,
+      "body": "Due date for initial retention release \t22 Working Days after the end of the\nmonth \tin \twhich \tthe \tnotice \tof\ncompletion \tof \tthe \tSubcontract\nWorks under clause 10.4.2(a) is\nissued",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.4.2",
+      "title": null,
+      "body": "Due date for final retention release \t25 \tWorking \tDays \tafter \tthe\ncompletion of the defects liability\nperiod, or seven working days after\ncompletion of rectification of all\ndefects in the Subcontract Works,\nwhichever is later",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "5.2.2",
+      "title": null,
+      "body": "Subcontractor is required to obtain building consent \tYes/No\nfor Subcontract Works",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "5.13.1",
+      "title": null,
+      "body": "Shop drawings required \tYes/No",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "5.13.1",
+      "title": null,
+      "body": "As built drawings required \tYes/No\nIf yes,\ndue by the month prior to the due\ndate for practical completion",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "5.13.1",
+      "title": null,
+      "body": "Operating instruction and maintenance manuals \tYes/No\nrequired If yes,\ndue by the month prior to the due\ndate for practical completion",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "5.13.1",
+      "title": null,
+      "body": "Producer statements required: Construction (PS3) \tYes/No",
+      "pageNumber": 7,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "6.1.5",
+      "title": null,
+      "body": "Producer statements required: Design (PS1) \tYes/No",
+      "pageNumber": 8,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "6.1.5",
+      "title": null,
+      "body": "Producer statements required: Design review (PS2) \tYes/No",
+      "pageNumber": 8,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "6.1.5",
+      "title": null,
+      "body": "Producer statements required: Construction review \tYes/No\n(PS4)",
+      "pageNumber": 8,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.5.1",
+      "title": null,
+      "body": "Payment for materials off-site \tYes/No",
+      "pageNumber": 8,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.5.1",
+      "title": null,
+      "body": "Conditions required for off-site payment \tRefer to Head Contract",
+      "pageNumber": 8,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "12.8",
+      "title": null,
+      "body": "Cost fluctuation adjustments \tYes/No\nIf yes,",
+      "pageNumber": 8,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "Appendix A",
+      "title": null,
+      "body": "Is this a Supply Only Subcontract? \tYes(Appendix A applies)/No\nSubcontract sum is subject to remeasure \tYes/No",
+      "pageNumber": 8,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "Appendix D",
+      "title": null,
+      "body": "Pre-letting meeting held \tYes/No\nOther:",
+      "pageNumber": 8,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "a",
+      "title": null,
+      "body": "Invitation to tender dated \tincluding all documents listed in the invitation to tender",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "b",
+      "title": null,
+      "body": "Notices to tenderers numbers",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "c",
+      "title": null,
+      "body": "Contract Programme \treference\ndated",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "d",
+      "title": null,
+      "body": "Email dated \tfrom",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "e",
+      "title": null,
+      "body": "Letter dated \tfrom",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "f",
+      "title": null,
+      "body": "Fax dated \tfrom",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "g",
+      "title": null,
+      "body": "Minutes of Subcontract pre-letting meeting/s \tdated",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "h",
+      "title": null,
+      "body": "Letter of award dated",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "i",
+      "title": null,
+      "body": "Subcontractor site specific safety plan",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "j",
+      "title": null,
+      "body": "Schedule of quantities (if applicable)",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "k",
+      "title": null,
+      "body": "Summary of Subcontract Sum\nOriginal tendered price \t$\nItem \t$\nItem \t$\nTotal agreed Subcontract \t$\nSum",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "l",
+      "title": null,
+      "body": "",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "m",
+      "title": null,
+      "body": "",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "n",
+      "title": null,
+      "body": "",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "o",
+      "title": null,
+      "body": "",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "p",
+      "title": null,
+      "body": "",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "1",
+      "title": null,
+      "body": "In the event of conflict, the following Special Conditions take precedence over the\nSubcontract Specific Conditions which in turn take precedence over the Subcontract\nGeneral Conditions.",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "2",
+      "title": null,
+      "body": "Conditions \tcontained \tin \tthe \tSubcontractor's \ttender do \tnot form \tpart of this\nSubcontract, unless conditions are listed in the attached pre-letting meeting minutes,\nor as listed here:",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "3",
+      "title": null,
+      "body": "Include any other Special Conditions that modify the Subcontract General Conditions here:",
+      "pageNumber": 9,
+      "isFillIn": true,
+      "part": "Specific Conditions",
+      "section": "Subcontract Specific Conditions (Clauses 2-12 schedule)",
+      "topicBucket": "specific_conditions_schedule"
+    },
+    {
+      "clauseRef": "6",
+      "title": "Interpretation",
+      "body": "In this Subcontract all words and expressions have the same meaning as those words or expressions (or equivalent words or expressions) in the Head Contract unless otherwise defined or required by context.\nWords using the singular also include the plural and vice versa where the context requires.\nWords using the masculine also include the feminine and vice versa where the context requires.",
+      "pageNumber": 10,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 1-2: Interpretation & Contracts",
+      "topicBucket": "interpretation_contracts"
+    },
+    {
+      "clauseRef": "6",
+      "title": "Interpretation",
+      "body": "The headings in this Subcontract are for convenience only and do not affect the interpretation of this Subcontract.\nAll references to clauses are references to clauses numbered in the Subcontract General Conditions and not to those in any other document forming part of this Subcontract unless otherwise stated.",
+      "pageNumber": 11,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 1-2: Interpretation & Contracts",
+      "topicBucket": "interpretation_contracts"
+    },
+    {
+      "clauseRef": "7",
+      "title": "Definitions",
+      "body": "Act of Insolvency means that any of the following events occurs in relation to a party to this Subcontract:\nit becomes bankrupt; or\nit is placed in liquidation or voluntary administration; or\na receiver or statutory manager is appointed in respect of it,\nand the assignee, liquidator, voluntary administrator, receiver or statutory manager fails within 10 Working Days to make arrangements satisfactory to the other party for the performance of its obligations under this Subcontract.\nAdditional Documents means those documents listed in the Subcontract Specific Conditions.\nEngineer means the Engineer, Architect or other supervising authority who may be appointed from time to time under the Head Contract.\nHead Contract means the contract between the Principal and the Contractor.\nHead Contract Works means the works defined in the Head Contract.\nSubcontract means the whole of the contract between the Contractor and Subcontractor.\nSubcontract Works means the works the Subcontractor has agreed to complete under this Subcontract.\nSubcontract Sum means the sum stated in this Subcontract Agreement to be paid for completion of the Subcontract Works, subject to any adjustments provided for in this Subcontract.\nSupply Only Subcontract means a Subcontract where the Subcontractor is required to supply materials, finished goods, or other items to the site but is not required to fix, place, or install them.\nWorking Day, unless defined otherwise in the Head Contract, means any day other than a Saturday, a Sunday, a public holiday, or any day within the period between and including 24 December to 5 January, irrespective of the days on which work is actually carried out.",
+      "pageNumber": 11,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 1-2: Interpretation & Contracts",
+      "topicBucket": "interpretation_contracts"
+    },
+    {
+      "clauseRef": "B",
+      "title": "Head Contract",
+      "body": "The Subcontractor agrees to comply with all the provisions of the Head Contract that apply to the Subcontract Works, except as specifically varied by this Subcontract. All the powers and obligations of the Principal and Engineer, under the Head Contract, extend to this Subcontract and must be exercised by the Contractor. In the event of ambiguity or conflict, the terms of this Subcontract take precedence over the terms of the Head Contract.",
+      "pageNumber": 12,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 1-2: Interpretation & Contracts",
+      "topicBucket": "interpretation_contracts"
+    },
+    {
+      "clauseRef": "B",
+      "title": "Subcontract Works",
+      "body": "The Subcontractor has the same obligations and liabilities to the Contractor for Subcontract Works, as those imposed on the Contractor by the terms of the Head Contract, except as modified in this Subcontract.",
+      "pageNumber": 12,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 1-2: Interpretation & Contracts",
+      "topicBucket": "interpretation_contracts"
+    },
+    {
+      "clauseRef": "6",
+      "title": "Subcontractor’s Tender",
+      "body": "a) \tTerms or conditions contained in any tender or form of offer do not form part of this Subcontract, except where those terms or conditions are also contained in the Subcontract Specific Conditions.",
+      "pageNumber": 12,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 1-2: Interpretation & Contracts",
+      "topicBucket": "interpretation_contracts"
+    },
+    {
+      "clauseRef": "7",
+      "title": "Signing",
+      "body": "The Subcontractor must initial each page and sign both copies of this Subcontract Agreement and return them to the Contractor prior to the first progress payment being made. Each party must retain one signed copy. If this Subcontract is signed after the commencement of the Subcontract Works, the terms and conditions apply retrospectively from the date of commencement of the Subcontract Works.",
+      "pageNumber": 12,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 1-2: Interpretation & Contracts",
+      "topicBucket": "interpretation_contracts"
+    },
+    {
+      "clauseRef": "4.",
+      "title": "Performance Bond",
+      "body": "If required by the Subcontract Specific Conditions, the Subcontractor must provide the Contractor with a performance bond for the amount stated in the Subcontract Specific Conditions. The form and surety of the bond must be approved by the Contractor. The executed bond must be returned to the Contractor with this Subcontract, and the Subcontractor is not entitled to any payment under this Subcontract until a properly executed bond is provided to the Contractor. The Performance Bond may only be called up by the Contractor with good cause, and if the Subcontractor is in default (as defined in clause 14.1). The Performance Bond must be returned to the Subcontractor when the Subcontractor’s work and any required maintenance work is completed.",
+      "pageNumber": 13,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 3-4: Bonds & Sub-Letting",
+      "topicBucket": "bonds_subletting"
+    },
+    {
+      "clauseRef": "5.",
+      "title": "Bonds in Lieu of Retentions",
+      "body": "If required by the Subcontract Specific Conditions, the Subcontractor must provide the Contractor with a bond (or bonds) in lieu of retentions. These bonds must be for the amounts stated in the Subcontract Specific Conditions and are in addition to any performance bond required by 3.1.1. Any bond in lieu of retentions must be in a form, and issued by a surety, approved by the Contractor. Where these bonds have been accepted by the Contractor, retentions will not be held. These Bonds will be returned to the Subcontractor no later than the due dates for release of the retentions that they are given in lieu of.",
+      "pageNumber": 13,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 3-4: Bonds & Sub-Letting",
+      "topicBucket": "bonds_subletting"
+    },
+    {
+      "clauseRef": "13.",
+      "title": "Guarantees",
+      "body": "If required by Subcontract Specific Conditions, the Subcontractor must provide warranties, guarantees, and/or continuity guarantees in the form required by this Subcontract or the Head Contract. These documents, properly executed, must be returned with the signed Subcontract (or at another time agreed in writing with the Contractor) and the Subcontractor is not entitled to any further payment under this Subcontract until these properly executed documents are provided to the Contractor.",
+      "pageNumber": 13,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 3-4: Bonds & Sub-Letting",
+      "topicBucket": "bonds_subletting"
+    },
+    {
+      "clauseRef": "l)",
+      "title": null,
+      "body": "The Subcontractor must not sub-let or assign the Subcontract Works, or any part of the Subcontract Works, without prior written consent from the Contractor. This consent must not be unreasonably withheld. Any change in the effective control of the Subcontractor requires written consent from the Contractor.",
+      "pageNumber": 14,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 3-4: Bonds & Sub-Letting",
+      "topicBucket": "bonds_subletting"
+    },
+    {
+      "clauseRef": "m)",
+      "title": null,
+      "body": "Assignment or sub-letting does not change the responsibility of the Subcontractor under this Subcontract. The Subcontractor will remain responsible for the acts, defaults or neglects of any of their subcontractors, including any subcontractor's agents or personnel, to the same extent as if they were the direct acts, defaults or neglects of the Subcontractor.",
+      "pageNumber": 14,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 3-4: Bonds & Sub-Letting",
+      "topicBucket": "bonds_subletting"
+    },
+    {
+      "clauseRef": "3.",
+      "title": "Care of Works",
+      "body": "The Subcontractor is responsible for the care and protection of the Subcontract Works, and must repair any Subcontract Works that have been damaged prior to practical completion (or earlier occupation by the Principal) of the Head Contract Works.\nIf damage has been caused by someone other than the Subcontractor, the Subcontractor is entitled to recover the cost of the repair from the party or parties who caused the damage. The Contractor will take all practicable steps to assist in recovery of the costs. Where such damage has been caused by a risk which is the responsibility of the Principal under the Head Contract, the cost of the repair will be treated as a variation.\nOnce the Subcontractor has completed the Subcontract Works and left the site, any work to repair damage under 5.1 will be treated as a variation.\nThe Subcontractor must take care not to cause any damage to the site and Head Contract Works. The Subcontractor is responsible for the cost of repairing any damage they cause to the site or Head Contract Works.\nThe Contractor must give written notice to the Subcontractor requiring the Subcontractor to remedy any damage the Subcontractor has caused. This remedial work to the site or Subcontract Works or Head Contract Works must be carried out within the time stated in the notice to avoid any delay or disruption to the Head Contract Works.\nIf the Subcontractor fails to carry out remedial work in accordance with the notice, the Contractor may, upon further written notice, and without further delay, carry out the work on the Subcontractor’s behalf. The cost of carrying out this work will become a debt immediately due to the Contractor. Without prejudice to any other method of recovery, the Contractor may deduct the costs of carrying out this work from payment due to the Subcontractor.",
+      "pageNumber": 15,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "4.",
+      "title": "Compliance with Legislation",
+      "body": "The Subcontractor must comply with all statutes, regulations and by-laws of Government, local government and other public authorities that may be applicable to the Subcontract Works.\nThe Subcontractor is responsible for making applications and obtaining any consents and approvals specified under the Subcontract Specific Conditions.\nThe Subcontractor must comply with all consents, approvals or other licences or authorities relating to the Subcontract Works.",
+      "pageNumber": 15,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.3",
+      "title": "Site Conditions and Inspection of Surfaces",
+      "body": "",
+      "pageNumber": 15,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.3.1",
+      "title": null,
+      "body": "The Subcontract Sum includes allowance for the nature of the site, including ground conditions, the extent and nature of the work, and materials required for the proper execution of the Subcontract Works, and appropriate access to, from, and on the site.",
+      "pageNumber": 15,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.3.2",
+      "title": null,
+      "body": "Before beginning any part of the Subcontract Works, the Subcontractor must inspect any surfaces against which their materials are to be applied. The Subcontractor must notify the Contractor in writing if there are any defects or conditions which may adversely affect the quality of the Subcontractor’s Works. The Contractor must immediately provide written acknowledgement of receipt of that notification. If the Subcontractor fails to provide written notification of such defects or conditions, the Subcontractor is deemed to accept existing surfaces and conditions.",
+      "pageNumber": 15,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.4",
+      "title": "Services",
+      "body": "",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.4.1",
+      "title": null,
+      "body": "If the Contractor provides (free of charge) services such as water, power, and lighting, the Subcontractor must only use these services for the purposes of the Subcontract Works.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.4.2",
+      "title": null,
+      "body": "The Subcontractor must (at their own expense) provide, erect, and remove all sheds, workshops, or other necessary facilities for the Subcontract Works. These facilities must only be in locations approved by the Contractor.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.4.3",
+      "title": null,
+      "body": "Regardless of the provisions of 5.4.1, any services, materials or consumables required for testing, commissioning or operation of the Subcontract Works required by this Subcontract must be provided by the Subcontractor at their own expense.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.5",
+      "title": "Scaffolding",
+      "body": "",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.5.1",
+      "title": null,
+      "body": "If the Subcontractor is permitted to use scaffolding provided by the Contractor, the Subcontractor must only use it for the purpose of the Subcontract Works.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.5.2",
+      "title": null,
+      "body": "If the Subcontractor’s scaffolding requirements exceed the extent or duration of that provided by the Contractor, the Subcontractor is responsible for any additional cost.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.5.3",
+      "title": null,
+      "body": "The Subcontractor must not alter any scaffolding erected by others.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.5.4",
+      "title": null,
+      "body": "No warranty or liability on the part of the Contractor or other Subcontractors is created or implied in regard to the condition or suitability of any scaffolding. The Subcontractor must be satisfied that the scaffolding is safe and suitable for the specific purpose and any special loadings required by the Subcontractor prior to using it.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.5.5",
+      "title": null,
+      "body": "Any other scaffolding required for the Subcontract Works must be provided by the Subcontractor.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.6",
+      "title": "Hoisting",
+      "body": "",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.6.1",
+      "title": null,
+      "body": "If the Subcontractor requires the use of any hoisting device provided by the Contractor, the Subcontractor must give the Contractor reasonable notice. The Subcontractor must provide, at their own cost, any specialist equipment for hoisting that is not provided by the Contractor.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.7",
+      "title": "Use of Work or Facilities Provided by Others",
+      "body": "",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.7.1",
+      "title": null,
+      "body": "If the Subcontractor uses any work, services, or facilities provided by the Contractor or any other Subcontractor, it is the Subcontractor’s responsibility to ascertain the suitability and safety of that work, service, or facility for their intended use and they will be fully responsible for any damage or loss caused by their use of it. This applies to (but is not limited to) scaffolding, hoisting, protection or safety systems, fastenings and attachments, lifting apparatus, any services, and any permanent or temporary work.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.8",
+      "title": "Cleaning",
+      "body": "",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.8.1",
+      "title": null,
+      "body": "The Subcontractor must remove any debris brought about by their operations and must keep the Subcontract Works and any part of the site or Head Contract Works affected by their operations clean and tidy.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.8.2",
+      "title": null,
+      "body": "If the Contractor provides bins for waste removal, the Subcontractor may place their waste in these bins, but otherwise the Subcontractor is responsible for their own waste removal. If the Contractor has provided separate bins for different types of waste, the Subcontractor must only use these bins for the types of waste allowed.",
+      "pageNumber": 16,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.8.3",
+      "title": null,
+      "body": "If the Subcontractor does not keep the area affected by the Subcontract Works clean and tidy, the Contractor may, after written notification to the Subcontractor, carry out cleaning on the Subcontractor’s behalf, and may, without prejudice to any other method of recovery, deduct the cost of cleaning from payments which would otherwise be payable to the Subcontractor under this Subcontract.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.8.4",
+      "title": null,
+      "body": "If the Subcontractor encounters any hazardous materials they must immediately notify the Contractor who will advise on the procedure to be followed. The Subcontractor is responsible for any hazardous materials they bring onto site and must remove any that are not used or required for the Subcontract Works.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.9",
+      "title": "Health and Safety",
+      "body": "",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.9.1",
+      "title": null,
+      "body": "Both the Contractor and Subcontractor acknowledge that they are PCBU’s as defined by the Health & Safety at Work Act 2015 owing the duties and obligations imposed by that Act.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.9.2",
+      "title": null,
+      "body": "Where the Head Contract requires the Contractor prepare a Site-specific safety plan, the Subcontractor shall provide all reasonable assistance to the Contractor to fulfil this obligation.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.9.3",
+      "title": null,
+      "body": "The Subcontractor must maintain safe and healthy working practices and conditions. The Subcontractor must promptly comply with all reasonable health and safety requirements of the Contractor, and any safety-related instruction given by the Contractor. The Subcontractor must comply with all applicable health and safety statutes and regulations at all times. As a minimum, the Subcontractor must comply with:\na) The Health and Safety at Work Act 2015;\nb) The Principal’s health and safety policy and procedures; and\nc) The Contractor’s health and safety policy and procedures.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.9.4",
+      "title": null,
+      "body": "Before commencing work on-site, the Subcontractor must submit a site-specific health and safety plan to the Contractor. This plan must show how the Subcontractor will comply with the requirements of 5.9.3.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.9.5",
+      "title": null,
+      "body": "If any health and safety requirement of the Principal or the Contractor is not complied with, the Contractor may take any necessary action to remedy the matter. The Subcontractor will be liable for all the Contractor’s costs and losses resulting from the Subcontractor’s non-compliance of health and safety requirements. Without prejudice to any other method of recovery, the amount may be deducted from any payments which would otherwise be payable to the Subcontractor under this Subcontract.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.10",
+      "title": "Hours of Work",
+      "body": "",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.10.1",
+      "title": null,
+      "body": "The Subcontractor must not carry out any work on the site outside the Contractor’s working hours, unless the Contractor has given written approval.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.11",
+      "title": "Quality Assurance",
+      "body": "",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.11.1",
+      "title": null,
+      "body": "The Subcontractor agrees to comply with all reasonable requirements of the Contractor relating to quality assurance.",
+      "pageNumber": 17,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations (1 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.12",
+      "title": "Use of Alternative Materials or Products",
+      "body": "5.12 \tUse of Alternative Materials or Products",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.12.1",
+      "title": null,
+      "body": "5.12.1 Use of materials or products that differ from those specified in the Head Contract is only permitted if approved in writing by the Contractor prior to their use. Application for approval to use alternative materials or products must be made in writing and must include all information required by the Contractor to assess the suitability of the substitution. If approval is given, it may be subject to conditions such as (but not limited to) cost, warranty and programme adjustments.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.12.2",
+      "title": null,
+      "body": "5.12.2 If a material or product required by the Head Contract is not available, or will not be available within the time required to enable the Subcontractor to meet their obligations under this Subcontract, the Subcontractor must notify the Contractor as soon as practicable.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.12.3",
+      "title": null,
+      "body": "5.12.3 Approval to use materials or products differing from those in the Head Contract, and conditions that may be imposed on their use, does not relieve the Subcontractor of their responsibilities under this Subcontract.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.13",
+      "title": "Shop Drawings, as Built Drawings, Operating Manuals and Construction Producer Statements",
+      "body": "5.13 \tShop Drawings, as Built Drawings, Operating Manuals and Construction Producer Statements",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.13.1",
+      "title": null,
+      "body": "5.13.1 If required for the Subcontract Works, shop drawings, as-built drawings, operating and maintenance manuals and construction producer statements will be supplied by the Subcontractor by the times specified in the Subcontract Specific Conditions.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.13.2",
+      "title": null,
+      "body": "5.13.2 The supply of any documents required under the Subcontract is an essential obligation for completion of the Subcontract Works.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.14",
+      "title": "Communication with Principal, Engineer, Consultants and Media",
+      "body": "5.14 \tCommunication with Principal, Engineer, Consultants and Media",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.14.1",
+      "title": null,
+      "body": "5.14.1 The \tSubcontractor \tmust \tnot \tcommunicate \tdirectly \twith \tthe \tPrincipal, \tEngineer \tor consultants without prior approval from the Contractor.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.14.2",
+      "title": null,
+      "body": "5.14.2 The Subcontractor must not discuss any matters relating to the project with the media. Any media enquiries must be referred to the Contractor.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.14.3",
+      "title": null,
+      "body": "5.14.3 The Subcontractor must not display advertising or signs on the site without the written permission of the Contractor.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.15",
+      "title": "Subcontractor Attendance at Meetings",
+      "body": "5.15 \tSubcontractor Attendance at Meetings",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.15.1",
+      "title": null,
+      "body": "5.15.1 The Subcontractor or their representative must attend site meetings when requested by the Contractor.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.16",
+      "title": "Comprehensive Programme Requirements of the Head Contract",
+      "body": "5.16 \tComprehensive Programme Requirements of the Head Contract",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.16.1",
+      "title": null,
+      "body": "5.16.1 Where the Head Contract requires the Contractor prepare and update a Comprehensive Programme (as defined in the Head Contract), the Subcontractor shall provide all reasonable assistance to the Contractor to fulfil this obligation.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.17",
+      "title": "Quality Plan Requirements of the Head Contract",
+      "body": "5.17 \tQuality Plan Requirements of the Head Contract",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.17.1",
+      "title": null,
+      "body": "5.17.1 \tWhere the Head Contract requires the Contractor prepare a quality plan, the Subcontractor shall provide all reasonable assistance to the Contractor to fulfil this obligation.",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.18",
+      "title": "Advance Notification",
+      "body": "5.18 \tAdvance Notification",
+      "pageNumber": 18,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.18.1",
+      "title": null,
+      "body": "5.18.1 The Contractor and the Subcontractor shall each notify each other in writing as soon as either of them becomes aware of any matter which is likely to:\na) \tMaterially alter the Subcontract Sum;\nb) \tMaterially delay completion of the Subcontract Works; or\nc) \tResult in a breach of a statutory duty in connection with the Subcontract Works.",
+      "pageNumber": 19,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "5.18.2",
+      "title": null,
+      "body": "5.18.2 If the Subcontractor does not notify a matter which it reasonably ought to have notified under clause 5.18.1, any Variation it may be entitled to arising out of the matter shall be valued under clause 9.2 as if notification had been given. Where that notification might reasonably have resulted in the impact of the matter being avoided or reduced, the amount of the Variation shall be reduced accordingly.",
+      "pageNumber": 19,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 5: General Obligations incl. 5.9 Health & Safety (2 of 2)",
+      "topicBucket": "general_obligations"
+    },
+    {
+      "clauseRef": "6.1",
+      "title": "Design and Producer Statements",
+      "body": "",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.1.1",
+      "title": null,
+      "body": "If the Subcontractor is responsible for design of any part of the Subcontract Works or temporary works, the Subcontractor must undertake the design with the reasonable skill, care, and diligence of an experienced professional designer and must provide the required design details in accordance with the Contractor’s programme.",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.1.2",
+      "title": null,
+      "body": "The Subcontractor must employ a suitably qualified or experienced person to carry out any design work required for the Subcontract Works and may be required to provide evidence of the competency of the designer.",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.1.3",
+      "title": null,
+      "body": "All design work must meet the requirements of the Head Contract and must comply with all relevant statutes, regulations and by-laws.",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.1.4",
+      "title": null,
+      "body": "All design work undertaken by the Subcontractor must be submitted to the Contractor upon request. The Subcontractor remains responsible for the design regardless of whether the design has been reviewed or approved by the Contractor.",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.1.5",
+      "title": null,
+      "body": "If required by the Subcontract Specific Conditions, the Subcontractor must supply producer statements for design, design review and construction review, of any part of the Subcontract Works.",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.2",
+      "title": "Design & Construct Contracts",
+      "body": "",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.2.1",
+      "title": null,
+      "body": "The following clauses shall apply where the Head Contract conditions are NZS 3916:2013.",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.2.2",
+      "title": null,
+      "body": "The Subcontractor shall comply with all obligations under the Head Contract to issue Design Documentation in order that the Engineer is allowed a reasonable opportunity for review.",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "6.2.3",
+      "title": null,
+      "body": "All New Intellectual Property (as defined in the Head Contract) shall be jointly owned by the Principal, the Contractor and the Subcontractor.",
+      "pageNumber": 20,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 6: Design and Producer Statements",
+      "topicBucket": "design_producer_statements"
+    },
+    {
+      "clauseRef": "7.1.1",
+      "title": null,
+      "body": "The Subcontractor agrees to indemnify the Contractor against any loss, liability, or cost suffered by the Contractor arising from, or as a consequence of, the Subcontractor carrying out the Subcontract Works, or remedial works, or their failure to:\na)\tcomply with statutes, regulations or by-laws;\nb)\tobtain consents required by this Subcontract;\nc)\tcomply with the requirements of 5.9 Health and Safety;\nd)\ttransfer full and unencumbered title of any materials, plant, equipment or other item supplied for the Head Contract Works and for which payment has been made in accordance with this Subcontract; or\ne)\tcomply with this Subcontract;\nother than where the loss, liability or cost is an unavoidable result of carrying out the Subcontract Works or remedial works.",
+      "pageNumber": 21,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "7.1.2",
+      "title": null,
+      "body": "The Subcontractor’s liability to indemnify the Contractor will be reduced proportionately to the extent that the Contractor, its servants or agents, have contributed to the loss, liability or cost.",
+      "pageNumber": 21,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "7.1.3",
+      "title": null,
+      "body": "Without prejudice to any other method of recovery, the Contractor is entitled to retain any damages, costs, losses, or expenses arising from 7.1.1 out of any payments which would otherwise be payable to the Subcontractor under this Subcontract.",
+      "pageNumber": 21,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "7.1.4",
+      "title": null,
+      "body": "Notwithstanding any provision of this Subcontract, the Contractor does not seek, nor does the Subcontractor offer any indemnity for any person’s liability to pay a fine or an infringement fee under the Health & Safety at Work Act 2015.",
+      "pageNumber": 21,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1",
+      "title": "General",
+      "body": "",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.1",
+      "title": null,
+      "body": "Regardless of the Contract Works insurances put in place by the Principal or the Contractor under the terms of the Head Contract, the Subcontractor is required to have other insurance cover as stated in the Subcontract Specific Conditions.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.2",
+      "title": null,
+      "body": "Before commencing the Subcontract Works, the Subcontractor must provide the Contractor with a certificate from their insurers or broker confirming that policies are in place (and provide a copy of the policies if requested by the Contractor).",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.3",
+      "title": null,
+      "body": "At any time during the Subcontract Works, at the Contractor’s request, the Subcontractor must provide evidence that the policies are still in place.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.4",
+      "title": null,
+      "body": "Nothing in this Subcontract prevents the Subcontractor from arranging additional insurance of any type, for the Subcontractor's sole benefit, at the Subcontractor’s expense.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.5",
+      "title": null,
+      "body": "If there is an insurance claim in respect of the construction and maintenance of the Head Contract Works and/or Subcontract Works, temporary works, and ancillary works, the Subcontractor must pay deductibles applicable under that claim. The Subcontractor’s liability for that deductible will be reduced proportionately to the extent that the Principal, Contractor, other subcontractors, or their servants or agents have contributed to the event.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.6",
+      "title": null,
+      "body": "The provisions of section 8 do not in any way limit the liabilities of the Subcontractor (whether under this Subcontract or under any statute or at common law).",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.7",
+      "title": null,
+      "body": "The policies taken out by the Subcontractor must:\na)\tbe with insurers acceptable to the Contractor and in terms approved by the Contractor, and this acceptance and approval must not be unreasonably withheld; and\nb)\tbe maintained in full force for the periods stated in the Subcontract General Conditions or the Subcontract Specific Conditions.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.8",
+      "title": null,
+      "body": "All money received by the Contractor or Subcontractor from an insurance claim relating to the Subcontract Works must be applied to reinstatement of the Subcontract Works.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.1.9",
+      "title": null,
+      "body": "Insurances required to be provided by the Subcontractor must be primary to, and respond in priority to, any policies that the Contractor or Principal may have in place.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.2",
+      "title": "Contract Works Insurance",
+      "body": "",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.2.1",
+      "title": null,
+      "body": "The Subcontractor is responsible for insuring their Subcontract Works, temporary works and materials while not on the site.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.2.2",
+      "title": null,
+      "body": "If the Contractor agrees that the Subcontractor is not required to have in place Contract Works Insurance for the Subcontract Works on site:\na)\tThe Subcontract Works, materials and temporary works will be covered by insurance put in place by the Principal or the Contractor under the Head Contract; and\nb)\tThe Subcontractor must be an insured party under the insurance put in place by the Principal or the Contractor under the Head Contract,\nbut only for the risks and subject to the conditions stipulated in these policies.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.2.3",
+      "title": null,
+      "body": "Unless otherwise provided under 8.2.2, the Subcontractor must insure their Subcontract Works, Temporary Works and materials whether fixed in position or not. The period and sum insured must be as stated in the Subcontract Specific Conditions. The Subcontractor’s policy must include automatic extension of cover for variations to the Subcontract Works.",
+      "pageNumber": 22,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.3",
+      "title": "Plant and Equipment Insurance",
+      "body": "",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.3.1",
+      "title": null,
+      "body": "The Subcontractor is responsible for insurance of plant, tools, equipment or other property belonging to them, or provided by them, or in their care.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.3.2",
+      "title": null,
+      "body": "The Subcontractor must insure critical items of plant as required by the Subcontract Specific Conditions.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.4",
+      "title": "Public Liability Insurance",
+      "body": "",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.4.1",
+      "title": null,
+      "body": "The Subcontractor must have public liability policy(s) to insure for their legal liability to third parties for property damage and/or bodily injury caused by an act or omission of the Subcontractor arising out of the performance of this Subcontract.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.4.2",
+      "title": null,
+      "body": "The minimum amount of public liability insurance must be the amount stated in the Subcontract Specific Conditions (but not less than $5,000,000) for any one claim or series of claims arising out of the same event.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.4.3",
+      "title": null,
+      "body": "The policy must include both the Principal and Contractor as jointly insured for their liability arising out of actions of the Subcontractor.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.4.4",
+      "title": null,
+      "body": "The insurance must include liability arising out of the use of any plant and equipment necessary to perform the Subcontract.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.4.5",
+      "title": null,
+      "body": "If required in the Subcontract Specific Conditions, the policy must include vibration, weakening and removal of support extensions to the full amount stated.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.5",
+      "title": "Motor Vehicle Liability Insurance",
+      "body": "",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.5.1",
+      "title": null,
+      "body": "The Subcontractor must have motor vehicle third party insurance for their legal liabilities arising out of the use of any motor vehicle in undertaking this Subcontract.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.5.2",
+      "title": null,
+      "body": "The insurance must include third party personal injury and property damage cover for a minimum amount of NZD$2,000,000 (two million dollars) or the amount specified in the Subcontract Specific Conditions, for any one claim or series of claims arising out of the same event.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.6",
+      "title": "Professional Indemnity Insurance",
+      "body": "",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.6.1",
+      "title": null,
+      "body": "If the Subcontractor designs any part of the Subcontract Works and if stated in the Subcontract Specific Conditions, the Subcontractor must have professional indemnity insurance.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.6.2",
+      "title": null,
+      "body": "The limit of indemnity under this insurance must be at least the amount specified in the Subcontract Specific Conditions for any one claim or series of claims arising out of the same event.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "8.6.3",
+      "title": null,
+      "body": "The Subcontractor must have this insurance in place for at least six years after practical completion of the whole of the Head Contract Works and provide evidence of this to the Contractor on request.",
+      "pageNumber": 23,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 7-8: Indemnity & Insurance",
+      "topicBucket": "indemnity_insurance"
+    },
+    {
+      "clauseRef": "9.1",
+      "title": "Variations",
+      "body": "9.1 \tVariations",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.1.1",
+      "title": null,
+      "body": "9.1.1 \tThe Contractor may vary the Subcontract Works whether by way of alteration, addition\nor omission by instructing the Subcontractor to do so in writing.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.1.2",
+      "title": null,
+      "body": "9.1.2 \tThe Subcontractor must not act upon an instruction for variation of the Subcontract Works\nwhich is directly received from the Principal or the Engineer under the Head Contract. If\nthe Subcontractor receives any such direct instruction, they must immediately inform the\nContractor. The Subcontractor must only act upon instructions made in writing by the\nContractor.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.1.3",
+      "title": null,
+      "body": "9.1.3 \tIf the Subcontractor considers that they are entitled to a variation for work, but has not been\nadvised that the work will be treated as a variation, the Subcontractor must notify the\nContractor in writing that they believe a variation is involved. The period between receipt of\nthe instruction for the work and notification by the Subcontractor to the Contractor that the\nwork may involve a variation, must not exceed the period given in the Subcontract Specific\nConditions. Failure by the Subcontractor to notify the Contractor within this period may\nresult in the work not being treated as a variation.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.1.3.1",
+      "title": null,
+      "body": "9.1.3.1 If the Principal’s approval is required for the work to be considered a variation, the\nContractor must seek the Principal’s approval without undue delay and the\nContractor must notify the Subcontractor of the Principal’s decision within five\nWorking Days of receipt of that decision. If the Contractor fails to comply with this\nclause, the work will be treated as a variation.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.1.3.2",
+      "title": null,
+      "body": "9.1.3.2 If the work is initiated by the Contractor, and does not require approval from the\nPrincipal for it to be treated as a variation, the work will be treated as a variation\nunless the Contractor notifies the Subcontractor otherwise within 5 Working Days\nof written notification by the Subcontractor that they believe a variation is involved.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.2",
+      "title": "Value of Variation to the Work",
+      "body": "9.2 \tValue of Variation to the Work",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.2.1",
+      "title": null,
+      "body": "9.2.1 \tAll variations must be valued using the rates and prices specified in this Subcontract for\nthat or similar work, but if there are no such rates and prices, or if they are inappropriate or\ninapplicable, then a fair and reasonable value must be agreed.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.2.2",
+      "title": null,
+      "body": "9.2.2 \tAny supporting evidence reasonably required by the Contractor for the valuation of any\nvariation, must be submitted by the Subcontractor within the period stated in the\nSubcontract Specific Conditions. The Subcontractor will not be entitled to payment for the\nvariation if the Subcontractor’s failure to provide the price and supporting evidence within\nthe required time results in the Contractor not being entitled to payment for a variation under\nthe Head Contract.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.2.3",
+      "title": null,
+      "body": "9.2.3 \tThe Subcontract Sum must be adjusted by the value of the variations.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.3",
+      "title": "Termination of the Subcontract Due to Variation",
+      "body": "9.3 \tTermination of the Subcontract Due to Variation",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.3.1",
+      "title": null,
+      "body": "9.3.1 \tThe Contractor has the right to terminate this Subcontract if the Subcontract Works, or a\nsubstantial part of it, is deleted under the Head Contract. Termination under this clause\nwill be treated as a variation.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "9.3.2",
+      "title": null,
+      "body": "9.3.2 \tThe amount of any variation under 9.3.1 will be deducted from the Subcontract Sum. The\nSubcontractor is not entitled to claim for damages or loss of profit for termination of this\nSubcontract under 9.3.1 unless the Contractor is able to claim for these from the Principal.",
+      "pageNumber": 24,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 9: Variations",
+      "topicBucket": "variations"
+    },
+    {
+      "clauseRef": "10.1",
+      "title": "Times for Commencement and Completion",
+      "body": "10.1 \tTimes for Commencement and Completion",
+      "pageNumber": 25,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.1.1",
+      "title": null,
+      "body": "10.1.1 The Subcontractor must carry out and complete the Subcontract Works within the time required by this Subcontract, whether that is\na)\ta specified due date for completion (including any Extensions of Time under clause 10.2); or\nb)\twhere there is no fixed time for completion, within a reasonable time considering all the circumstances including the Contractor’s current construction programme (which has been issued to the Subcontractor)\nin order to ensure no delay to the progress and completion of the Head Contract Works.",
+      "pageNumber": 25,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.1.2",
+      "title": null,
+      "body": "10.1.2 Revisions to the Contractor’s current construction programme, or to the times when the Subcontractor is to carry out and complete any part of the Subcontract Works, must be communicated to the Subcontractor in a timely manner.",
+      "pageNumber": 25,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.1.3",
+      "title": null,
+      "body": "10.1.3 The Contractor and Subcontractor must discuss proposed changes to the Subcontractor's work programme with a view to ensuring the Contractor’s current construction programme is maintained.",
+      "pageNumber": 25,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.1.4",
+      "title": null,
+      "body": "10.1.4 \tThe Contractor must notify the Subcontractor of the date of practical completion under the Head Contract, within 10 Working Days of receiving the certificate of practical completion.",
+      "pageNumber": 25,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.2",
+      "title": "Extensions of Time",
+      "body": "10.2 \tExtensions of Time",
+      "pageNumber": 25,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.2.1",
+      "title": null,
+      "body": "10.2.1 Subject to the requirements of 10.2.2, the Subcontractor is entitled to an extension of time for:\na)\tdelay resulting from any of the causes described in the Head Contract as grounds for the granting of extensions of time. But if delay to the Subcontract Works causes delay to the Contractor’s current construction programme, the Subcontractor is not entitled to any greater extension of time than the Contractor is entitled to under the Head Contract;\nb)\tdelay caused by the actions or inactions of the Principal or Engineer or Contractor or other subcontractors or for any other act of prevention of the Contractor not specifically covered in this clause; and\nc)\tdelay caused by suspension of the Head Contract Works by the Contractor under the Construction Contracts Act 2002.",
+      "pageNumber": 25,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.2.2",
+      "title": null,
+      "body": "10.2.2 The Subcontractor is not entitled to an extension of time unless:\na)\tthey have notified the Contractor in writing that they are claiming an extension of time and stated the grounds for the extension;\nb)\tthe notice is given within 5 Working Days after the Subcontractor should reasonably have been aware of the circumstances which resulted in grounds for extension; and\nc)\tthe notice gives details of the length of extension sought.",
+      "pageNumber": 25,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.2.3",
+      "title": null,
+      "body": "10.2.3 Once the Contractor has received notice of a claim complying with the requirements of 10.2, the Contractor must, as soon as practicable, investigate the claim, and determine whether or not the Subcontractor is entitled to an extension, and notify the Subcontractor of their decision.",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.3",
+      "title": "Compensation for Extension of Time",
+      "body": "10.3 \tCompensation for Extension of Time",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.3.1",
+      "title": null,
+      "body": "10.3.1 If an extension of time is granted, the Subcontractor is not entitled to compensation for costs incurred in relation to the extension, unless the extension was a result of a variation under this Subcontract, or the Contractor receives a variation for this from the Principal.",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.4",
+      "title": "Completion of the Subcontract Works",
+      "body": "10.4 \tCompletion of the Subcontract Works",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.4.1",
+      "title": null,
+      "body": "10.4.1 When the Subcontract Works or any Separable Portion thereof are complete, the Subcontractor shall notify the Contractor accordingly.",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.4.2",
+      "title": null,
+      "body": "10.4.2 Following receipt of such notice, the Contractor shall inspect the Subcontract Works or Separable Portion and within 15 working days of having received such notice, shall either:\na)\tIssue a notice to the Subcontractor stating the date and time at which the Subcontract Works or Separable Portion were so completed; or\nb)\tGive the Subcontractor written notice of the work to be altered or completed in order to complete the Subcontract Works.",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.4.3",
+      "title": null,
+      "body": "10.4.3 Where the Subcontractor has completed any work notified under clause 10.4.2 (b), it may serve a further notice to Contractor under clause 10.4.1.",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.5",
+      "title": "Subcontractor Failure to Complete",
+      "body": "10.5 \tSubcontractor Failure to Complete",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.5.1",
+      "title": null,
+      "body": "10.5.1 If the Subcontractor fails to complete the Subcontract Works within the time required by this Subcontract, the Subcontractor indemnifies the Contractor for any costs or losses the Contractor incurs or suffers as a result of the Subcontractor’s default, which may include, but is not limited to, any liquidated damages, or an equitable proportion thereof, that the Contractor may become liable for under the Head Contract.",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "10.5.2",
+      "title": null,
+      "body": "10.5.2 Without prejudice to any other method of recovery, the Contractor may deduct the amount of such damages, costs or losses from any payments which would otherwise be payable to the Subcontractor under this Subcontract. The Subcontractor must still meet their obligations to complete the Subcontract Works and all other obligations and liabilities under this Subcontract.",
+      "pageNumber": 26,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 10: Time",
+      "topicBucket": "time"
+    },
+    {
+      "clauseRef": "11.1.1",
+      "title": null,
+      "body": "If required by the Contractor, the Subcontractor must inspect their own work and issue a list of defects in the Subcontract Works to the Contractor.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.1.2",
+      "title": null,
+      "body": "Any defects or faults which appear in the Subcontract Works prior to completion of the Subcontract Works, or during the defects liability period, must, upon notification in writing by the Contractor, be remedied by the Subcontractor at its own cost.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.1.3",
+      "title": null,
+      "body": "The remedial work must be carried out by the Subcontractor within the time stated in the notice to avoid delay to the Head Contract Works or unnecessary inconvenience to occupiers.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.1.4",
+      "title": null,
+      "body": "If the Subcontractor fails to carry out remedial work in accordance with the notice, the Contractor may, upon further written notification, carry out the work on the Subcontractor’s behalf and at the Subcontractor’s cost. This cost becomes a debt immediately due to the Contractor. Without prejudice to any other method of recovery, the Contractor is entitled to deduct the costs of carrying out remedial work from any payments which would otherwise be payable to the Subcontractor under this Subcontract.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.1.5",
+      "title": null,
+      "body": "The Contractor may instruct the Subcontractor not to remedy any defect or fault. The Contractor may, in consultation with the Subcontractor, agree upon an amount payable by the Subcontractor to compensate for not remedying the defect or fault. Without prejudice to any other method of recovery, this amount may be deducted from any payment due to the Subcontractor under this Subcontract.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.1.6",
+      "title": null,
+      "body": "Nothing in this Section 11 limits the Subcontractor’s liability for defective works whether arising in law or equity or whether pursuant to contract, tort, or by statute.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.1.7",
+      "title": null,
+      "body": "Notwithstanding any provision of, or agreement under, the Subcontract the defects liability period shall not continue beyond the date of the Final Completion Certificate issued under the Head Contract.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.1.8",
+      "title": null,
+      "body": "The Contractor must notify the Subcontractor of the date of Final Completion under the Head Contract, within 10 Working Days of receiving the Final Completion Certificate.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.2",
+      "title": "Obligations of the Subcontractor",
+      "body": "Obligations of the Subcontractor",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "11.2.1",
+      "title": null,
+      "body": "The Subcontractor shall not be released from its liability for the fulfilment of any obligation under the Subcontract which remains unperformed or not properly performed by:\na)\tThe completion of the defects liability period under the Subcontract.\nb)\tThe release of final retentions under the Subcontract.\nc)\tThe issuing of the Final Completion Certificate under the Head Contract.",
+      "pageNumber": 27,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 11: Defects",
+      "topicBucket": "defects"
+    },
+    {
+      "clauseRef": "12.1",
+      "title": "Payment Claims",
+      "body": "12.1 \tPayment Claims",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.1.1",
+      "title": null,
+      "body": "12.1.1 The Subcontract Specific Conditions specify when payment claims for the Subcontract\nWorks are due.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.1.2",
+      "title": null,
+      "body": "12.1.2 The Subcontractor must present a detailed and substantiated payment claim for work\ncompleted during the period for which payment is being claimed. Payment claims\nreceived after the due date are deemed to have been received on the next due date.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.1.3",
+      "title": null,
+      "body": "12.1.3 Payment claims submitted by the Subcontractor must comply with the Construction Contracts\nAct 2002. Payment claims should include all the information contained in the sample\npayment claim in Appendix B, and must include all other information the Contractor is\nrequired to provide in the Contractor’s payment claim under the Head Contract.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.1.4",
+      "title": null,
+      "body": "12.1.4 The Subcontractor agrees not to issue any tax invoices in respect of the Subcontract Works.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.2",
+      "title": "Payment Schedules and Payments",
+      "body": "12.2 \tPayment Schedules and Payments",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.2.1",
+      "title": null,
+      "body": "12.2.1 The Contractor must pay the Subcontractor progress payments for work carried out on the\nSubcontract \tWorks. \tThe \tSubcontract \tSpecific \tConditions \tspecify \twhen \tpayment\nschedules and payments are due for the Subcontract Works.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.2.2",
+      "title": null,
+      "body": "12.2.2 If the Contractor intends to pay less than the amount of the payment claim submitted by the\nSubcontractor, the Contractor must issue a payment schedule on or before the due date for\npayment schedules. The payment schedule must identify the Subcontractor's payment\nclaim to which it relates, state the scheduled amount that will be paid for that payment\nclaim, show how the amount to be paid has been calculated and give the reasons why part\nof the Subcontractor's claim is not being paid.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.2.3",
+      "title": null,
+      "body": "12.2.3 On or before the due date for payments, the Contractor must pay to the Subcontractor\nthe amount shown in the payment schedule. If a payment schedule has not been issued\nin accordance with 12.2.2, the Contractor must pay the Subcontractor the full amount of\nthe Subcontractor’s payment claim.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.2.4",
+      "title": null,
+      "body": "12.2.4 Each payment to the Subcontractor must be accompanied by a buyer-created tax invoice\nwhich meets the requirements of section 24(2) of the Goods and Services Tax Act 1985 for\na tax invoice (the Commissioner of Inland Revenue has approved the issue of buyer created\ntax invoices by Contractors using this subcontract agreement). Prior to the submission of\ntheir first payment claim, and prior to the first payment being made, the Subcontractor must\nadvise the Contractor in writing of their registered GST number.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.2.5",
+      "title": null,
+      "body": "12.2.5 If part of a Subcontractor’s claim is not paid, the Subcontractor may claim for that part in a\nfuture payment claim if they consider the reasons given in the payment schedule for that\npart not being paid are no longer applicable.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.2.6",
+      "title": null,
+      "body": "12.2.6 When retentions are due for release, the Subcontractor must include the amount due in\na payment claim.",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.3",
+      "title": "Final Account",
+      "body": "12.3 \tFinal Account",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.3.1",
+      "title": null,
+      "body": "12.3.1 On or before the date stated in the Subcontract Specific Conditions, the Subcontractor must\nsubmit to the Contractor their final account covering the whole of the Subcontract Works and\nincluding, where applicable, variations, fluctuations and adjustments to provisional or prime\ncost sums. The Subcontractor’s final account must be accompanied by full documentation to\nsubstantiate all items and amounts claimed. The Subcontractor must provide sufficient\nfurther",
+      "pageNumber": 28,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.3.1",
+      "title": null,
+      "body": "information to substantiate any claims within five Working Days of being requested to do\nso by the Contractor.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.3.2",
+      "title": null,
+      "body": "12.3.2 If the Subcontractor fails to submit their final account within the time stated in the\nSubcontract Specific Conditions, or does not supply the information required by the\nContractor to enable it to substantiate the claims within the specified time, the Contractor is\nentitled to determine the reasonable amount of the Subcontractor’s final account and notify\nthe Subcontractor of that amount.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.3.3",
+      "title": null,
+      "body": "12.3.3 The Contractor is not required to pay the Subcontractor for any matter relating to the\nSubcontract Works that occurred prior to the date of the Subcontractor’s final account if it\nwas not included in the Subcontractor's final account and if it was not notified in writing to the\nContractor prior to the Contractor’s determination under 12.3.2.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.3.4",
+      "title": null,
+      "body": "12.3.4 Claims for variations submitted with the final account and not previously claimed will be\ndue for payment 44 Working Days after the end of the month in which they are claimed.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.4",
+      "title": "Retentions",
+      "body": "12.4 \tRetentions",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.4.1",
+      "title": null,
+      "body": "12.4.1 Payments will be subject to retentions as specified in the Subcontract Specific Conditions.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.4.2",
+      "title": null,
+      "body": "12.4.2 Retentions may be released in two stages. Part of the retention amount may be held after\ncompletion of the Subcontract Works as notified under clause 10.4.2(a) to cover\nrectification of defects. The dates for release of retentions are given in the Subcontract\nSpecific Conditions.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.5",
+      "title": "Items Not Fixed in the Works and Transfer of Title",
+      "body": "12.5 \tItems Not Fixed in the Works and Transfer of Title",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.5.1",
+      "title": null,
+      "body": "12.5.1 The Subcontractor is only entitled to payment for any materials, plant, equipment or other\nitems supplied but not fixed in the Head Contract Works if the Head Contract allows\npayment for them. The conditions in the Head Contract relating to payment for these items\nmust have been satisfied and the Subcontractor must also satisfy the Contractor that the\nSubcontractor’s suppliers have no claim to ownership of the items.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.5.2",
+      "title": null,
+      "body": "12.5.2 Ownership of any materials, plant, equipment or other item supplied, intended or required\nfor the Head Contract Works transfers to the Contractor immediately upon payment to the\nSubcontractor.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.6",
+      "title": "Payments Not Constituting Approval",
+      "body": "12.6 \tPayments Not Constituting Approval",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.6.1",
+      "title": null,
+      "body": "12.6.1 Issue of a payment schedule or payment of any amount to the Subcontractor does not\nconstitute or imply acceptance of the work undertaken by the Subcontractor. Nor does it\nrelieve the Subcontractor from their obligations under this Subcontract or their\nresponsibility to remedy, and meet all costs arising from defects attributable to them.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.7",
+      "title": "Over Payment",
+      "body": "12.7 \tOver Payment",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.7.1",
+      "title": null,
+      "body": "12.7.1 If there is an error or over-certification by the Principal or their Engineer under the Head\nContract, or any other cause resulting in the amount paid to the Subcontractor exceeding\nthe amount properly due, the amount overpaid becomes a debt due from the Subcontractor\nto the Contractor payable on demand. Without prejudice to any other method of recovery,\nthe Contractor may deduct this amount from any payments which would otherwise be\npayable to the Subcontractor under this Subcontract.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.8",
+      "title": "Cost Fluctuations",
+      "body": "12.8 \tCost Fluctuations",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "12.8.1",
+      "title": null,
+      "body": "12.8.1 Cost fluctuations must be treated as a Variation where allowed for in the Subcontract\nSpecific Conditions and must be calculated as provided for in the Head Contract.",
+      "pageNumber": 29,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 12: Payments",
+      "topicBucket": "payments"
+    },
+    {
+      "clauseRef": "13.1",
+      "title": "Negotiate in Good Faith",
+      "body": "13.1 \tNegotiate in Good Faith",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "13.1.1",
+      "title": null,
+      "body": "13.1.1 If either party notifies the other in writing of any dispute relating to the Subcontract, the parties must endeavour to resolve the dispute in good faith. The parties may agree to use a mediator.",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "13.2",
+      "title": "Adjudication",
+      "body": "13.2 \tAdjudication",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "13.2.1",
+      "title": null,
+      "body": "13.2.1 Disputes may be dealt with by adjudication as provided for in the Construction Contracts Act 2002.",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "13.3",
+      "title": "Arbitration",
+      "body": "13.3 \tArbitration",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "13.3.1",
+      "title": null,
+      "body": "13.3.1 \tIf any dispute cannot be resolved in accordance with 13.1 above, either party shall be entitled to refer the dispute to arbitration in accordance with the provisions of the Arbitration Act 1996.",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "13.3.2",
+      "title": null,
+      "body": "13.3.2 The dispute must be referred to a sole arbitrator agreed to by the Contractor and Subcontractor. If the Contractor and Subcontractor cannot agree on the sole arbitrator, then either party may request the appointment of a sole arbitrator nominated by the Registrar of the Building Disputes Tribunal (NZ) Limited.",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "13.4",
+      "title": "Consolidation of Disputes",
+      "body": "13.4 \tConsolidation of Disputes",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "13.4.1",
+      "title": null,
+      "body": "13.4.1 If any dispute arises between the Contractor and the Subcontractor relating to this Subcontract and the Contractor makes a claim against the Principal relating to the same matter, or a similar or related matter, then the parties agree:\na)\tto consolidate their dispute; and\nb)\tto provide each other with all reasonable assistance in the resolution of the dispute and make available all relevant information within either party’s possession or control to assist with resolution of the dispute; and\nc)\tto attempt to resolve the dispute with due diligence.",
+      "pageNumber": 30,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.1",
+      "title": "Default by the Subcontractor and Remedies",
+      "body": "14.1 \tDefault by the Subcontractor and Remedies",
+      "pageNumber": 31,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.1.1",
+      "title": null,
+      "body": "14.1.1 If the Subcontractor:\na)\tfails to proceed with the Subcontract Works with reasonable diligence; or\nb)\tis unable to complete the amount of work reasonably required by the Contractor during any specified period to enable the Contractor to fulfil their programme of work under the Head Contract; or\nc)\tdoes not, after notice in writing from the Contractor, remove or remedy defective work or improper material; or\nd)\tis otherwise in breach of any of their obligations under this Subcontract despite previous written notice from the Contractor,\nand if the default continues for three Working Days following written notice from the Contractor, the Contractor may issue a further notice to terminate this Subcontract, or limit the extent of this Subcontract to the proven capacity of the Subcontractor, without prejudice to any other rights or remedies. A default notice must not be given unreasonably and must specify the default and state that the notice is given under this clause.",
+      "pageNumber": 31,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.1.2",
+      "title": null,
+      "body": "14.1.2 If the Subcontractor commits an Act of Insolvency, then the Contractor may, without prejudice to any other rights or remedies, by written notice, immediately terminate this Subcontract.",
+      "pageNumber": 31,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.1.3",
+      "title": null,
+      "body": "14.1.3 If this Subcontract is terminated under 14.1, the Contractor is liable only for the value of any work actually and properly executed and not paid for at the date of the termination, including any variations and cost fluctuations as appropriate. The Contractor may recover from the Subcontractor any cost, damage, loss, or expense incurred as a result of the termination of this Subcontract. Without prejudice to any other method of recovery, the Contractor may deduct the amount of such damages, costs or losses from any payments which would otherwise be payable to the Subcontractor under this Subcontract.",
+      "pageNumber": 31,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.1.4",
+      "title": null,
+      "body": "14.1.4 If the Contractor limits the extent of this Subcontract to the proven capacity of the Subcontractor under 14.1, the Contractor may recover from this Subcontractor any cost, damage, loss or expense incurred as a result of the breach of the Subcontract. Without prejudice to any other method of recovery, the Contractor may deduct the amount of such damages, costs or losses from any payments which would otherwise be payable to the Subcontractor under this Subcontract.",
+      "pageNumber": 31,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.2",
+      "title": "Default by Contractor and Remedies",
+      "body": "14.2 \tDefault by Contractor and Remedies",
+      "pageNumber": 31,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.2.1",
+      "title": null,
+      "body": "14.2.1 If:\na)\tthe Contractor commits an Act of Insolvency; or\nb)\tthe Head Contract is terminated by the Principal because of any act or default by the Contractor; or\nc)\tfollowing 10 Working Days notice in writing from the Subcontractor, the Contractor fails to remedy any substantial breach of their obligations under this Subcontract,\nwithout prejudice to any other rights or remedies, the Subcontractor may, by written notice, terminate the Subcontract. The Contractor is liable for the value of any work actually and properly executed at the date of such termination, including any variations and cost fluctuations as appropriate. The Subcontractor may also recover from the Contractor any cost reasonably incurred by the Subcontractor in expectation of completing the Subcontract",
+      "pageNumber": 31,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.3",
+      "title": "Default by Principal and Remedies",
+      "body": "14.3 \tDefault by Principal and Remedies",
+      "pageNumber": 32,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.3.1",
+      "title": null,
+      "body": "14.3.1 If the Contractor suspends work under the Head Contract (under the provisions of the Construction Contracts Act 2002) the Contractor may suspend this Subcontract. The Subcontractor must resume work when the suspension has been lifted. Notice of suspension and notice of lifting of suspension must be given in writing. The Subcontractor is not entitled to recover any costs incurred solely as a consequence of a suspension under this clause, unless the Contractor is entitled to recover these costs under the Head Contract.",
+      "pageNumber": 32,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.3.2",
+      "title": null,
+      "body": "14.3.2 \tIf the Principal defaults on a payment, or if the Contractor believes with good cause that the Principal may default on a payment, then the Contractor may suspend this Subcontract. The suspension will continue until there is no longer a default, or good cause to consider a default may occur. Notice of suspension and notice of lifting of suspension must be given in writing.",
+      "pageNumber": 32,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.3.3",
+      "title": null,
+      "body": "14.3.3 If the Contractor has directed the Subcontractor to suspend work under 14.3.1 or 14.3.2 and the suspension continues for 10 Working Days, the Subcontractor may terminate this Subcontract 15 Working Days after giving written notice of their intention to terminate. If the suspension is lifted within the notice period the Subcontractor cannot terminate the Subcontract. The Contractor is only liable for the value of any work actually and properly completed at the date of the termination, including any variations and cost fluctuations as appropriate.",
+      "pageNumber": 32,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "14.3.4",
+      "title": null,
+      "body": "14.3.4 If the Head Contract is terminated due to default by the Principal, the Contractor must terminate the Subcontract. The Contractor will be liable for the value of any work actually and properly undertaken prior to the termination, including any variations and cost fluctuations allowed by this Subcontract. The Subcontractor may also recover from the Contractor any cost reasonably incurred by the Subcontractor in expectation of completing the Subcontract Works, but only if this cost is not covered by other payments and not reasonably recoverable by the Subcontractor by any other means. The Contractor must also pay to the Subcontractor any costs reasonably incurred in the removal of the Subcontractor’s plant, and in carrying out the Contractor’s instructions for making the Subcontract Works secure or safe.",
+      "pageNumber": 32,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "15.1.1",
+      "title": null,
+      "body": "15.1.1 If it is impractical for the Subcontractor to carry out work of an urgent nature, because there is insufficient time to give them adequate notice to carry out the work, and the delays that would result from waiting for them to carry out the work would result in significant costs to the Contractor, or create a health and safety risk, the Contractor may carry out that work at the Subcontractor’s expense.",
+      "pageNumber": 33,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "15.1.2",
+      "title": null,
+      "body": "15.1.2 In the event of the Contractor carrying out work under clause 15.1.1 the Contractor must notify the Subcontractor as soon as practicable, but not later than one working day, after commencing the work.",
+      "pageNumber": 33,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "15.1.3",
+      "title": null,
+      "body": "15.1.3 The Subcontractor is entitled to receive a full breakdown of costs for the work carried out at the Subcontractor’s expense under 15.1.1. A full breakdown of these costs must be provided to the Subcontractor within 10 Working Days of the Subcontractor requesting them, and these costs must be fair and reasonable.",
+      "pageNumber": 33,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 13-15: Disputes, Default & Urgent Work",
+      "topicBucket": "disputes_default_urgent"
+    },
+    {
+      "clauseRef": "16.1.1",
+      "title": null,
+      "body": "When this Subcontract requires notices to be given they must be sent by post, facsimile, or delivered to the addresses stated in this Subcontract Agreement or new addresses subsequently advised in writing. All other communications may be sent by email, including payment claims and payment schedules. General communications may be via email.",
+      "pageNumber": 34,
+      "isFillIn": false,
+      "part": "General Conditions",
+      "section": "Section 16: Service of Notices",
+      "topicBucket": "notices_service"
+    },
+    {
+      "clauseRef": "A1.1",
+      "title": "Care of Works",
+      "body": "Clauses 5.1.1, 5.1.2 and 5.1.3 are deleted.\nThe Subcontractor remains responsible for care of the Subcontract Works while off-site or in\ntransit and is responsible for supplying the specified items to site in accordance with the agreed\ntimetable and in the condition required by this Subcontract.",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A1.2",
+      "title": "Site Conditions and Inspection of Surfaces",
+      "body": "Clause 5.3 is deleted",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A1.3",
+      "title": "Services",
+      "body": "Clause 5.4 is deleted",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A1.4",
+      "title": "Scaffolding",
+      "body": "Clause 5.5 is deleted",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A1.5",
+      "title": "Hoisting",
+      "body": "Clause 5.6 is deleted",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A1.6",
+      "title": "Cleaning",
+      "body": "Clause 5.8 is deleted",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A1.7",
+      "title": "Hours of Work",
+      "body": "Clause 5.10 is deleted",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A2.1",
+      "title": "Deliveries to Site",
+      "body": "",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A2.1.1",
+      "title": null,
+      "body": "A delivery schedule must be agreed for items to be provided by the Subcontractor.",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A2.1.2",
+      "title": null,
+      "body": "Changes to a previously agreed delivery schedule may be required by the Contractor, to\naccommodate changes to the construction programme, or for other reasons. The\nSubcontractor must agree to reasonable changes to the delivery schedule. If the\nSubcontractor believes the change to the delivery schedule should be treated as a variation,\nthey must notify the Contractor of their intention to claim a variation within three Working\nDays of notification of the change to the delivery schedule. Where the change relates to a\ndelivery scheduled to take place within one working day of the notification of the change, the\nSubcontractor must notify the Contractor of their intention to claim a variation within four\nworking hours of notification of the change to the delivery schedule.",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "A2.1.3",
+      "title": null,
+      "body": "Deliveries to the site must only be made at times that have been agreed with the Contractor.",
+      "pageNumber": 35,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix A: Supply Only Subcontracts (clause amendments)",
+      "topicBucket": "appendix_a_supply_only"
+    },
+    {
+      "clauseRef": "1",
+      "title": null,
+      "body": "Original Subcontract Sum \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "2",
+      "title": null,
+      "body": "Approved variations \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "3",
+      "title": null,
+      "body": "Revised Subcontract Sum \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "4",
+      "title": null,
+      "body": "Variations submitted awaiting approval \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "5",
+      "title": null,
+      "body": "Value of original Subcontract Sum claimed to date (refer Appendix B2) \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "6",
+      "title": null,
+      "body": "Value of approved variations claimed to date (refer Appendix B3) \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "7",
+      "title": null,
+      "body": "Value of variations waiting for approval (refer Appendix B3) \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "8",
+      "title": null,
+      "body": "Value of fluctuations if applicable (refer attached details) \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "9",
+      "title": null,
+      "body": "Value of materials on-site and off-site (refer attached details) \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "10",
+      "title": null,
+      "body": "Gross claim to date \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "11",
+      "title": null,
+      "body": "Less retentions \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "12",
+      "title": null,
+      "body": "Net claim to date \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "13",
+      "title": null,
+      "body": "Less previous payment claims (item 12 from previous claim) \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "14",
+      "title": null,
+      "body": "Net amount for this claim \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "15",
+      "title": null,
+      "body": "Plus GST \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "16",
+      "title": null,
+      "body": "Gross amount for this claim (incl. GST) \t$",
+      "pageNumber": 36,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "8",
+      "title": null,
+      "body": "pay the amount claimed in the payment claim (in full) on or before the due date for payment; or",
+      "pageNumber": 39,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "9",
+      "title": null,
+      "body": "if you dispute the payment claim, send the claimant a written payment schedule that complies with section\n21 of the Act (a payment schedule) stating the amount you are prepared to pay instead (which could be\nnothing).",
+      "pageNumber": 39,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "B",
+      "title": null,
+      "body": "how you calculated the scheduled amount; and",
+      "pageNumber": 39,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "B",
+      "title": null,
+      "body": "why the scheduled amount is less than the claimed amount; and",
+      "pageNumber": 39,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "B",
+      "title": null,
+      "body": "your reason or reasons for not paying the full amount claimed.",
+      "pageNumber": 39,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices B1-B4: Payment & Variation Claim Forms",
+      "topicBucket": "appendix_payment_forms"
+    },
+    {
+      "clauseRef": "1",
+      "title": null,
+      "body": "Set out grid lines and floor levels",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "2",
+      "title": null,
+      "body": "Set out from grid lines and provide datums",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "3",
+      "title": null,
+      "body": "Provide offices, workshops, storage and containers (5.4.2)\tIf 5.4.2 does not apply, detail in ”Special Conditions” section of “Specific Conditions”",
+      "pageNumber": 43,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "4",
+      "title": null,
+      "body": "Provide lunch room and toilets (5.4.2)\tIf 5.4.2 does not apply, detail in “Special Conditions” section of “Specific Conditions”",
+      "pageNumber": 43,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "5",
+      "title": null,
+      "body": "Unloading of materials and plant",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "6",
+      "title": null,
+      "body": "Distribution of materials to working area",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "7",
+      "title": null,
+      "body": "Scaffolding (fixed or mobile) up to 3 metre platform height (5.5)\n(extent & duration must be agreed prior to erection)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "8",
+      "title": null,
+      "body": "Scaffolding above a 3 metre platform height (5.5)\n(extent & duration must be agreed prior to erection)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "9",
+      "title": null,
+      "body": "Use of personnel hoist (5.6)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "10",
+      "title": null,
+      "body": "Use of tower crane (5.6)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "11",
+      "title": null,
+      "body": "Crane booking system (5.6)\n(unscheduled or late deliveries may be rejected)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "12",
+      "title": null,
+      "body": "Special hoisting facilities (i.e. crane / hoist / forklift) (5.6)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "13",
+      "title": null,
+      "body": "Site lighting (background, safety and task specific lighting)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "14",
+      "title": null,
+      "body": "Power for hand tools only – 240V (leads by Subcontractor)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "15",
+      "title": null,
+      "body": "Additional power requirements (e.g. 3 phase)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "16",
+      "title": null,
+      "body": "Water supply point on each floor (hoses by Subcontractor)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "17",
+      "title": null,
+      "body": "Fume extraction",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "18",
+      "title": null,
+      "body": "Mark out holes and chases and supply drawings of these",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "19",
+      "title": null,
+      "body": "Cutting holes and chases (adequate notification required)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "20",
+      "title": null,
+      "body": "Clean area of work on a daily basis (5.8)\tYes\tIf 5.8 does not apply, detail in ”Special Conditions” section of “Specific Conditions”",
+      "pageNumber": 43,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "21",
+      "title": null,
+      "body": "Removal of debris, waste and packaging to designated bins (5.8)\tYes\tIf 5.8 does not apply, detail in ”Special Conditions” section of “Specific Conditions”",
+      "pageNumber": 43,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "22",
+      "title": null,
+      "body": "Final clean on completion of Subcontract Works (5.8)\tYes\tIf 5.8 does not apply, detail in ”Special Conditions” section of “Specific Conditions”",
+      "pageNumber": 43,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "23",
+      "title": null,
+      "body": "Protect work in progress (5.1)\tYes\tIf 5.1 does not apply, detail in ”Special Conditions” section of “Specific Conditions”",
+      "pageNumber": 43,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "24",
+      "title": null,
+      "body": "Protect work until practical completion (5.1)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "25",
+      "title": null,
+      "body": "Establish & agree approved quality assurance check sheet (5.11.1)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "26",
+      "title": null,
+      "body": "Attendance on all progress, technical and safety meetings (5.15.1)",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "27",
+      "title": null,
+      "body": "Work permits for all non-residents entering site",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "28",
+      "title": null,
+      "body": "Samples and prior material approvals",
+      "pageNumber": 43,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "29",
+      "title": "Issues With Methodology / Quality / Design / Specification",
+      "body": "Issues With Methodology / Quality / Design / Specification\na)\nb)\nc)",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "30",
+      "title": "Technical Alternatives",
+      "body": "Technical Alternatives\nInnovative suggestions for delivering the specified works, or providing a cost or performance advantage (for consideration by the Contractor or Principal)",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "31",
+      "title": "Alternative Materials or Products (5.12)",
+      "body": "Alternative Materials or Products (5.12)\nMaterial or product substitution suggested by the Subcontractor because of availability or supply issues (for consideration by the Contractor or Principal)",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "32",
+      "title": "Site Access",
+      "body": "Site Access\nWill be as follows: (deliveries need to be coordinated with site team to prevent congestion and delays)",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "33",
+      "title": null,
+      "body": "Subcontractor to provide detailed weekly returns on labour and others?\tYes / No",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "34",
+      "title": null,
+      "body": "Subcontractor to advise if they propose to subcontract any work? Yes / No\nA list of proposed subcontractors to be supplied and prior approval from Contractor required",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "35",
+      "title": null,
+      "body": "Level of supervision to be provided",
+      "pageNumber": 44,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "36",
+      "title": "Completion of the Subcontract works",
+      "body": "Completion of the Subcontract works:\na)\tApproximate Commencement Date:\nb)\tProgramme (construction programme issued at meeting and key dates agreed)\nc)\tWorking Hours on Site:\nadditional hours can be worked with prior agreement, but only while a Contractor’s representative is present\n7:00am – 6:00pm\tMonday - Thursday\n7:00am – 5:00pm\tFriday\n7:00am – 5:00pm\tSaturday",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "37",
+      "title": "Shop Drawings",
+      "body": "Shop Drawings\nNumber of copies and drawing size for each submission\nShop drawing review and approval period:",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "38",
+      "title": "Design Obligations",
+      "body": "Design Obligations\tYes / No",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "39",
+      "title": "Safety",
+      "body": "Safety\nThe Subcontractor must comply with the Contractor’s health and safety policy and, where relevant, the Principal’s health and safety policy. The Subcontractor must provide the following:\n• Subcontractor’s health and safety policy\n• Site specific safety plan\n• Site specific task analysis\n• How Subcontractor will conduct hazard inspections\n• Plant and equipment records (i.e. maintenance, and weekly inspections)\n• All mobile plant and equipment must be fitted with roll over protections and safety belts\n• Training and competency records of all staff\n• All personnel will be required to have a current Site Safe Passport or equivalent\n• All personnel are required to use appropriate personal protection equipment\n• Material safety data sheets of hazardous materials (where applicable)\nSubcontractor safety meeting to review the above information must be conducted before commencement of Subcontract Works\nSubcontractor representative to action:\tBy when:",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "40",
+      "title": null,
+      "body": "The Subcontractor confirms that all terms and conditions in their quotation are deleted,\texcept those included in the Specific Conditions of Subcontract\tYes / No",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "41",
+      "title": null,
+      "body": "The Subcontractor confirms that their price includes allowance for complying with the provisions of the Head Contract including the specification and drawings\tYes / No",
+      "pageNumber": 44,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "42",
+      "title": null,
+      "body": "The Subcontractor confirms acceptance of the Subcontract conditions without modification. The signed agreement must be returned before any payment is made\tYes / No",
+      "pageNumber": 45,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "43",
+      "title": null,
+      "body": "The Subcontractor agrees to work within the Contractor’s quality assurance procedures (5.11)\tYes / No",
+      "pageNumber": 45,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "44",
+      "title": null,
+      "body": "The Subcontractor’s rates and margins on variations have been submitted and agreed\tYes / No",
+      "pageNumber": 45,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "45",
+      "title": null,
+      "body": "Any other matters:\na)\nb)\nc)",
+      "pageNumber": 45,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "46",
+      "title": null,
+      "body": "These minutes accurately record our discussion. Dated:\nSIGNED by the CONTRACTOR:\tSIGNED by the SUBCONTRACTOR:\nPosition:\tPosition",
+      "pageNumber": 45,
+      "isFillIn": true,
+      "part": "Appendices",
+      "section": "Appendix D: Pre-Letting Meeting Minutes",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "2.",
+      "title": null,
+      "body": "The Contractor \thas entered into an agreement with the Principal\nfor \t(the Head\nContract).",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "3.",
+      "title": null,
+      "body": "The Subcontractor has entered into an agreement with the Contractor to construct, complete, deliver and\nmaintain certain work described in the Subcontract and to carry out and fulfil the obligations imposed on the\nSubcontractor by the Subcontract.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "4.",
+      "title": null,
+      "body": "The Subcontractor is to provide the Contractor with security in the form of a bond in lieu of retentions.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "8.",
+      "title": null,
+      "body": "The Subcontractor and Sureties are jointly and severally liable to the Contractor for the sum of $NZ\n(bond sum in words) and unconditionally bind themselves, their successors and assigns jointly and\nseverally for payment of the bond sum.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "9.",
+      "title": null,
+      "body": "The Sureties will immediately pay the Contractor any sum or sums up to the full amount of the bond sum upon\nwritten demand from the Contractor which must include a statement from the Contractor that it has given the\nSubcontractor three working days notice of its intention to demand the bond sum from the Sureties.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "10.",
+      "title": null,
+      "body": "The Sureties must unconditionally pay any amount demanded in accordance with this bond without reference\nto the Subcontractor, and without regard to the performance or non-performance of the Subcontractor or the\nContractor under the terms of the contract.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "11.",
+      "title": null,
+      "body": "The condition of this bond is null and void if the Contractor has given written notice to the Sureties that:\na)\tthe Subcontractor has fulfilled all the obligations imposed on the Subcontractor by the Subcontract prior to\nthe completion of the Subcontract Works as notified under clause 10.4.2 (a) of the Subcontract; or\nb)\tthe Subcontractor or the Sureties have rectified any damages sustained by the Contractor in respect of\nall defaults; or\nc)\tthis bond is null and void.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "12.",
+      "title": null,
+      "body": "EXCEPT as provided in paragraph 4 above, this bond must remain in full force and effect.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "13.",
+      "title": null,
+      "body": "The Sureties are not released from any liability under this bond:\nBy any alteration in the terms of the Subcontract between the Contractor and the Subcontractor;\nBy any alteration in the extent or nature of the Subcontract Works to be completed, delivered and\nmaintained;\nBy any allowance of time by the Contractor under the Subcontract;\nBy any waiver of the Subcontractor’s obligations by the Contractor:\nBy any default on the part of the Subcontractor; or\nBy notice from the Sureties to the Contractor.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "6.",
+      "title": null,
+      "body": "The Sureties may at any time deposit with the Contractor the bond sum, or a lesser amount agreed by the\nContractor. Upon payment of this amount the liability of the Sureties will be terminated.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "7.",
+      "title": null,
+      "body": "This bond must not be transferred or assigned.",
+      "pageNumber": 46,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "9.",
+      "title": null,
+      "body": "The Contractor \thas entered into an agreement with the Principal\nfor \t(the Head\nContract).",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "10.",
+      "title": null,
+      "body": "The Subcontractor has entered into an agreement with the Contractor to construct, complete, deliver and\nmaintain certain work described in the Subcontract and to carry out and fulfil the obligations imposed on the\nSubcontractor by the Subcontract.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "11.",
+      "title": null,
+      "body": "The Subcontractor is to provide the Contractor with security in the form of a bond in lieu of retentions.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "14.",
+      "title": null,
+      "body": "The Subcontractor and Sureties are jointly and severally liable to the Contractor for the sum of $NZ\n(bond sum in words) and unconditionally bind themselves, their successors and assigns jointly and severally\nfor payment of the bond sum.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "15.",
+      "title": null,
+      "body": "The Sureties will immediately pay the Contractor any sum or sums up to the full amount of the bond sum upon\nwritten demand from the Contractor which must include a statement from the Contractor that it has given the\nSubcontractor three working days notice of its intention to demand the bond sum from the Sureties.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "16.",
+      "title": null,
+      "body": "The Sureties must unconditionally pay any amount demanded in accordance with this bond without reference\nto the Subcontractor, and without regard to the performance or non-performance of the Subcontractor or the\nContractor under the terms of the contract.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "17.",
+      "title": null,
+      "body": "The condition of this bond is null and void if the Contractor has given written notice to the Sureties that:\nthe Subcontractor has fulfilled all the obligations imposed on the Subcontractor by the Subcontract\nsubsequent to the issuing of the notice under clause 10.4.2(a) of the Subcontract ; or\nthe Subcontractor or the Sureties have rectified any damages sustained by the Contractor in respect of all\ndefaults; or\nthis bond is null and void.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "18.",
+      "title": null,
+      "body": "EXCEPT as provided in paragraph 4 above, this bond must remain in full force and effect.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "19.",
+      "title": null,
+      "body": "The Sureties are not released from any liability under this bond:\nBy any alteration in the terms of the Subcontract between the Contractor and the Subcontractor;\nBy any alteration in the extent or nature of the Subcontract Works to be completed, delivered and\nmaintained;\nBy any allowance of time by the Contractor under the Subcontract;\nBy any waiver of the Subcontractor’s obligations by the Contractor;\nBy any default on the part of the Subcontractor; or\nBy any notice from the Sureties to the Contractor.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "5.",
+      "title": null,
+      "body": "The Sureties may at any time deposit with the Contractor the bond sum, or a lesser amount agreed by the\nContractor. Upon payment of this amount the liability of the Sureties will be terminated.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "6.",
+      "title": null,
+      "body": "This bond must not be transferred or assigned.",
+      "pageNumber": 48,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "4.",
+      "title": null,
+      "body": "The Contractor \thas entered into an agreement with the Principal\nfor \t(the Head\nContract).",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "5.",
+      "title": null,
+      "body": "The Subcontractor has entered into an agreement with the Contractor to construct, complete, deliver and\nmaintain certain work described in the Subcontract and to carry out and fulfil the obligations imposed on the\nSubcontractor by the Subcontract.",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "c).",
+      "title": null,
+      "body": "The Subcontractor is to provide the Contractor with security in the form of a bond.",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "5.4",
+      "title": null,
+      "body": "The Sureties jointly and severally unconditionally agree to pay the Contractor on demand from time to time\nsums up to the aggregate amount of $ \t(bond sum in words).",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "5.6",
+      "title": null,
+      "body": "Any demand from the Contractor must be in writing and signed for and on behalf of the Contractor.",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "2",
+      "title": null,
+      "body": "The condition of this bond is that it is null and void if:\n5.5.1 \tThe Sureties have paid to the Contractor the aggregate amount in paragraph 1 above or such lesser\namount as may be agreed in writing with the Contractor; or\n5.5.2 \tThe Contractor has been issued with a Practical Completion Certificate for the Contract Works under\nthe Head Contract; or\n5.5.3 \tThe Subcontractor and Sureties receive written notification from the Contractor that the bond is no longer\nrequired by the Contractor.",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "3",
+      "title": null,
+      "body": "EXCEPT as provided in paragraph 3 above, this bond must remain in full force and effect.",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "4",
+      "title": null,
+      "body": "The Sureties are not released from any liability under this bond:\n5.5.1 \tBy any alteration in the terms of the Subcontract between the Contractor and the Subcontractor;\n5.5.2 \tBy any alteration in the extent or nature of the Subcontract Works to be completed, delivered\nand maintained;\n5.5.3 \tBy any allowance of time by the Contractor under the Subcontract;\n5.5.4 \tBy any waiver of the Subcontractor’s obligations by the Contractor;\n5.5.5 \tBy any default on the part of the Subcontractor; or\n5.5.6 \tBy any notice from the Sureties to the Contractor.",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "5",
+      "title": null,
+      "body": "The Sureties may at any time deposit with the Contractor the bond sum, or a lesser amount agreed by the\nContractor. Upon payment of this amount the liability of the Sureties will be terminated.",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    },
+    {
+      "clauseRef": "6",
+      "title": null,
+      "body": "This bond must not be transferred or assigned.",
+      "pageNumber": 50,
+      "isFillIn": false,
+      "part": "Appendices",
+      "section": "Appendices E1-E3: Bonds",
+      "topicBucket": "appendix_meeting_bonds"
+    }
+  ]
+}

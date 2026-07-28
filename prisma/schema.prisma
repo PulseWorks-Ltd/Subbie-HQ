@@ -98,6 +98,29 @@ enum ReminderStage {
   overdue
 }
 
+enum ContractReviewStatus {
+  running
+  complete
+  failed
+}
+
+enum DeviationClassification {
+  matches_standard
+  minor_deviation
+  major_deviation
+  missing_from_subcontract
+  additional_in_subcontract
+}
+
+enum InsuranceRequirementType {
+  contract_works
+  plant_and_equipment
+  public_liability
+  motor_vehicle_liability
+  professional_indemnity
+  other
+}
+
 model User {
   id            String          @id @default(cuid())
   email         String          @unique
@@ -181,6 +204,9 @@ model Project {
   safetyDocuments    SafetyDocument[]
   variationItems     VariationItem[]
   correspondence     Correspondence[]
+  contractReviews    ContractReview[]
+  contractTerms      ContractTerms?
+  insuranceRequirements InsuranceRequirement[]
 }
 
 model ProjectMember {
@@ -212,6 +238,9 @@ model ContractDocument {
   clauses     Clause[]
   scopeItems  ScopeItem[]
   programmeItems ProgrammeItem[]
+  reviews     ContractReview[]
+  contractTermsSourced ContractTerms[]
+  insuranceRequirementsSourced InsuranceRequirement[]
 }
 
 model Clause {
@@ -230,6 +259,109 @@ model Clause {
   project        Project         @relation(fields: [projectId], references: [id])
   document       ContractDocument @relation(fields: [documentId], references: [id])
   scopeItems     ScopeItem[]
+}
+
+model ContractReview {
+  id                  String   @id @default(cuid())
+  projectId           String
+  documentId           String
+  standardFormVersion String
+  status              ContractReviewStatus @default(running)
+  executiveSummary    String?
+  overallRiskLevel    RiskLevel?
+  majorDeviationCount Int      @default(0)
+  minorDeviationCount Int      @default(0)
+  errorMessage        String?
+  rawModelOutputs     Json?
+  createdAt           DateTime @default(now())
+  completedAt         DateTime?
+
+  project    Project          @relation(fields: [projectId], references: [id])
+  document   ContractDocument @relation(fields: [documentId], references: [id])
+  deviations ContractDeviation[]
+}
+
+model ContractDeviation {
+  id                    String   @id @default(cuid())
+  contractReviewId      String
+  topicBucket           String
+  baselineClauseRef     String?
+  baselineClauseTitle   String?
+  subcontractClauseRef  String?
+  subcontractExcerpt    String?
+  classification        DeviationClassification
+  impact                RiskLevel
+  priorityScore         Int
+  rationale             String
+  recommendation        String?
+  sourcePage            Int?
+  createdAt             DateTime @default(now())
+
+  contractReview ContractReview @relation(fields: [contractReviewId], references: [id])
+}
+
+// Actionable reference data extracted from the governing subcontract (payment
+// claim method, notice periods, retention, etc.), surfaced on the Settings
+// page. Suggested* fields hold an AI-extracted value until a human confirms
+// it (copied into the real field, shadow cleared) — same shadow-value
+// pattern as VariationItem.suggestedPercentComplete.
+model ContractTerms {
+  id                     String   @id @default(cuid())
+  projectId              String   @unique
+  sourceDocumentId       String?
+  sourceContractReviewId String?
+
+  paymentClaimMethod          String?
+  paymentClaimDay             Int?
+  variationNoticePeriodDays   Int?
+  variationNoticeMethod       String?
+  retentionPercent            Float?
+  defectsLiabilityPeriodDays  Int?
+  disputeNoticeMethod         String?
+  generalNoticeMethod         String?
+
+  suggestedPaymentClaimMethod         String?
+  suggestedPaymentClaimDay            Int?
+  suggestedVariationNoticePeriodDays  Int?
+  suggestedVariationNoticeMethod      String?
+  suggestedRetentionPercent           Float?
+  suggestedDefectsLiabilityPeriodDays Int?
+  suggestedDisputeNoticeMethod        String?
+  suggestedGeneralNoticeMethod        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project        Project           @relation(fields: [projectId], references: [id])
+  sourceDocument ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
+}
+
+// Insurance requirements extracted from the contract (or entered manually).
+// AI-created rows start "parsed" and a human confirms them, same
+// status-lifecycle pattern as ProgrammeItem — this is a list of rows, not
+// scalar fields, so shadow-value doesn't fit here.
+model InsuranceRequirement {
+  id                     String    @id @default(cuid())
+  projectId              String
+  type                   InsuranceRequirementType
+  label                  String
+  required               Boolean   @default(true)
+  minimumAmount          Decimal?
+  status                 ItemStatus @default(parsed)
+  confidence             Float?    @default(0)
+  sourceDocumentId       String?
+  sourceContractReviewId String?
+  sourcePage             Int?
+
+  certificateFileName    String?
+  certificateStorageKey  String?
+  certificateExpiresAt   DateTime?
+  lastReminderStage      ReminderStage?
+
+  createdAt DateTime @default(now())
+
+  project        Project           @relation(fields: [projectId], references: [id])
+  sourceDocument ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
 }
 
 model ScopeItem {

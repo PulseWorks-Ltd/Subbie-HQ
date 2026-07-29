@@ -7,6 +7,15 @@
 // Usage: node scripts/check-db-target.js <the prisma args about to be run...>
 // e.g.:  node scripts/check-db-target.js migrate deploy
 
+import { config } from "dotenv";
+
+// Plain `node` doesn't auto-load .env the way `next` and the `prisma` CLI
+// do (see scripts/with-staging-db.js) — without this, DATABASE_URL/
+// PROD_DB_HOST_ALLOWLIST are only set if the caller's shell happened to
+// export them already, so this guard rail would fail closed with a
+// misleading "DATABASE_URL is not set" even when .env has it.
+config();
+
 const DANGEROUS_ARG_PATTERNS = ["--shadow-database-url", "diff", "reset"];
 
 function fail(message) {

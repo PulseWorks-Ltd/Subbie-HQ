@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
+import { getNewBaselineDriftDeviations } from "@/lib/contract-comparison";
 import { ContractView } from "@/components/contract/contract-view";
 
 export default async function ContractPage({ params }: { params: Promise<{ projectId: string }> }) {
@@ -13,18 +14,35 @@ export default async function ContractPage({ params }: { params: Promise<{ proje
     redirect(`/projects/${projectId}`);
   }
 
-  const documents = await prisma.contractDocument.findMany({
+  const rawDocuments = await prisma.contractDocument.findMany({
     where: { projectId },
     include: {
       clauses: { orderBy: { createdAt: "desc" } },
       reviews: {
+        where: { isPrimary: true },
         orderBy: { createdAt: "desc" },
         take: 1,
-        include: { deviations: { orderBy: { priorityScore: "desc" } } }
+        include: {
+          deviations: { orderBy: { priorityScore: "desc" } },
+          comparedAgainstReview: { include: { document: { select: { title: true, fileName: true, uploadedAt: true } } } }
+        }
       }
     },
     orderBy: { uploadedAt: "desc" }
   });
+
+  const documents = await Promise.all(
+    rawDocuments.map(async (document) => {
+      const review = document.reviews[0];
+      if (!review) return { ...document, reviews: [] as never[] };
+      const driftDeviations = await getNewBaselineDriftDeviations(
+        review.documentId,
+        review.comparedAgainstType,
+        review.newBaselineDriftCount
+      );
+      return { ...document, reviews: [{ ...review, driftDeviations }] };
+    })
+  );
 
   return <ContractView projectId={projectId} documents={documents} />;
 }

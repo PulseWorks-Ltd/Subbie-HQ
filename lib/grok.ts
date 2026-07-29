@@ -4,10 +4,20 @@ import { z } from "zod";
 // Constructed lazily (not at module scope) — the OpenAI SDK validates apiKey
 // presence eagerly in its constructor, which would crash Next.js's build-time
 // page-data collection if this ran at import time with no key configured yet.
+//
+// timeout/maxRetries are set explicitly rather than left at the SDK's
+// defaults (10 minutes, 2 retries) — a single slow/hung call could otherwise
+// block a map-reduce Promise.all step for up to ~30 minutes before finally
+// erroring. 90s is generous for a JSON completion on clause-sized inputs;
+// failing faster lets the existing "failed" review/error-message handling
+// (contract review routes, document-processing.ts) do its job promptly
+// instead of leaving a request hanging.
 function getClient() {
   return new OpenAI({
     apiKey: process.env.XAI_API_KEY,
-    baseURL: "https://api.x.ai/v1"
+    baseURL: "https://api.x.ai/v1",
+    timeout: 90_000,
+    maxRetries: 1
   });
 }
 
@@ -311,8 +321,13 @@ export type SynthesisResult = z.infer<typeof SynthesisResultSchema>;
 // not raw legal text) and produces the prioritized, summarized report the
 // founder asked for: an executive summary, an overall risk level, and a
 // priorityScore per deviation so major/risk-shifting items surface first.
+// comparisonLabel describes what the subcontract was compared against —
+// "the SA-2017 standard-form baseline" for baseline reviews, or "their
+// previous contract with this Main Contractor" for prior_contract reviews
+// (see lib/contract-comparison.ts) — the prompt/wording adapts either way.
 export async function synthesizeContractReview(
-  bucketResults: { topicBucket: string; deviations: BucketDeviation[] }[]
+  bucketResults: { topicBucket: string; deviations: BucketDeviation[] }[],
+  comparisonLabel = "the SA-2017 standard-form baseline"
 ): Promise<SynthesisResult> {
   const relevant = bucketResults.flatMap(({ topicBucket, deviations }) =>
     deviations
@@ -331,11 +346,11 @@ export async function synthesizeContractReview(
       {
         role: "system",
         content:
-          "You are prioritizing and summarizing a list of already-classified deviations found between a subcontract agreement and the SA-2017 standard-form baseline, for a subcontractor to review quickly without missing anything important. " +
+          `You are prioritizing and summarizing a list of already-classified deviations found between a subcontract agreement and ${comparisonLabel}, for a subcontractor to review quickly without missing anything important. ` +
           "Respond with only a JSON object matching this exact shape: " +
           '{"executiveSummary": string, "overallRiskLevel": "low" | "medium" | "high", "deviations": [{"topicBucket": string, "baselineClauseRef": string | null, "baselineClauseTitle": string | null, "subcontractClauseRef": string | null, "subcontractExcerpt": string | null, "classification": string, "impact": "low" | "medium" | "high", "priorityScore": number, "rationale": string, "recommendation": string | null}]}. ' +
-          "executiveSummary: 2-4 sentences, plain English, giving the overall picture (how many major issues, the general character of the changes, whether this looks like a lightly-modified or heavily-modified standard form). " +
-          "overallRiskLevel: your overall assessment of how much this subcontract shifts risk onto the subcontractor compared to the standard form. " +
+          `executiveSummary: 2-4 sentences, plain English, giving the overall picture (how many major issues, the general character of the changes, whether this looks like a lightly-modified or heavily-modified version of ${comparisonLabel}). ` +
+          `overallRiskLevel: your overall assessment of how much this subcontract shifts risk onto the subcontractor compared to ${comparisonLabel}. ` +
           "For each input deviation, include it in the output with the same fields plus a priorityScore (0-100, higher = more important for the subcontractor to read first) — major_deviation, missing_from_subcontract, and additional_in_subcontract entries should generally score higher than minor_deviation entries, but weigh actual practical impact (e.g. a 'minor'-labelled clause about a large retention change should still score highly). " +
           "Do not invent new deviations or drop any of the input deviations — reorder and score them, do not filter them out."
       },
@@ -410,4 +425,162 @@ export async function extractContractTermsFromClauses(
   }
 
   return ExtractedContractTermsSchema.parse(JSON.parse(raw));
+}
+
+const PriorContractDeviationSchema = BucketDeviationSchema.extend({ topicBucket: z.string() });
+const PriorContractComparisonResultSchema = z.object({ deviations: z.array(PriorContractDeviationSchema) });
+
+export type PriorContractDeviation = z.infer<typeof PriorContractDeviationSchema>;
+
+// Map phase for a prior_contract-type review (see lib/contract-comparison.ts)
+// — same map-reduce shape as compareClausesToStandardBucket, but there's no
+// fixed topic-bucket structure to chunk by since the "baseline" here is an
+// arbitrary previously-uploaded contract, not SA-2017. Instead this chunks
+// the PRIOR contract's clauses (the reference/checklist side, playing the
+// role baseline clauses played) and sends the FULL new-contract clause list
+// each time (the side being searched, playing subcontract clauses' role) —
+// the same "chunk one side, send the other whole" principle, just applied
+// to whichever side is being used as the checklist. classification reuses
+// DeviationClassification's baseline-oriented names: missing_from_subcontract
+// = a clause the prior contract had that this one has dropped;
+// additional_in_subcontract = a clause new to this contract with no prior
+// counterpart.
+const PRIOR_CONTRACT_CHUNK_SIZE = 20;
+// Same reasoning as compareClausesToStandardBucket's caller in
+// lib/contract-comparison.ts — firing every chunk at once can make most of
+// them queue for minutes rather than genuinely run in parallel.
+const PRIOR_CONTRACT_CONCURRENCY = 4;
+
+export async function compareClausesToPriorContract(
+  priorClauses: ClauseLike[],
+  newClauses: ClauseLike[]
+): Promise<PriorContractDeviation[]> {
+  const newContractText = formatClausesForPrompt(newClauses);
+
+  const chunks: ClauseLike[][] = [];
+  for (let i = 0; i < priorClauses.length; i += PRIOR_CONTRACT_CHUNK_SIZE) {
+    chunks.push(priorClauses.slice(i, i + PRIOR_CONTRACT_CHUNK_SIZE));
+  }
+
+  const results: PriorContractDeviation[][] = new Array(chunks.length);
+  let nextChunkIndex = 0;
+  async function worker() {
+    while (nextChunkIndex < chunks.length) {
+      const index = nextChunkIndex++;
+      results[index] = await compareOneChunk(chunks[index]);
+    }
+  }
+
+  async function compareOneChunk(chunk: ClauseLike[]): Promise<PriorContractDeviation[]> {
+      const priorContractText = formatClausesForPrompt(chunk);
+
+      const response = await getClient().chat.completions.create({
+        model: GROK_MODEL,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are comparing a newly-uploaded subcontract agreement against this same Main Contractor's PREVIOUS contract with this subcontractor, to flag anything that has changed, been added, or been removed — the Main Contractor may have quietly updated their own template. " +
+              "The two documents' clause numbers will NOT correspond — match clauses by what they actually say and require, not by label. " +
+              "For every prior-contract clause below, carefully check whether the new contract contains a clause covering the same subject matter, and if so whether its substance matches, is a minor (wording/technical/administrative) deviation, or is a major deviation (changes obligations, liability, risk allocation, deadlines, amounts, or removes a protection). " +
+              "Also separately check whether the new contract contains any clause on this section's topic that has NO counterpart at all in the prior-contract clauses below (a newly-added clause). " +
+              "Respond with only a JSON object matching this exact shape: " +
+              '{"deviations": [{"topicBucket": string, "baselineClauseRef": string | null, "baselineClauseTitle": string | null, "subcontractClauseRef": string | null, "subcontractExcerpt": string | null, "classification": "matches_standard" | "minor_deviation" | "major_deviation" | "missing_from_subcontract" | "additional_in_subcontract", "impact": "low" | "medium" | "high", "rationale": string, "recommendation": string | null}]}. ' +
+              "topicBucket: a short topic label for this deviation (e.g. 'Payment Terms', 'Variations', 'Insurance'). " +
+              "classification: matches_standard = substantively unchanged from the prior contract; minor_deviation = differs but low practical impact; major_deviation = differs in a way that meaningfully changes risk, liability, obligations, deadlines, or amounts vs the prior contract; missing_from_subcontract = a clause the prior contract had that this new one has dropped with no replacement; additional_in_subcontract = a new clause in this contract with no counterpart in the prior contract. " +
+              "baselineClauseRef/baselineClauseTitle: the PRIOR contract's clause being compared (from the 'PRIOR CONTRACT CLAUSES' list below), or null for additional_in_subcontract. " +
+              "subcontractClauseRef/subcontractExcerpt: the matching NEW contract clause reference and a short verbatim excerpt, or null for missing_from_subcontract. " +
+              "impact: how much this specific change shifts risk/liability onto the subcontractor compared to the prior contract — low/medium/high. Always low for matches_standard. " +
+              "rationale: 1-2 plain-English sentences explaining the change and why it matters (or briefly confirming it's unchanged). " +
+              "recommendation: a short, practical suggestion, or null if none needed. " +
+              "Include one entry per prior-contract clause below (even matches_standard ones — keep those brief), plus any additional_in_subcontract entries you find. Be thorough."
+          },
+          {
+            role: "user",
+            content: `PRIOR CONTRACT CLAUSES (this Main Contractor's previous contract with this subcontractor):\n${priorContractText}\n\n---\n\nNEW CONTRACT CLAUSES (full document, for matching against the above):\n${newContractText}`
+          }
+        ]
+      });
+
+      const raw = response.choices[0]?.message?.content;
+      if (!raw) {
+        throw new Error("No response from Grok.");
+      }
+
+      return PriorContractComparisonResultSchema.parse(JSON.parse(raw)).deviations;
+  }
+
+  await Promise.all(Array.from({ length: Math.min(PRIOR_CONTRACT_CONCURRENCY, chunks.length) }, () => worker()));
+
+  return results.flat();
+}
+
+const DraftedLetterSchema = z.object({ letterBody: z.string() });
+
+export type DraftedLetter = z.infer<typeof DraftedLetterSchema>;
+
+// Drafts one combined response letter covering every ticked deviation, for a
+// subcontractor to send to a Main Contractor contact pushing back on flagged
+// clauses. Each deviation carries its own comparedAgainstLabel — a letter
+// can combine clauses from a prior_contract review ("differs from your
+// previous contract with us") with clauses from the accompanying baseline
+// drift callout ("differs from the SA-2017 standard form"), since both are
+// selectable together. The mandatory not-legal-advice disclaimer is
+// deliberately NOT left to the model to include — the caller
+// (app/api/.../draft-letter/route.ts) appends it deterministically after
+// this returns, so it can never be dropped or paraphrased away.
+export async function draftResponseLetter(
+  deviations: {
+    baselineClauseRef: string | null;
+    baselineClauseTitle: string | null;
+    subcontractClauseRef: string | null;
+    rationale: string;
+    recommendation: string | null;
+    comparedAgainstLabel: string;
+  }[],
+  context: {
+    mainContractorName: string;
+    contactName: string;
+    contactRole: string | null;
+    projectName: string;
+  }
+): Promise<DraftedLetter> {
+  const deviationsText = deviations
+    .map(
+      (d, i) =>
+        `${i + 1}. ${d.subcontractClauseRef ? `Clause ${d.subcontractClauseRef}` : "New clause"}` +
+        `${d.baselineClauseRef ? ` (vs ${d.baselineClauseRef})` : ""} — compared against ${d.comparedAgainstLabel}: ${d.rationale}${d.recommendation ? ` Suggested change: ${d.recommendation}` : ""}`
+    )
+    .join("\n");
+
+  const response = await getClient().chat.completions.create({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You draft a professional, genuinely usable response letter/email from a construction subcontractor to a Main Contractor, pushing back on specific contract clauses that were flagged as deviating from either the SA-2017 standard-form baseline or the subcontractor's previous contract with this same Main Contractor (each flagged clause below states which). " +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"letterBody": string}. ' +
+          "letterBody: a complete, ready-to-send letter — a professional greeting addressed to the named contact, 1-2 sentences of context (referencing the project name and that this follows a review of the subcontract agreement), then one clearly-written paragraph per flagged clause explaining specifically how it differs from whichever baseline it was compared against and making a clear, professional, non-confrontational case for why it should be amended (referencing that baseline where useful), then a brief closing paragraph inviting discussion, then a sign-off. " +
+          "Do not include a subject line, do not include placeholder brackets like [Your Name] — write it as ready to send as-is other than the sender's own signature. " +
+          "Do not include any legal disclaimer — that is appended separately. " +
+          "Professional tone throughout, not a bare bullet list — full sentences and paragraphs a Main Contractor would take seriously."
+      },
+      {
+        role: "user",
+        content:
+          `Project: ${context.projectName}\nMain Contractor: ${context.mainContractorName}\nAddressed to: ${context.contactName}${context.contactRole ? ` (${context.contactRole})` : ""}\n\nFlagged clauses:\n${deviationsText}`
+      }
+    ]
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return DraftedLetterSchema.parse(JSON.parse(raw));
 }

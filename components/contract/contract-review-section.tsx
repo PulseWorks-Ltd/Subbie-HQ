@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractDeviation, ContractReview, DocumentProcessingStatus } from "@prisma/client";
+import type { ContractDeviation, ContractDocument, ContractReview, DocumentProcessingStatus } from "@prisma/client";
 import { ReviewProgress } from "@/components/contract/review-progress";
 import { DeviationReportView } from "@/components/contract/deviation-report-view";
 
-type ReviewWithDeviations = ContractReview & { deviations: ContractDeviation[] };
+export type ReviewWithChain = ContractReview & {
+  deviations: ContractDeviation[];
+  comparedAgainstReview:
+    | (ContractReview & { document: Pick<ContractDocument, "title" | "fileName" | "uploadedAt"> })
+    | null;
+  driftDeviations: ContractDeviation[];
+};
 
 export function ContractReviewSection({
   projectId,
@@ -18,15 +24,19 @@ export function ContractReviewSection({
 }: {
   projectId: string;
   documentId: string;
-  initialReview: ReviewWithDeviations | null;
+  initialReview: ReviewWithChain | null;
   hasClauses: boolean;
   processingStatus: DocumentProcessingStatus;
   processingError: string | null;
 }) {
   const router = useRouter();
-  const [review, setReview] = useState<ReviewWithDeviations | null>(initialReview);
+  const [review, setReview] = useState<ReviewWithChain | null>(initialReview);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReview(initialReview);
+  }, [initialReview]);
 
   // Background clause extraction (kicked off at upload time) is still in
   // progress — poll until it finishes so the button unlocks on its own.
@@ -66,7 +76,8 @@ export function ContractReviewSection({
         <div>
           <h4 className="text-sm font-bold">Contract Review</h4>
           <p className="text-xs text-[#4c739a] dark:text-slate-400">
-            Compares this document against the SA-2017 standard-form subcontract agreement.
+            Compares this document against the SA-2017 standard-form subcontract agreement, or this Main
+            Contractor's previous contract once one exists.
           </p>
         </div>
         {!isRunning && (
@@ -97,7 +108,7 @@ export function ContractReviewSection({
       {isRunning ? (
         <ReviewProgress />
       ) : review ? (
-        <DeviationReportView review={review} />
+        <DeviationReportView projectId={projectId} documentId={documentId} review={review} />
       ) : (
         !isBackgroundProcessing && (
           <p className="text-sm text-[#4c739a] dark:text-slate-400">

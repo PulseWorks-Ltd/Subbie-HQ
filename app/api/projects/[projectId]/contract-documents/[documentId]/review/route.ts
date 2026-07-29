@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
-import {
-  compareClausesToStandardBucket,
-  synthesizeContractReview,
-  extractContractTermsFromClauses
-} from "@/lib/grok";
-import { getStandardForm, getStandardFormBuckets, getStandardFormClausesByBucket } from "@/lib/standard-forms/sa-2017";
 import { processContractDocument } from "@/lib/document-processing";
+import { runContractReview, getNewBaselineDriftDeviations } from "@/lib/contract-comparison";
+import { getStandardForm } from "@/lib/standard-forms/sa-2017";
 
 export async function GET(
   request: Request,
@@ -28,12 +24,18 @@ export async function GET(
   }
 
   const review = await prisma.contractReview.findFirst({
-    where: { documentId, projectId },
+    where: { documentId, projectId, isPrimary: true },
     orderBy: { createdAt: "desc" },
-    include: { deviations: { orderBy: { priorityScore: "desc" } } }
+    include: {
+      deviations: { orderBy: { priorityScore: "desc" } },
+      comparedAgainstReview: { include: { document: { select: { title: true, fileName: true, uploadedAt: true } } } }
+    }
   });
+  const driftDeviations = review
+    ? await getNewBaselineDriftDeviations(review.documentId, review.comparedAgainstType, review.newBaselineDriftCount)
+    : [];
 
-  return NextResponse.json({ review });
+  return NextResponse.json({ review: review ? { ...review, driftDeviations } : null });
 }
 
 export async function POST(
@@ -92,132 +94,8 @@ export async function POST(
     }
   }
 
-  const standardForm = getStandardForm();
-
-  const review = await prisma.contractReview.create({
-    data: { projectId, documentId, standardFormVersion: standardForm.version, status: "running" }
-  });
-
   try {
-    const clauseInputs = clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body }));
-
-    // Step 1 (map, parallel) + terms extraction run concurrently — both only
-    // depend on the already-extracted clauses, not on each other.
-    const buckets = getStandardFormBuckets();
-    const [bucketResults, extractedTerms] = await Promise.all([
-      Promise.all(
-        buckets.map(async (bucket) => {
-          const baselineClauses = getStandardFormClausesByBucket(bucket).map((c) => ({
-            clauseRef: c.clauseRef,
-            title: c.title,
-            body: c.body
-          }));
-          const deviations = await compareClausesToStandardBucket(bucket, baselineClauses, clauseInputs);
-          return { topicBucket: bucket, deviations };
-        })
-      ),
-      extractContractTermsFromClauses(
-        clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber }))
-      )
-    ]);
-
-    // Step 2 (reduce) — prioritize and summarize.
-    const synthesis = await synthesizeContractReview(bucketResults);
-
-    const majorDeviationCount = synthesis.deviations.filter(
-      (d) =>
-        d.classification === "major_deviation" ||
-        d.classification === "missing_from_subcontract" ||
-        d.classification === "additional_in_subcontract"
-    ).length;
-    const minorDeviationCount = synthesis.deviations.filter((d) => d.classification === "minor_deviation").length;
-
-    await prisma.contractDeviation.createMany({
-      data: synthesis.deviations.map((d) => ({
-        contractReviewId: review.id,
-        topicBucket: d.topicBucket,
-        baselineClauseRef: d.baselineClauseRef,
-        baselineClauseTitle: d.baselineClauseTitle,
-        subcontractClauseRef: d.subcontractClauseRef,
-        subcontractExcerpt: d.subcontractExcerpt,
-        classification: d.classification,
-        impact: d.impact,
-        priorityScore: d.priorityScore,
-        rationale: d.rationale,
-        recommendation: d.recommendation
-      }))
-    });
-
-    await prisma.contractReview.update({
-      where: { id: review.id },
-      data: {
-        status: "complete",
-        executiveSummary: synthesis.executiveSummary,
-        overallRiskLevel: synthesis.overallRiskLevel,
-        majorDeviationCount,
-        minorDeviationCount,
-        completedAt: new Date(),
-        rawModelOutputs: { bucketResults, synthesis } as unknown as object
-      }
-    });
-
-    // Only suggest a field the human hasn't already confirmed a value for —
-    // re-running a review shouldn't resurface an amber "suggested" badge next
-    // to a value that's already correctly set.
-    const existingTerms = await prisma.contractTerms.findUnique({ where: { projectId } });
-    function suggestIfUnconfirmed<T>(realValue: T | null | undefined, extracted: T | null): T | null | undefined {
-      return realValue === null || realValue === undefined ? extracted : undefined;
-    }
-
-    await prisma.contractTerms.upsert({
-      where: { projectId },
-      create: {
-        projectId,
-        sourceDocumentId: documentId,
-        sourceContractReviewId: review.id,
-        suggestedPaymentClaimMethod: extractedTerms.paymentClaimMethod,
-        suggestedPaymentClaimDay: extractedTerms.paymentClaimDay,
-        suggestedVariationNoticePeriodDays: extractedTerms.variationNoticePeriodDays,
-        suggestedVariationNoticeMethod: extractedTerms.variationNoticeMethod,
-        suggestedRetentionPercent: extractedTerms.retentionPercent,
-        suggestedDefectsLiabilityPeriodDays: extractedTerms.defectsLiabilityPeriodDays,
-        suggestedDisputeNoticeMethod: extractedTerms.disputeNoticeMethod,
-        suggestedGeneralNoticeMethod: extractedTerms.generalNoticeMethod
-      },
-      update: {
-        sourceDocumentId: documentId,
-        sourceContractReviewId: review.id,
-        suggestedPaymentClaimMethod: suggestIfUnconfirmed(existingTerms?.paymentClaimMethod, extractedTerms.paymentClaimMethod),
-        suggestedPaymentClaimDay: suggestIfUnconfirmed(existingTerms?.paymentClaimDay, extractedTerms.paymentClaimDay),
-        suggestedVariationNoticePeriodDays: suggestIfUnconfirmed(
-          existingTerms?.variationNoticePeriodDays,
-          extractedTerms.variationNoticePeriodDays
-        ),
-        suggestedVariationNoticeMethod: suggestIfUnconfirmed(
-          existingTerms?.variationNoticeMethod,
-          extractedTerms.variationNoticeMethod
-        ),
-        suggestedRetentionPercent: suggestIfUnconfirmed(existingTerms?.retentionPercent, extractedTerms.retentionPercent),
-        suggestedDefectsLiabilityPeriodDays: suggestIfUnconfirmed(
-          existingTerms?.defectsLiabilityPeriodDays,
-          extractedTerms.defectsLiabilityPeriodDays
-        ),
-        suggestedDisputeNoticeMethod: suggestIfUnconfirmed(
-          existingTerms?.disputeNoticeMethod,
-          extractedTerms.disputeNoticeMethod
-        ),
-        suggestedGeneralNoticeMethod: suggestIfUnconfirmed(
-          existingTerms?.generalNoticeMethod,
-          extractedTerms.generalNoticeMethod
-        )
-      }
-    });
-
-    const fullReview = await prisma.contractReview.findUnique({
-      where: { id: review.id },
-      include: { deviations: { orderBy: { priorityScore: "desc" } } }
-    });
-
+    const fullReview = await runContractReview(projectId, documentId);
     return NextResponse.json({ review: fullReview });
   } catch (error) {
     console.error("Contract review failed:", error);
@@ -227,9 +105,8 @@ export async function POST(
     // the page later and DeviationReportView re-renders the failed review.
     const userMessage = "Could not complete an automated review of this document. You can still review it manually.";
 
-    const failedReview = await prisma.contractReview.update({
-      where: { id: review.id },
-      data: { status: "failed", errorMessage: userMessage }
+    const failedReview = await prisma.contractReview.create({
+      data: { projectId, documentId, standardFormVersion: getStandardForm().version, status: "failed", errorMessage: userMessage }
     });
     return NextResponse.json({ error: userMessage, review: failedReview }, { status: 422 });
   }

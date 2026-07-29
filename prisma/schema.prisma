@@ -81,6 +81,7 @@ enum VariationItemStatus {
 enum CorrespondenceSource {
   upload
   inbound_email
+  response_letter_draft
 }
 
 enum VariationCompletionMode {
@@ -139,6 +140,15 @@ enum DeviationClassification {
   additional_in_subcontract
 }
 
+// baseline = compared against the SA-2017 standard form (always true for a
+// Main Contractor's first-ever reviewed contract). prior_contract = compared
+// against that same Main Contractor's most-recently-reviewed contract on any
+// project, once one exists — see ContractReview.comparedAgainstReviewId.
+enum ContractReviewComparisonType {
+  baseline
+  prior_contract
+}
+
 model User {
   id            String          @id @default(cuid())
   email         String          @unique
@@ -161,6 +171,7 @@ model Organisation {
   invites   OrganisationInvite[]
   projects  Project[]
   insuranceCertificates InsuranceCertificate[]
+  mainContractors MainContractor[]
 }
 
 model OrganisationMember {
@@ -205,10 +216,16 @@ model Project {
   nextClaimDate      DateTime?
   invoiceModeEnabled Boolean           @default(false)
   tradeReference     String?
+  // Main Contractor's own job/contract number for this project — distinct
+  // from `code`, which is Subbie HQ's internal project reference.
+  jobNumber          String?
+  mainContractorId   String?
   createdAt          DateTime          @default(now())
 
   organisation       Organisation?     @relation(fields: [organisationId], references: [id])
+  mainContractor     MainContractor?   @relation(fields: [mainContractorId], references: [id])
   members            ProjectMember[]
+  projectContacts    ProjectContact[]
   contractDocuments  ContractDocument[]
   clauses            Clause[]
   scopeItems         ScopeItem[]
@@ -261,6 +278,7 @@ model ContractDocument {
   programmeItems ProgrammeItem[]
   reviews     ContractReview[]
   contractTermsSourced ContractTerms[]
+  correspondenceOutcomes Correspondence[]
 }
 
 model Clause {
@@ -296,9 +314,35 @@ model ContractReview {
   createdAt           DateTime @default(now())
   completedAt         DateTime?
 
+  // What this review's deviations were compared against. "baseline" always
+  // for a Main Contractor's first-ever contract; "prior_contract" for every
+  // later one, pointing at that MC's previously most-recent review via
+  // comparedAgainstReviewId — this chain is what makes the comparison
+  // auditable later. isPrimary distinguishes the review actually shown to
+  // the user for this document from an internal, always-run baseline
+  // "shadow" review (isPrimary: false) that exists purely so the NEXT
+  // contract from this Main Contractor can detect newly-introduced SA-2017
+  // drift, even though the primary report for THIS document compares
+  // against the prior contract instead. See lib/contract-comparison.ts.
+  comparedAgainstType     ContractReviewComparisonType @default(baseline)
+  comparedAgainstReviewId String?
+  isPrimary               Boolean  @default(true)
+  // Count of this Main Contractor's clauses that newly deviate from SA-2017
+  // in THIS contract, having matched (or only minorly deviated) in their
+  // previous contract — i.e. the MC quietly changed their own template.
+  // Only meaningful on isPrimary + comparedAgainstType=prior_contract
+  // reviews; the actual flagged clauses live on the sibling shadow review's
+  // ContractDeviation rows (isNewBaselineDrift), found via
+  // findFirst({ documentId, comparedAgainstType: "baseline", isPrimary: false }).
+  newBaselineDriftCount Int @default(0)
+
   project    Project          @relation(fields: [projectId], references: [id])
   document   ContractDocument @relation(fields: [documentId], references: [id])
   deviations ContractDeviation[]
+
+  comparedAgainstReview ContractReview?  @relation("ReviewChain", fields: [comparedAgainstReviewId], references: [id])
+  chainedReviews        ContractReview[] @relation("ReviewChain")
+  responseLetters       Correspondence[]
 }
 
 model ContractDeviation {
@@ -315,6 +359,11 @@ model ContractDeviation {
   rationale             String
   recommendation        String?
   sourcePage            Int?
+  // Set on a baseline shadow review's deviation rows (see ContractReview
+  // comment) when this clause newly deviates from SA-2017 having been fine
+  // (or only minor) in the Main Contractor's previous contract — the
+  // "quietly changed their own template" case.
+  isNewBaselineDrift    Boolean  @default(false)
   createdAt             DateTime @default(now())
 
   contractReview ContractReview @relation(fields: [contractReviewId], references: [id])
@@ -389,6 +438,57 @@ model InsuranceDistribution {
 
   insuranceCertificate InsuranceCertificate @relation(fields: [insuranceCertificateId], references: [id])
   project              Project              @relation(fields: [projectId], references: [id])
+}
+
+// Company-level, like InsuranceCertificate — a Main Contractor is a real-world
+// company a subcontractor works for, and can span many projects. Never
+// inferred from document text (see ContractReview.comparedAgainstType /
+// lib/contract-comparison.ts) — always the explicit Project.mainContractorId
+// assignment made at project creation or from project Settings.
+model MainContractor {
+  id             String   @id @default(cuid())
+  organisationId String
+  name           String
+  createdAt      DateTime @default(now())
+
+  organisation Organisation             @relation(fields: [organisationId], references: [id])
+  contacts     MainContractorContact[]
+  projects     Project[]
+  // TODO: surface this Main Contractor's Contract Review comparison history
+  // (chain of reviews across all its projects) on the detail page.
+}
+
+model MainContractorContact {
+  id               String   @id @default(cuid())
+  mainContractorId String
+  name             String
+  email            String?
+  phone            String?
+  // Free text rather than a locked enum — the UI offers common presets
+  // (Health & Safety Officer, Project Manager, Site Manager, Quantity
+  // Surveyor, Contracts Manager) plus a custom option, but any role is valid.
+  role             String?
+  createdAt        DateTime @default(now())
+
+  mainContractor  MainContractor   @relation(fields: [mainContractorId], references: [id])
+  projectContacts ProjectContact[]
+  correspondence  Correspondence[]
+}
+
+// Which of a Main Contractor's contacts are actually active/relevant for a
+// specific project — kept as a row (rather than deleted) even when set
+// inactive, so historical assignments aren't lost.
+model ProjectContact {
+  id                       String   @id @default(cuid())
+  projectId                String
+  mainContractorContactId  String
+  active                   Boolean  @default(true)
+  createdAt                DateTime @default(now())
+
+  project Project                @relation(fields: [projectId], references: [id])
+  contact MainContractorContact  @relation(fields: [mainContractorContactId], references: [id])
+
+  @@unique([projectId, mainContractorContactId])
 }
 
 model ScopeItem {
@@ -656,10 +756,30 @@ model Correspondence {
   sourceInsuranceCertificateId String?
   createdAt       DateTime             @default(now())
 
+  // AI-drafted response letter rows (source: response_letter_draft): the
+  // letter text lives here directly (as well as being saved as a .txt file
+  // via fileName/storageKey, for the existing download route) so it can be
+  // shown/copied inline without re-fetching from S3, matching how inbound
+  // email bodies are already displayed.
+  bodyText                String?
+  addressedToContactId    String?
+  sourceContractReviewId  String?
+  // JSON array of the ContractDeviation ids this letter addresses.
+  sourceDeviationIds      Json?
+
+  // Outcome logging (Task 3.4) — a note, and/or a revised contract re-upload
+  // that becomes this Main Contractor's new "most recent contract" for the
+  // comparison chain (see lib/contract-comparison.ts).
+  outcomeNote               String?
+  outcomeContractDocumentId String?
+
   project         Project              @relation(fields: [projectId], references: [id])
   variationItem   VariationItem?       @relation(fields: [variationItemId], references: [id])
   inboundEmail    InboundEmail?        @relation(fields: [inboundEmailId], references: [id])
   sourceInsuranceCertificate InsuranceCertificate? @relation(fields: [sourceInsuranceCertificateId], references: [id])
+  addressedToContact    MainContractorContact? @relation(fields: [addressedToContactId], references: [id])
+  sourceContractReview  ContractReview?         @relation(fields: [sourceContractReviewId], references: [id])
+  outcomeContractDocument ContractDocument?     @relation(fields: [outcomeContractDocumentId], references: [id])
 }
 
 model SafetyDocument {

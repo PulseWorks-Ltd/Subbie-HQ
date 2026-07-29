@@ -43,14 +43,16 @@ export default async function CorrespondencePage({ params }: { params: Promise<{
       fileHref: null,
       linkedItem: null,
       date: email.receivedAt,
-      deletable: false
+      deletable: false,
+      outcomeNote: null,
+      hasOutcome: false
     })),
     ...correspondence.map((item) => ({
       id: item.id,
-      kind: "upload" as const,
+      kind: item.source === "response_letter_draft" ? ("letter_draft" as const) : ("upload" as const),
       title: item.title,
       subtitle: item.fileName,
-      body: null,
+      body: item.bodyText,
       fileHref: item.storageKey
         ? `/api/projects/${projectId}/correspondence/${item.id}/file`
         : item.sourceInsuranceCertificateId
@@ -58,7 +60,9 @@ export default async function CorrespondencePage({ params }: { params: Promise<{
           : null,
       linkedItem: item.variationItem,
       date: item.createdAt,
-      deletable: true
+      deletable: true,
+      outcomeNote: item.outcomeNote,
+      hasOutcome: Boolean(item.outcomeNote || item.outcomeContractDocumentId)
     }))
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
 

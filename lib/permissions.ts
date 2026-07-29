@@ -11,6 +11,7 @@ export const MODULES = [
   "payment_claims",
   "evidence",
   "insurance",
+  "main_contractors",
   "quoting"
 ] as const;
 
@@ -39,6 +40,10 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   // (which is project-scoped); it's checked directly against the
   // OrganisationMember row via hasModuleAccess.
   insurance: "Insurance",
+  // Gates the global, organisation-level Main Contractors page — same
+  // placement pattern as `insurance` above (checked via hasModuleAccess
+  // against OrganisationMember, not requireModuleAccess).
+  main_contractors: "Main Contractors",
   quoting: "Quoting"
 };
 
@@ -66,6 +71,7 @@ export const PRESETS: Record<PresetKey, { label: string; isAdmin: boolean; modul
       payment_claims: true,
       evidence: true,
       insurance: true,
+      main_contractors: true,
       quoting: true
     }
   },

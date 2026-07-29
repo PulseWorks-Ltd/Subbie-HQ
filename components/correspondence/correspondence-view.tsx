@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { VariationItem } from "@prisma/client";
 import { CorrespondenceFormDialog } from "@/components/correspondence/correspondence-form-dialog";
+import { LogOutcomeDialog } from "@/components/correspondence/log-outcome-dialog";
 
 export type CorrespondenceRow = {
   id: string;
-  kind: "email" | "upload";
+  kind: "email" | "upload" | "letter_draft";
   title: string;
   subtitle: string | null;
   body: string | null;
@@ -16,6 +17,8 @@ export type CorrespondenceRow = {
   linkedItem: { id: string; reference: string; title: string } | null;
   date: Date;
   deletable: boolean;
+  outcomeNote: string | null;
+  hasOutcome: boolean;
 };
 
 function formatDate(date: Date) {
@@ -34,6 +37,7 @@ export function CorrespondenceView({
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [outcomeRowId, setOutcomeRowId] = useState<string | null>(null);
 
   async function handleDelete(row: CorrespondenceRow) {
     if (!confirm(`Delete "${row.title}"?`)) return;
@@ -75,13 +79,14 @@ export function CorrespondenceView({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   <span className="material-symbols-outlined text-lg text-[#4c739a] dark:text-slate-400 mt-0.5 shrink-0">
-                    {row.kind === "email" ? "mail" : "description"}
+                    {row.kind === "email" ? "mail" : row.kind === "letter_draft" ? "draft" : "description"}
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-bold truncate">{row.title}</p>
                     <p className="text-xs text-[#4c739a] dark:text-slate-400">
                       {row.subtitle && `${row.subtitle} · `}
                       {formatDate(row.date)}
+                      {row.hasOutcome && " · Outcome logged"}
                       {row.linkedItem && (
                         <>
                           {" · "}
@@ -97,12 +102,20 @@ export function CorrespondenceView({
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {row.kind === "email" && (
+                  {(row.kind === "email" || row.kind === "letter_draft") && (
                     <button
                       onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
                       className="text-xs font-bold text-primary hover:underline"
                     >
                       {expandedId === row.id ? "Hide" : "View"}
+                    </button>
+                  )}
+                  {row.kind === "letter_draft" && (
+                    <button
+                      onClick={() => setOutcomeRowId(row.id)}
+                      className="text-xs font-bold text-primary hover:underline"
+                    >
+                      Log outcome
                     </button>
                   )}
                   {row.fileHref && (
@@ -126,9 +139,16 @@ export function CorrespondenceView({
                 </div>
               </div>
 
-              {row.kind === "email" && expandedId === row.id && row.body && (
+              {(row.kind === "email" || row.kind === "letter_draft") && expandedId === row.id && row.body && (
                 <p className="mt-3 pt-3 border-t border-[#e7edf3] dark:border-slate-800 text-sm text-[#0d141b] dark:text-slate-200 whitespace-pre-wrap">
                   {row.body}
+                </p>
+              )}
+
+              {row.outcomeNote && (
+                <p className="mt-3 pt-3 border-t border-[#e7edf3] dark:border-slate-800 text-xs text-[#4c739a] dark:text-slate-400">
+                  <span className="font-bold">Outcome: </span>
+                  {row.outcomeNote}
                 </p>
               )}
             </div>
@@ -142,6 +162,15 @@ export function CorrespondenceView({
         open={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
       />
+
+      {outcomeRowId && (
+        <LogOutcomeDialog
+          projectId={projectId}
+          correspondenceId={outcomeRowId}
+          open={Boolean(outcomeRowId)}
+          onClose={() => setOutcomeRowId(null)}
+        />
+      )}
     </div>
   );
 }

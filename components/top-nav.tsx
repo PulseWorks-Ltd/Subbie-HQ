@@ -9,18 +9,21 @@ export function TopNav({
   userName,
   userEmail,
   isOrganisationAdmin,
-  canSeeInsurance
+  canSeeInsurance,
+  canSeeMainContractors
 }: {
   userName: string | null;
   userEmail: string;
   isOrganisationAdmin: boolean;
   canSeeInsurance: boolean;
+  canSeeMainContractors: boolean;
 }) {
   const pathname = usePathname();
   const isDashboard = pathname === "/";
   const isProjects = pathname === "/projects";
   const isTeam = pathname === "/team";
   const isInsurance = pathname === "/insurance";
+  const isMainContractors = pathname?.startsWith("/main-contractors") ?? false;
   const initial = (userName ?? userEmail).charAt(0).toUpperCase();
 
   return (
@@ -70,6 +73,17 @@ export function TopNav({
           >
             <span className="material-symbols-outlined text-lg">shield</span>
             Insurance
+          </Link>
+        )}
+        {canSeeMainContractors && (
+          <Link
+            href="/main-contractors"
+            className={`text-sm font-bold pb-1 border-b-2 flex items-center gap-1.5 ${
+              isMainContractors ? "text-primary border-primary" : "text-[#4c739a] dark:text-slate-400 border-transparent hover:text-primary"
+            }`}
+          >
+            <span className="material-symbols-outlined text-lg">domain</span>
+            Main Contractors
           </Link>
         )}
       </div>

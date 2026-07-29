@@ -69,13 +69,36 @@ export function PushNotificationsButton() {
     }
   }
 
+  async function handleDisable() {
+    setStatus("subscribing");
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: subscription.endpoint })
+        });
+        await subscription.unsubscribe();
+      }
+      setStatus("idle");
+    } catch {
+      setStatus("error");
+    }
+  }
+
   if (status === "unsupported") return null;
 
   if (status === "subscribed") {
     return (
-      <span className="text-[11px] font-medium text-green-600 flex items-center gap-1">
+      <button
+        onClick={handleDisable}
+        title="Turn off notifications"
+        className="text-[11px] font-medium text-green-600 flex items-center gap-1"
+      >
         <span className="material-symbols-outlined text-sm">notifications_active</span>
-      </span>
+      </button>
     );
   }
 

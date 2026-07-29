@@ -40,7 +40,11 @@ export default async function MobileLayout({ children }: { children: React.React
           <form
             action={async () => {
               "use server";
-              await signOut({ redirectTo: "/login" });
+              // Without callbackUrl, logging back in lands on "/" (the full
+              // desktop app, all nav tabs) instead of back in the scoped
+              // mobile shell — the exact "shows full desktop view after
+              // logging out and back in" symptom.
+              await signOut({ redirectTo: "/login?callbackUrl=/m" });
             }}
           >
             <button className="text-xs font-medium text-[#4c739a] dark:text-slate-400">Sign out</button>

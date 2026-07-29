@@ -21,7 +21,9 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [updates, taggableItems] = await Promise.all([
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { mainContractorId: true } });
+
+  const [updates, taggableItems, contacts] = await Promise.all([
     prisma.update.findMany({
       where: { projectId, parentId: null },
       include: {
@@ -43,8 +45,15 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
           where: { projectId, type: { in: visibleTypes }, status: { not: "complete" } },
           orderBy: { createdAt: "desc" }
         })
+      : Promise.resolve([]),
+    project?.mainContractorId
+      ? prisma.mainContractorContact.findMany({
+          where: { mainContractorId: project.mainContractorId },
+          select: { id: true, name: true, email: true, role: true },
+          orderBy: { name: "asc" }
+        })
       : Promise.resolve([])
   ]);
 
-  return <UpdatesView projectId={projectId} updates={updates} taggableItems={taggableItems} />;
+  return <UpdatesView projectId={projectId} updates={updates} taggableItems={taggableItems} contacts={contacts} />;
 }

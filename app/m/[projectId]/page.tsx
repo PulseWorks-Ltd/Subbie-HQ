@@ -5,12 +5,15 @@ import { requireModuleAccess, requireProjectAccess } from "@/lib/auth";
 import { MobileUpdatesView } from "@/components/mobile/mobile-updates-view";
 
 export default async function MobileProjectUpdatesPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ update?: string }>;
 }) {
   const session = await auth();
   const { projectId } = await params;
+  const { update: highlightUpdateId } = await searchParams;
 
   const hasAccess = await requireProjectAccess(projectId, session!.user.id);
   const canAccessUpdates = hasAccess && (await requireModuleAccess(projectId, session!.user.id, "updates"));
@@ -30,7 +33,7 @@ export default async function MobileProjectUpdatesPage({
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [updates, taggableItems] = await Promise.all([
+  const [updates, taggableItems, contacts] = await Promise.all([
     prisma.update.findMany({
       where: { projectId, parentId: null },
       include: {
@@ -49,6 +52,13 @@ export default async function MobileProjectUpdatesPage({
     }),
     visibleTypes.length > 0
       ? prisma.variationItem.findMany({ where: { projectId, type: { in: visibleTypes } }, orderBy: { createdAt: "desc" } })
+      : Promise.resolve([]),
+    project.mainContractorId
+      ? prisma.mainContractorContact.findMany({
+          where: { mainContractorId: project.mainContractorId },
+          select: { id: true, name: true, email: true, role: true },
+          orderBy: { name: "asc" }
+        })
       : Promise.resolve([])
   ]);
 
@@ -60,7 +70,13 @@ export default async function MobileProjectUpdatesPage({
         </a>
         <h1 className="text-lg font-bold">{project.name}</h1>
       </div>
-      <MobileUpdatesView projectId={projectId} updates={updates} taggableItems={taggableItems} />
+      <MobileUpdatesView
+        projectId={projectId}
+        updates={updates}
+        taggableItems={taggableItems}
+        contacts={contacts}
+        highlightUpdateId={highlightUpdateId}
+      />
     </div>
   );
 }

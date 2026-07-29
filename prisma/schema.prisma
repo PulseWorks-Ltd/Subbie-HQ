@@ -82,6 +82,7 @@ enum CorrespondenceSource {
   upload
   inbound_email
   response_letter_draft
+  external_update
 }
 
 enum VariationCompletionMode {
@@ -513,6 +514,7 @@ model MainContractorContact {
   mainContractor  MainContractor   @relation(fields: [mainContractorId], references: [id])
   projectContacts ProjectContact[]
   correspondence  Correspondence[]
+  updateRecipients UpdateRecipient[]
 }
 
 // Which of a Main Contractor's contacts are actually active/relevant for a
@@ -722,12 +724,46 @@ model Update {
   body              String
   createdAt         DateTime          @default(now())
 
+  // External updates are a one-way notification sent out by email (via
+  // SendGrid, see lib/email.ts) rather than an internal, reply-supported
+  // thread entry — `body` still holds the author's original rough text
+  // (typed or Whisper-transcribed), while externalSubject/externalBody hold
+  // the final, human-reviewed content that was actually emailed, so there's
+  // an exact record of what went out. externalSentAt is set once the send
+  // succeeds; a row with isExternal true but externalSentAt null shouldn't
+  // normally persist (the update is only created once the user hits Send —
+  // see app/api/projects/[projectId]/updates/route.ts), but is left
+  // nullable rather than required in case a send needs retrying later.
+  isExternal        Boolean           @default(false)
+  externalSubject   String?
+  externalBody      String?
+  externalSentAt    DateTime?
+
   project           Project           @relation(fields: [projectId], references: [id])
   author            User              @relation(fields: [authorId], references: [id])
   parent            Update?           @relation("UpdateReplies", fields: [parentId], references: [id])
   replies           Update[]          @relation("UpdateReplies")
   variationItem     VariationItem?    @relation(fields: [variationItemId], references: [id])
   attachments       UpdateAttachment[]
+  recipients        UpdateRecipient[]
+  correspondence    Correspondence[]
+}
+
+// Who an external Update was actually sent to — a mix of saved Main
+// Contractor contacts and one-off typed email addresses is expected on the
+// same update, hence a child row per recipient rather than a flat field.
+// `email` is always populated (copied from the contact at send time for
+// contact-based recipients) so the record of who received it doesn't
+// silently change if the contact's email is edited later.
+model UpdateRecipient {
+  id                      String   @id @default(cuid())
+  updateId                String
+  mainContractorContactId String?
+  email                   String
+  createdAt               DateTime @default(now())
+
+  update  Update                 @relation(fields: [updateId], references: [id])
+  contact MainContractorContact? @relation(fields: [mainContractorContactId], references: [id])
 }
 
 model VariationItem {
@@ -813,6 +849,10 @@ model Correspondence {
   outcomeNote               String?
   outcomeContractDocumentId String?
 
+  // Set on source: external_update rows — the Update this correspondence
+  // entry logs the sending of (see app/api/projects/[projectId]/updates/route.ts).
+  sourceUpdateId String?
+
   project         Project              @relation(fields: [projectId], references: [id])
   variationItem   VariationItem?       @relation(fields: [variationItemId], references: [id])
   inboundEmail    InboundEmail?        @relation(fields: [inboundEmailId], references: [id])
@@ -820,6 +860,7 @@ model Correspondence {
   addressedToContact    MainContractorContact? @relation(fields: [addressedToContactId], references: [id])
   sourceContractReview  ContractReview?         @relation(fields: [sourceContractReviewId], references: [id])
   outcomeContractDocument ContractDocument?     @relation(fields: [outcomeContractDocumentId], references: [id])
+  sourceUpdate            Update?               @relation(fields: [sourceUpdateId], references: [id])
 }
 
 model SafetyDocument {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { MobileThread } from "@/components/mobile/mobile-thread";
+import { UpdateComposer } from "@/components/updates/update-composer";
 import { getCountdownInfo } from "@/lib/date-countdown";
 
 type Author = { id: string; name: string | null; email: string };
@@ -14,90 +14,36 @@ type UpdateWithReplies = Update & {
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 
 export function MobileUpdatesView({
   projectId,
   updates,
-  taggableItems
+  taggableItems,
+  contacts,
+  highlightUpdateId
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   taggableItems: VariationItem[];
+  contacts: ContactOption[];
+  highlightUpdateId?: string;
 }) {
-  const router = useRouter();
-  const [body, setBody] = useState("");
-  const [variationItemId, setVariationItemId] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const openItems = taggableItems.filter((item) => item.status !== "complete");
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!body.trim()) return;
-    setIsSubmitting(true);
-
-    const formData = new FormData();
-    formData.set("body", body);
-    if (variationItemId) formData.set("variationItemId", variationItemId);
-    files.forEach((file) => formData.append("files", file));
-
-    await fetch(`/api/projects/${projectId}/updates`, { method: "POST", body: formData });
-
-    setIsSubmitting(false);
-    setBody("");
-    setVariationItemId("");
-    setFiles([]);
-    router.refresh();
-  }
+  useEffect(() => {
+    if (!highlightUpdateId) return;
+    const el = document.getElementById(`update-${highlightUpdateId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-primary");
+    const timeout = setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2500);
+    return () => clearTimeout(timeout);
+  }, [highlightUpdateId]);
 
   return (
     <div className="flex flex-col gap-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 p-4 flex flex-col gap-3"
-      >
-        <textarea
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          rows={3}
-          placeholder="Post a progress update..."
-          className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-        />
-        <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400">
-          <span className="material-symbols-outlined text-lg">photo_camera</span>
-          {files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} attached` : "Add photo"}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
-            className="hidden"
-          />
-        </label>
-        {openItems.length > 0 && (
-          <select
-            value={variationItemId}
-            onChange={(event) => setVariationItemId(event.target.value)}
-            className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          >
-            <option value="">Not tied to a Variation/SI</option>
-            {openItems.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.reference} · {item.title}
-              </option>
-            ))}
-          </select>
-        )}
-        <button
-          type="submit"
-          disabled={isSubmitting || !body.trim()}
-          className="h-11 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
-        >
-          {isSubmitting ? "Posting..." : "Post Update"}
-        </button>
-      </form>
+      <UpdateComposer projectId={projectId} taggableItems={taggableItems} contacts={contacts} variant="mobile" />
 
       {taggableItems.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { UpdateThread } from "@/components/updates/update-thread";
+import { UpdateComposer } from "@/components/updates/update-composer";
 
 type Author = { id: string; name: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -13,44 +12,19 @@ type UpdateWithReplies = Update & {
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 
 export function UpdatesView({
   projectId,
   updates,
-  taggableItems
+  taggableItems,
+  contacts
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   taggableItems: VariationItem[];
+  contacts: ContactOption[];
 }) {
-  const router = useRouter();
-  const [body, setBody] = useState("");
-  const [variationItemId, setVariationItemId] = useState("");
-  const [percentComplete, setPercentComplete] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!body.trim()) return;
-    setIsSubmitting(true);
-
-    const formData = new FormData();
-    formData.set("body", body);
-    if (variationItemId) formData.set("variationItemId", variationItemId);
-    if (variationItemId && percentComplete) formData.set("percentComplete", percentComplete);
-    files.forEach((file) => formData.append("files", file));
-
-    await fetch(`/api/projects/${projectId}/updates`, { method: "POST", body: formData });
-
-    setIsSubmitting(false);
-    setBody("");
-    setVariationItemId("");
-    setPercentComplete("");
-    setFiles([]);
-    router.refresh();
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -61,67 +35,7 @@ export function UpdatesView({
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col gap-4">
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5 flex flex-col gap-3"
-        >
-          <textarea
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            rows={3}
-            placeholder="Post an update for the team..."
-            className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-          <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400">
-            <span className="material-symbols-outlined text-lg">photo_camera</span>
-            {files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} attached` : "Attach photos"}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
-              className="hidden"
-            />
-          </label>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              {taggableItems.length > 0 ? (
-                <select
-                  value={variationItemId}
-                  onChange={(event) => setVariationItemId(event.target.value)}
-                  className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                >
-                  <option value="">Not tied to a Variation/SI</option>
-                  {taggableItems.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.reference} · {item.title}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span />
-              )}
-              {variationItemId && (
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={percentComplete}
-                  onChange={(event) => setPercentComplete(event.target.value)}
-                  placeholder="% complete"
-                  className="h-9 w-28 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                />
-              )}
-            </div>
-            <button
-              type="submit"
-              disabled={isSubmitting || !body.trim()}
-              className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
-            >
-              {isSubmitting ? "Posting..." : "Post Update"}
-            </button>
-          </div>
-        </form>
+        <UpdateComposer projectId={projectId} taggableItems={taggableItems} contacts={contacts} variant="desktop" />
 
         {updates.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">

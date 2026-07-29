@@ -6,7 +6,11 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export default async function MobileLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/login");
+    // Preserve callbackUrl so login sends the user back into the scoped
+    // mobile shell — without it, the post-login redirect falls back to "/"
+    // (the full app), which only self-corrects after a hard reload re-runs
+    // this layout check with a real session.
+    redirect("/login?callbackUrl=/m");
   }
 
   return (
@@ -19,7 +23,7 @@ export default async function MobileLayout({ children }: { children: React.React
           <img src="/brand/mark-light.png" alt="" className="size-7 dark:hidden" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/mark-dark.png" alt="" className="size-7 hidden dark:block" />
-          <span className="text-base font-bold">Subbie Updates</span>
+          <span className="text-base font-bold">Subbie HQ</span>
         </a>
         <div className="flex items-center gap-3">
           <ThemeToggle />

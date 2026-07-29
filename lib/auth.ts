@@ -51,3 +51,26 @@ export async function requireModuleAccess(projectId: string, userId: string, mod
   });
   return hasModuleAccess(membership, module);
 }
+
+/**
+ * Every user who can currently see a given module on a project — the same
+ * rule requireModuleAccess checks for one user, applied to the whole
+ * membership list. Used for broadcast notifications (e.g. a new Update —
+ * see app/api/projects/[projectId]/updates/route.ts) so only people with
+ * real visibility into the project/module get notified.
+ */
+export async function getProjectMemberUserIdsWithModuleAccess(projectId: string, module: ModuleKey): Promise<string[]> {
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
+  if (!project) return [];
+
+  if (!project.organisationId) {
+    const members = await prisma.projectMember.findMany({ where: { projectId }, select: { userId: true } });
+    return members.map((m) => m.userId);
+  }
+
+  const memberships = await prisma.organisationMember.findMany({
+    where: { organisationId: project.organisationId },
+    select: { userId: true, isAdmin: true, modules: true }
+  });
+  return memberships.filter((membership) => hasModuleAccess(membership, module)).map((m) => m.userId);
+}

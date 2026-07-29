@@ -67,6 +67,43 @@ export async function sendReminderEmail(params: {
   });
 }
 
+// Unlike the fire-and-forget notification emails above (which silently
+// no-op if SendGrid isn't configured, since they're a nice-to-have on top
+// of an action that already succeeded), this is the actual user-facing send
+// for an external Update — the user clicked "Send" and expects either real
+// delivery or a clear error to retry (see Task 3.2's "handle send failures
+// gracefully" requirement), so this throws rather than silently no-opping.
+export async function sendExternalUpdateEmail(params: {
+  to: { email: string; name?: string }[];
+  subject: string;
+  body: string;
+  attachments: { filename: string; content: Uint8Array; contentType: string }[];
+}) {
+  const config = getConfiguredSendGrid();
+  if (!config) {
+    throw new Error("Email sending isn't configured — SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are missing.");
+  }
+
+  const html = params.body
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br />")}</p>`)
+    .join("\n");
+
+  await sgMail.send({
+    to: params.to,
+    from: { email: config.fromEmail, name: "Subbie HQ" },
+    subject: params.subject,
+    text: params.body,
+    html,
+    attachments: params.attachments.map((attachment) => ({
+      filename: attachment.filename,
+      type: attachment.contentType,
+      content: Buffer.from(attachment.content).toString("base64"),
+      disposition: "attachment"
+    }))
+  });
+}
+
 export async function sendOrganisationInviteEmail(params: {
   to: string;
   organisationName: string;

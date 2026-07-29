@@ -54,7 +54,7 @@ export function MobileThread({ projectId, update }: { projectId: string; update:
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 p-4">
+    <div id={`update-${update.id}`} className="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 p-4 scroll-mt-20 transition-shadow">
       <div className="flex items-baseline justify-between gap-2 mb-1">
         <p className="text-sm font-bold">{authorLabel(update.author)}</p>
         <p className="text-[11px] text-[#4c739a] dark:text-slate-400 shrink-0">{formatTimestamp(update.createdAt)}</p>
@@ -70,7 +70,7 @@ export function MobileThread({ projectId, update }: { projectId: string; update:
       {update.replies.length > 0 && (
         <div className="flex flex-col gap-2 mt-3 pl-3 border-l-2 border-[#e7edf3] dark:border-slate-800">
           {update.replies.map((reply) => (
-            <div key={reply.id}>
+            <div key={reply.id} id={`update-${reply.id}`} className="scroll-mt-20">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-xs font-bold">{authorLabel(reply.author)}</p>
                 <p className="text-[10px] text-[#4c739a] dark:text-slate-400">{formatTimestamp(reply.createdAt)}</p>

@@ -1,18 +1,30 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
+import { requireModuleAccess, requireProjectAccess, requireUserId, getProjectMemberUserIdsWithModuleAccess } from "@/lib/auth";
 import { sendPushToUser } from "@/lib/push";
 import { sendReplyNotificationEmail } from "@/lib/email";
 import { uploadToS3 } from "@/lib/s3";
+import { sendExternalUpdateAndLog } from "@/lib/external-update";
 
 const MAX_ATTACHMENTS = 4;
+
+const recipientSchema = z
+  .object({
+    contactId: z.string().optional(),
+    email: z.string().email().optional()
+  })
+  .refine((r) => r.contactId || r.email, { message: "Each recipient needs either a saved contact or an email address." });
 
 const createUpdateSchema = z.object({
   body: z.string().min(1),
   parentId: z.string().optional(),
   variationItemId: z.string().optional(),
-  percentComplete: z.number().min(0).max(100).optional()
+  percentComplete: z.number().min(0).max(100).optional(),
+  isExternal: z.boolean().default(false),
+  externalSubject: z.string().optional(),
+  externalBody: z.string().optional(),
+  recipients: z.array(recipientSchema).default([])
 });
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
@@ -37,6 +49,7 @@ export async function GET(request: Request, context: { params: { projectId: stri
       author: { select: { id: true, name: true, email: true } },
       variationItem: { select: { id: true, reference: true, title: true } },
       attachments: true,
+      recipients: true,
       replies: {
         include: {
           author: { select: { id: true, name: true, email: true } },
@@ -69,11 +82,16 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const formData = await request.formData();
   const percentCompleteRaw = formData.get("percentComplete");
+  const recipientsRaw = formData.get("recipients")?.toString();
   const payload = createUpdateSchema.parse({
     body: formData.get("body"),
     parentId: formData.get("parentId") || undefined,
     variationItemId: formData.get("variationItemId") || undefined,
-    percentComplete: percentCompleteRaw ? Number(percentCompleteRaw) : undefined
+    percentComplete: percentCompleteRaw ? Number(percentCompleteRaw) : undefined,
+    isExternal: formData.get("isExternal") === "true",
+    externalSubject: formData.get("externalSubject")?.toString() || undefined,
+    externalBody: formData.get("externalBody")?.toString() || undefined,
+    recipients: recipientsRaw ? JSON.parse(recipientsRaw) : []
   });
 
   const files = formData.getAll("files").filter((entry): entry is File => entry instanceof File && entry.size > 0);
@@ -105,6 +123,44 @@ export async function POST(request: Request, context: { params: { projectId: str
     }
   }
 
+  // External updates are a one-way email notification, not part of the
+  // internal reply thread — validated up front so a bad recipient doesn't
+  // create a half-finished update. Contact-based recipients are resolved to
+  // their CURRENT email server-side (never trusting a client-supplied email
+  // for a saved contact) — one-off recipients use the typed email as-is.
+  let resolvedRecipients: { contactId?: string; email: string }[] = [];
+  if (payload.isExternal && !payload.parentId) {
+    if (!payload.externalSubject?.trim() || !payload.externalBody?.trim()) {
+      return NextResponse.json({ error: "Draft the email before sending an external update." }, { status: 400 });
+    }
+    if (payload.recipients.length === 0) {
+      return NextResponse.json({ error: "Select at least one recipient for an external update." }, { status: 400 });
+    }
+
+    const project = await prisma.project.findUnique({ where: { id: projectId }, select: { mainContractorId: true } });
+    const contactIds = payload.recipients.map((r) => r.contactId).filter((id): id is string => Boolean(id));
+    const contacts = contactIds.length
+      ? await prisma.mainContractorContact.findMany({
+          where: { id: { in: contactIds }, mainContractorId: project?.mainContractorId ?? undefined }
+        })
+      : [];
+    const contactsById = new Map(contacts.map((c) => [c.id, c]));
+
+    for (const recipient of payload.recipients) {
+      if (recipient.contactId) {
+        const contact = contactsById.get(recipient.contactId);
+        if (!contact?.email) {
+          return NextResponse.json({ error: "One of the selected contacts has no email on file." }, { status: 400 });
+        }
+        resolvedRecipients.push({ contactId: contact.id, email: contact.email });
+      } else if (recipient.email) {
+        resolvedRecipients.push({ email: recipient.email });
+      }
+    }
+  }
+
+  const isExternal = payload.isExternal && !payload.parentId && resolvedRecipients.length > 0;
+
   const update = await prisma.update.create({
     data: {
       projectId,
@@ -113,11 +169,16 @@ export async function POST(request: Request, context: { params: { projectId: str
       // Replies inherit their parent thread's tagged item rather than carrying their own.
       variationItemId: payload.parentId ? undefined : payload.variationItemId,
       percentComplete: payload.parentId ? undefined : payload.percentComplete,
-      body: payload.body
+      body: payload.body,
+      isExternal,
+      externalSubject: isExternal ? payload.externalSubject : undefined,
+      externalBody: isExternal ? payload.externalBody : undefined,
+      recipients: isExternal ? { create: resolvedRecipients.map((r) => ({ mainContractorContactId: r.contactId, email: r.email })) } : undefined
     },
     include: {
       author: { select: { id: true, name: true, email: true } },
-      variationItem: { select: { id: true, reference: true, title: true } }
+      variationItem: { select: { id: true, reference: true, title: true } },
+      recipients: true
     }
   });
 
@@ -156,15 +217,24 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const attachments = await prisma.updateAttachment.findMany({ where: { updateId: update.id } });
 
+  let sendError: string | undefined;
+  if (isExternal) {
+    const result = await sendExternalUpdateAndLog(update.id);
+    if (!result.ok) sendError = result.error;
+  }
+
+  const notifiedUserIds = new Set<string>([userId]);
+
   if (parent && parent.authorId !== userId) {
     const authorLabel = update.author.name ?? update.author.email;
-    const mobileUrl = `/m/${projectId}`;
+    const mobileUrl = `/m/${projectId}?update=${parent.id}`;
 
     await sendPushToUser(parent.authorId, {
       title: `${authorLabel} replied`,
       body: payload.body.slice(0, 140),
       url: mobileUrl
     }).catch(() => {});
+    notifiedUserIds.add(parent.authorId);
 
     if (parent.author.email) {
       const project = await prisma.project.findUnique({ where: { id: projectId }, select: { name: true } });
@@ -178,5 +248,26 @@ export async function POST(request: Request, context: { params: { projectId: str
     }
   }
 
-  return NextResponse.json({ update: { ...update, attachments } }, { status: 201 });
+  // Broadcast to everyone else with visibility into this project's Updates
+  // — a new top-level update (or a reply) is relevant to the whole team,
+  // not just a reply's direct parent author (who's already been notified
+  // more specifically above, so isn't double-notified here). Deep-links to
+  // this specific update, not just the project's update list.
+  const authorLabel = update.author.name ?? update.author.email;
+  const memberIds = await getProjectMemberUserIdsWithModuleAccess(projectId, "updates");
+  const targetUpdateId = payload.parentId ?? update.id;
+  const deepLinkUrl = `/m/${projectId}?update=${targetUpdateId}`;
+  await Promise.all(
+    memberIds
+      .filter((id) => !notifiedUserIds.has(id))
+      .map((id) =>
+        sendPushToUser(id, {
+          title: `${authorLabel} posted an update`,
+          body: payload.body.slice(0, 140),
+          url: deepLinkUrl
+        }).catch(() => {})
+      )
+  );
+
+  return NextResponse.json({ update: { ...update, attachments }, sendError }, { status: 201 });
 }

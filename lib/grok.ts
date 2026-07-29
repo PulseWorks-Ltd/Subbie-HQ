@@ -689,3 +689,53 @@ export async function extractRequiredInsuranceCoverFromClauses(
 
   return ExtractedRequiredCoverListSchema.parse(JSON.parse(raw)).covers;
 }
+
+const DraftedUpdateEmailSchema = z.object({ subject: z.string(), body: z.string() });
+
+export type DraftedUpdateEmail = z.infer<typeof DraftedUpdateEmailSchema>;
+
+// Converts a subcontractor's rough progress-update text (typed or
+// Whisper-transcribed — see lib/transcription.ts) into a professional
+// email a Main Contractor or client would expect, for the user to review
+// and edit before sending (see app/api/projects/[projectId]/updates/route.ts
+// — nothing is sent without that human review step). Not a comparison or
+// extraction task, so this is a single call like extractContractTermsFromClauses.
+export async function draftExternalUpdateEmail(params: {
+  roughText: string;
+  projectName: string;
+  authorName: string;
+  photoCount: number;
+}): Promise<DraftedUpdateEmail> {
+  const response = await getClient().chat.completions.create({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You convert a subcontractor's rough, informal progress-update notes into a professional progress-update email suitable for sending to a Main Contractor or client. " +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"subject": string, "body": string}. ' +
+          "subject: a short, clear subject line referencing the project and that this is a progress update. " +
+          "body: a complete, ready-to-send email — an appropriate greeting, a clearly-written summary of the work/progress described in the rough notes (do not invent details not present in the notes), " +
+          (params.photoCount > 0
+            ? `a brief mention that ${params.photoCount} photo${params.photoCount === 1 ? " is" : "s are"} attached, `
+            : "") +
+          "a professional sign-off. " +
+          "Do not include placeholder brackets like [Your Name] — sign off with the author's name given below. " +
+          "Professional tone throughout — this is going to a Main Contractor or client, not an internal team chat. Do not fabricate figures, dates, or claims the rough notes don't support."
+      },
+      {
+        role: "user",
+        content: `Project: ${params.projectName}\nAuthor: ${params.authorName}\n\nRough update notes:\n${params.roughText}`
+      }
+    ]
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return DraftedUpdateEmailSchema.parse(JSON.parse(raw));
+}

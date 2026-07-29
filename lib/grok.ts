@@ -695,7 +695,7 @@ const DraftedUpdateEmailSchema = z.object({ subject: z.string(), body: z.string(
 export type DraftedUpdateEmail = z.infer<typeof DraftedUpdateEmailSchema>;
 
 // Converts a subcontractor's rough progress-update text (typed or
-// Whisper-transcribed — see lib/transcription.ts) into a professional
+// voice-transcribed — see lib/transcription.ts) into a professional
 // email a Main Contractor or client would expect, for the user to review
 // and edit before sending (see app/api/projects/[projectId]/updates/route.ts
 // — nothing is sent without that human review step). Not a comparison or

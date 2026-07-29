@@ -8,15 +8,24 @@ import { z } from "zod";
 // timeout/maxRetries are set explicitly rather than left at the SDK's
 // defaults (10 minutes, 2 retries) — a single slow/hung call could otherwise
 // block a map-reduce Promise.all step for up to ~30 minutes before finally
-// erroring. 90s is generous for a JSON completion on clause-sized inputs;
-// failing faster lets the existing "failed" review/error-message handling
-// (contract review routes, document-processing.ts) do its job promptly
-// instead of leaving a request hanging.
+// erroring.
+//
+// 90s was the original value, calibrated against small synthetic test
+// payloads (a handful of clauses) — too aggressive in production, where a
+// real subcontract can run 100-350+ clauses and every map-phase bucket call
+// sends the FULL clause list (compareClausesToStandardBucket,
+// compareClausesToPriorContract, extractContractTermsFromClauses,
+// extractRequiredInsuranceCoverFromClauses all do this), producing a much
+// larger prompt that genuinely needs more time, not a hang. Confirmed via a
+// real 350-clause contract in production timing out at 90s. 5 minutes is
+// generous enough for that scale while still bounded — combined with
+// maxRetries: 1, a genuinely broken/hung call fails within ~10 minutes
+// instead of the SDK's unbounded-by-us ~30.
 function getClient() {
   return new OpenAI({
     apiKey: process.env.XAI_API_KEY,
     baseURL: "https://api.x.ai/v1",
-    timeout: 90_000,
+    timeout: 300_000,
     maxRetries: 1
   });
 }

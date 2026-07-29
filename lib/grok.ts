@@ -243,14 +243,20 @@ const DeviationClassificationSchema = z.enum([
 ]);
 
 const BucketDeviationSchema = z.object({
-  baselineClauseRef: z.string().nullable(),
-  baselineClauseTitle: z.string().nullable(),
-  subcontractClauseRef: z.string().nullable(),
-  subcontractExcerpt: z.string().nullable(),
+  // .nullish() (not .nullable()) — the reduce/synthesis phase (see
+  // SynthesisDeviationSchema below) asks the model to re-emit these fields a
+  // second time, and it sometimes omits the key entirely for legitimately-
+  // null entries (e.g. additional_in_subcontract has no baselineClauseTitle)
+  // instead of writing an explicit null. .nullable() rejects that missing
+  // key with a ZodError and crashes the whole review; .nullish() accepts both.
+  baselineClauseRef: z.string().nullish(),
+  baselineClauseTitle: z.string().nullish(),
+  subcontractClauseRef: z.string().nullish(),
+  subcontractExcerpt: z.string().nullish(),
   classification: DeviationClassificationSchema,
   impact: z.enum(["low", "medium", "high"]),
   rationale: z.string(),
-  recommendation: z.string().nullable()
+  recommendation: z.string().nullish()
 });
 const BucketComparisonResultSchema = z.object({ deviations: z.array(BucketDeviationSchema) });
 

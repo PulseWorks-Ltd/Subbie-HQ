@@ -22,6 +22,7 @@ export function DocumentPanel({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClauseDialogOpen, setIsClauseDialogOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [clauseSearch, setClauseSearch] = useState("");
 
   const trimmedSearch = clauseSearch.trim().toLowerCase();
@@ -43,6 +44,20 @@ export function DocumentPanel({
       body: JSON.stringify({ status })
     });
     setIsUpdatingStatus(false);
+    router.refresh();
+  }
+
+  async function handleDelete() {
+    if (
+      !confirm(
+        `Delete "${document.title}"? This removes the file and everything extracted from it (clauses, reviews). This can't be undone — you can upload a replacement straight after.`
+      )
+    ) {
+      return;
+    }
+    setIsDeleting(true);
+    await fetch(`/api/projects/${projectId}/contract-documents/${document.id}`, { method: "DELETE" });
+    setIsDeleting(false);
     router.refresh();
   }
 
@@ -84,6 +99,13 @@ export function DocumentPanel({
           >
             View file
           </a>
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="h-8 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
         </div>
       </div>
 

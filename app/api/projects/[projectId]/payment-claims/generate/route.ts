@@ -72,6 +72,9 @@ export async function POST(request: Request, context: { params: { projectId: str
   );
 
   // TODO: Refine claim calculation to align with contract-specific valuation rules.
+  // TODO: surface relevant filed Correspondence (including inbound emails —
+  // see Incoming Emails Task 4.2) linked to this project/its Variations as
+  // supporting evidence when generating a claim — not built yet.
   const claimedAmount = workTotal.plus(variationTotal);
   const statutoryWording =
     payload.statutoryWording ??

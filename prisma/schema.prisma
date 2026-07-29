@@ -47,10 +47,14 @@ enum EvidenceType {
   system_generated
 }
 
-enum EmailStatus {
-  new
-  reviewed
-  linked
+// Confirmed unused by any real data before this rename — the old
+// new/reviewed/linked InboundEmail flow was never wired to any UI or status
+// transition (see lib/inbound-email.ts / the Incoming Emails feature, which
+// finally makes this a real, reviewed-by-a-human pipeline).
+enum InboundEmailStatus {
+  pending_review
+  filed
+  dismissed
 }
 
 enum RiskLevel {
@@ -151,100 +155,102 @@ enum ContractReviewComparisonType {
 }
 
 model User {
-  id            String          @id @default(cuid())
-  email         String          @unique
-  passwordHash  String
-  name          String?
-  createdAt     DateTime        @default(now())
-  memberships   ProjectMember[]
+  id                      String               @id @default(cuid())
+  email                   String               @unique
+  passwordHash            String
+  name                    String?
+  createdAt               DateTime             @default(now())
+  memberships             ProjectMember[]
   organisationMemberships OrganisationMember[]
-  sentInvites   OrganisationInvite[]
-  updates       Update[]
-  pushSubscriptions PushSubscription[]
+  sentInvites             OrganisationInvite[]
+  updates                 Update[]
+  pushSubscriptions       PushSubscription[]
 }
 
 model Organisation {
-  id                      String     @id @default(cuid())
+  id                      String                  @id @default(cuid())
   name                    String
   variationCompletionMode VariationCompletionMode @default(requires_confirmation)
-  createdAt               DateTime   @default(now())
-  members   OrganisationMember[]
-  invites   OrganisationInvite[]
-  projects  Project[]
-  insuranceCertificates InsuranceCertificate[]
-  mainContractors MainContractor[]
+  createdAt               DateTime                @default(now())
+  members                 OrganisationMember[]
+  invites                 OrganisationInvite[]
+  projects                Project[]
+  insuranceCertificates   InsuranceCertificate[]
+  mainContractors         MainContractor[]
+  inboundEmails           InboundEmail[]
 }
 
 model OrganisationMember {
-  id             String       @id @default(cuid())
+  id             String   @id @default(cuid())
   organisationId String
   userId         String
   title          String?
-  isAdmin        Boolean      @default(false)
-  modules        Json         @default("{}")
-  createdAt      DateTime     @default(now())
+  isAdmin        Boolean  @default(false)
+  modules        Json     @default("{}")
+  createdAt      DateTime @default(now())
 
-  organisation   Organisation @relation(fields: [organisationId], references: [id])
-  user           User         @relation(fields: [userId], references: [id])
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
 
   @@unique([organisationId, userId])
 }
 
 model OrganisationInvite {
-  id              String       @id @default(cuid())
+  id              String    @id @default(cuid())
   organisationId  String
   email           String
   title           String?
-  isAdmin         Boolean      @default(false)
-  modules         Json         @default("{}")
-  token           String       @unique @default(cuid())
+  isAdmin         Boolean   @default(false)
+  modules         Json      @default("{}")
+  token           String    @unique @default(cuid())
   invitedByUserId String
   expiresAt       DateTime
   acceptedAt      DateTime?
-  createdAt       DateTime     @default(now())
+  createdAt       DateTime  @default(now())
 
-  organisation    Organisation @relation(fields: [organisationId], references: [id])
-  invitedBy       User         @relation(fields: [invitedByUserId], references: [id])
+  organisation Organisation @relation(fields: [organisationId], references: [id])
+  invitedBy    User         @relation(fields: [invitedByUserId], references: [id])
 }
 
 model Project {
-  id                 String            @id @default(cuid())
+  id                 String    @id @default(cuid())
   organisationId     String?
   name               String
   code               String?
-  status             String            @default("active")
-  riskLevel          RiskLevel         @default(low)
+  status             String    @default("active")
+  riskLevel          RiskLevel @default(low)
   nextClaimDate      DateTime?
-  invoiceModeEnabled Boolean           @default(false)
+  invoiceModeEnabled Boolean   @default(false)
   tradeReference     String?
   // Main Contractor's own job/contract number for this project — distinct
   // from `code`, which is Subbie HQ's internal project reference.
   jobNumber          String?
   mainContractorId   String?
-  createdAt          DateTime          @default(now())
+  createdAt          DateTime  @default(now())
 
-  organisation       Organisation?     @relation(fields: [organisationId], references: [id])
-  mainContractor     MainContractor?   @relation(fields: [mainContractorId], references: [id])
-  members            ProjectMember[]
-  projectContacts    ProjectContact[]
-  contractDocuments  ContractDocument[]
-  clauses            Clause[]
-  scopeItems         ScopeItem[]
-  programmeItems     ProgrammeItem[]
-  monthlyWorkRecords MonthlyWorkRecord[]
-  variations         Variation[]
-  paymentClaims      PaymentClaim[]
-  invoices           Invoice[]
-  evidence           Evidence[]
-  inboundEmails      InboundEmail[]
-  updates            Update[]
-  safetyDocuments    SafetyDocument[]
-  variationItems     VariationItem[]
-  correspondence     Correspondence[]
-  contractReviews    ContractReview[]
-  contractTerms      ContractTerms?
-  insuranceDistributions InsuranceDistribution[]
-  contractRequiredCovers ContractRequiredCover[]
+  organisation              Organisation?           @relation(fields: [organisationId], references: [id])
+  mainContractor            MainContractor?         @relation(fields: [mainContractorId], references: [id])
+  members                   ProjectMember[]
+  projectContacts           ProjectContact[]
+  contractDocuments         ContractDocument[]
+  clauses                   Clause[]
+  scopeItems                ScopeItem[]
+  programmeItems            ProgrammeItem[]
+  monthlyWorkRecords        MonthlyWorkRecord[]
+  variations                Variation[]
+  paymentClaims             PaymentClaim[]
+  invoices                  Invoice[]
+  evidence                  Evidence[]
+  inboundEmails             InboundEmail[]          @relation("InboundEmailProject")
+  suggestedForInboundEmails InboundEmail[]          @relation("InboundEmailSuggestedProject")
+  updates                   Update[]
+  safetyDocuments           SafetyDocument[]
+  variationItems            VariationItem[]
+  correspondence            Correspondence[]
+  contractReviews           ContractReview[]
+  contractTerms             ContractTerms?
+  insuranceDistributions    InsuranceDistribution[]
+  contractRequiredCovers    ContractRequiredCover[]
 }
 
 model ProjectMember {
@@ -254,67 +260,67 @@ model ProjectMember {
   role      String   @default("member")
   createdAt DateTime @default(now())
 
-  project   Project  @relation(fields: [projectId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
 
   @@unique([projectId, userId])
 }
 
 model ContractDocument {
-  id          String         @id @default(cuid())
-  projectId   String
-  title       String
-  fileName    String
-  fileUrl     String
-  storageKey  String
-  status      DocumentStatus @default(draft)
-  documentType DocumentKind  @default(contract)
-  sourceNotes String?
+  id               String                   @id @default(cuid())
+  projectId        String
+  title            String
+  fileName         String
+  fileUrl          String
+  storageKey       String
+  status           DocumentStatus           @default(draft)
+  documentType     DocumentKind             @default(contract)
+  sourceNotes      String?
   processingStatus DocumentProcessingStatus @default(idle)
   processingError  String?
-  uploadedAt  DateTime       @default(now())
+  uploadedAt       DateTime                 @default(now())
 
-  project     Project        @relation(fields: [projectId], references: [id])
-  clauses     Clause[]
-  scopeItems  ScopeItem[]
-  programmeItems ProgrammeItem[]
-  reviews     ContractReview[]
-  contractTermsSourced ContractTerms[]
-  correspondenceOutcomes Correspondence[]
+  project                       Project                 @relation(fields: [projectId], references: [id])
+  clauses                       Clause[]
+  scopeItems                    ScopeItem[]
+  programmeItems                ProgrammeItem[]
+  reviews                       ContractReview[]
+  contractTermsSourced          ContractTerms[]
+  correspondenceOutcomes        Correspondence[]
   contractRequiredCoversSourced ContractRequiredCover[]
 }
 
 model Clause {
-  id             String         @id @default(cuid())
-  projectId      String
-  documentId     String
-  clauseRef      String
-  title          String?
-  body           String
-  riskLevel      RiskLevel      @default(low)
-  status         ItemStatus      @default(parsed)
-  pageNumber     Int?
-  sourceRef      String?
-  createdAt      DateTime        @default(now())
+  id         String     @id @default(cuid())
+  projectId  String
+  documentId String
+  clauseRef  String
+  title      String?
+  body       String
+  riskLevel  RiskLevel  @default(low)
+  status     ItemStatus @default(parsed)
+  pageNumber Int?
+  sourceRef  String?
+  createdAt  DateTime   @default(now())
 
-  project        Project         @relation(fields: [projectId], references: [id])
-  document       ContractDocument @relation(fields: [documentId], references: [id])
-  scopeItems     ScopeItem[]
+  project    Project          @relation(fields: [projectId], references: [id])
+  document   ContractDocument @relation(fields: [documentId], references: [id])
+  scopeItems ScopeItem[]
 }
 
 model ContractReview {
-  id                  String   @id @default(cuid())
+  id                  String               @id @default(cuid())
   projectId           String
-  documentId           String
+  documentId          String
   standardFormVersion String
   status              ContractReviewStatus @default(running)
   executiveSummary    String?
   overallRiskLevel    RiskLevel?
-  majorDeviationCount Int      @default(0)
-  minorDeviationCount Int      @default(0)
+  majorDeviationCount Int                  @default(0)
+  minorDeviationCount Int                  @default(0)
   errorMessage        String?
   rawModelOutputs     Json?
-  createdAt           DateTime @default(now())
+  createdAt           DateTime             @default(now())
   completedAt         DateTime?
 
   // What this review's deviations were compared against. "baseline" always
@@ -329,7 +335,7 @@ model ContractReview {
   // against the prior contract instead. See lib/contract-comparison.ts.
   comparedAgainstType     ContractReviewComparisonType @default(baseline)
   comparedAgainstReviewId String?
-  isPrimary               Boolean  @default(true)
+  isPrimary               Boolean                      @default(true)
   // Count of this Main Contractor's clauses that newly deviate from SA-2017
   // in THIS contract, having matched (or only minorly deviated) in their
   // previous contract — i.e. the MC quietly changed their own template.
@@ -337,10 +343,10 @@ model ContractReview {
   // reviews; the actual flagged clauses live on the sibling shadow review's
   // ContractDeviation rows (isNewBaselineDrift), found via
   // findFirst({ documentId, comparedAgainstType: "baseline", isPrimary: false }).
-  newBaselineDriftCount Int @default(0)
+  newBaselineDriftCount   Int                          @default(0)
 
-  project    Project          @relation(fields: [projectId], references: [id])
-  document   ContractDocument @relation(fields: [documentId], references: [id])
+  project    Project             @relation(fields: [projectId], references: [id])
+  document   ContractDocument    @relation(fields: [documentId], references: [id])
   deviations ContractDeviation[]
 
   comparedAgainstReview ContractReview?  @relation("ReviewChain", fields: [comparedAgainstReviewId], references: [id])
@@ -349,25 +355,25 @@ model ContractReview {
 }
 
 model ContractDeviation {
-  id                    String   @id @default(cuid())
-  contractReviewId      String
-  topicBucket           String
-  baselineClauseRef     String?
-  baselineClauseTitle   String?
-  subcontractClauseRef  String?
-  subcontractExcerpt    String?
-  classification        DeviationClassification
-  impact                RiskLevel
-  priorityScore         Int
-  rationale             String
-  recommendation        String?
-  sourcePage            Int?
+  id                   String                  @id @default(cuid())
+  contractReviewId     String
+  topicBucket          String
+  baselineClauseRef    String?
+  baselineClauseTitle  String?
+  subcontractClauseRef String?
+  subcontractExcerpt   String?
+  classification       DeviationClassification
+  impact               RiskLevel
+  priorityScore        Int
+  rationale            String
+  recommendation       String?
+  sourcePage           Int?
   // Set on a baseline shadow review's deviation rows (see ContractReview
   // comment) when this clause newly deviates from SA-2017 having been fine
   // (or only minor) in the Main Contractor's previous contract — the
   // "quietly changed their own template" case.
-  isNewBaselineDrift    Boolean  @default(false)
-  createdAt             DateTime @default(now())
+  isNewBaselineDrift   Boolean                 @default(false)
+  createdAt            DateTime                @default(now())
 
   contractReview ContractReview @relation(fields: [contractReviewId], references: [id])
 }
@@ -378,19 +384,19 @@ model ContractDeviation {
 // it (copied into the real field, shadow cleared) — same shadow-value
 // pattern as VariationItem.suggestedPercentComplete.
 model ContractTerms {
-  id                     String   @id @default(cuid())
-  projectId              String   @unique
+  id                     String  @id @default(cuid())
+  projectId              String  @unique
   sourceDocumentId       String?
   sourceContractReviewId String?
 
-  paymentClaimMethod          String?
-  paymentClaimDay             Int?
-  variationNoticePeriodDays   Int?
-  variationNoticeMethod       String?
-  retentionPercent            Float?
-  defectsLiabilityPeriodDays  Int?
-  disputeNoticeMethod         String?
-  generalNoticeMethod         String?
+  paymentClaimMethod         String?
+  paymentClaimDay            Int?
+  variationNoticePeriodDays  Int?
+  variationNoticeMethod      String?
+  retentionPercent           Float?
+  defectsLiabilityPeriodDays Int?
+  disputeNoticeMethod        String?
+  generalNoticeMethod        String?
 
   suggestedPaymentClaimMethod         String?
   suggestedPaymentClaimDay            Int?
@@ -412,21 +418,21 @@ model ContractTerms {
 // holds one Public Liability/Contract Works/etc. policy that applies across
 // every project they work on, not a separate one per project.
 model InsuranceCertificate {
-  id             String                   @id @default(cuid())
-  organisationId String
-  type           InsuranceCertificateType
-  provider       String
-  policyNumber   String?
-  expiryAt       DateTime?
-  fileName       String?
-  storageKey     String?
+  id                String                   @id @default(cuid())
+  organisationId    String
+  type              InsuranceCertificateType
+  provider          String
+  policyNumber      String?
+  expiryAt          DateTime?
+  fileName          String?
+  storageKey        String?
   lastReminderStage InsuranceReminderStage?
-  createdAt      DateTime                 @default(now())
+  createdAt         DateTime                 @default(now())
 
-  organisation  Organisation             @relation(fields: [organisationId], references: [id])
-  distributions InsuranceDistribution[]
+  organisation   Organisation                @relation(fields: [organisationId], references: [id])
+  distributions  InsuranceDistribution[]
   correspondence Correspondence[]
-  covers        InsuranceCertificateCover[]
+  covers         InsuranceCertificateCover[]
 }
 
 // A single certificate can carry multiple types of cover (e.g. a combined
@@ -492,7 +498,7 @@ model MainContractor {
   name           String
   createdAt      DateTime @default(now())
 
-  organisation Organisation             @relation(fields: [organisationId], references: [id])
+  organisation Organisation            @relation(fields: [organisationId], references: [id])
   contacts     MainContractorContact[]
   projects     Project[]
   // TODO: surface this Main Contractor's Contract Review comparison history
@@ -511,9 +517,9 @@ model MainContractorContact {
   role             String?
   createdAt        DateTime @default(now())
 
-  mainContractor  MainContractor   @relation(fields: [mainContractorId], references: [id])
-  projectContacts ProjectContact[]
-  correspondence  Correspondence[]
+  mainContractor   MainContractor    @relation(fields: [mainContractorId], references: [id])
+  projectContacts  ProjectContact[]
+  correspondence   Correspondence[]
   updateRecipients UpdateRecipient[]
 }
 
@@ -521,80 +527,80 @@ model MainContractorContact {
 // specific project — kept as a row (rather than deleted) even when set
 // inactive, so historical assignments aren't lost.
 model ProjectContact {
-  id                       String   @id @default(cuid())
-  projectId                String
-  mainContractorContactId  String
-  active                   Boolean  @default(true)
-  createdAt                DateTime @default(now())
+  id                      String   @id @default(cuid())
+  projectId               String
+  mainContractorContactId String
+  active                  Boolean  @default(true)
+  createdAt               DateTime @default(now())
 
-  project Project                @relation(fields: [projectId], references: [id])
-  contact MainContractorContact  @relation(fields: [mainContractorContactId], references: [id])
+  project Project               @relation(fields: [projectId], references: [id])
+  contact MainContractorContact @relation(fields: [mainContractorContactId], references: [id])
 
   @@unique([projectId, mainContractorContactId])
 }
 
 model ScopeItem {
-  id               String         @id @default(cuid())
+  id               String     @id @default(cuid())
   projectId        String
   title            String
   description      String?
-  status           ItemStatus     @default(parsed)
-  confidence       Float?         @default(0)
-  ambiguityFlag    Boolean        @default(false)
+  status           ItemStatus @default(parsed)
+  confidence       Float?     @default(0)
+  ambiguityFlag    Boolean    @default(false)
   sourceDocumentId String?
   sourceClauseId   String?
   sourcePage       Int?
-  createdAt        DateTime       @default(now())
+  createdAt        DateTime   @default(now())
 
-  project          Project        @relation(fields: [projectId], references: [id])
-  sourceDocument   ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
-  sourceClause     Clause?        @relation(fields: [sourceClauseId], references: [id])
-  programmeLinks   ScopeProgrammeLink[]
-  evidenceLinks    EvidenceScopeItem[]
+  project        Project              @relation(fields: [projectId], references: [id])
+  sourceDocument ContractDocument?    @relation(fields: [sourceDocumentId], references: [id])
+  sourceClause   Clause?              @relation(fields: [sourceClauseId], references: [id])
+  programmeLinks ScopeProgrammeLink[]
+  evidenceLinks  EvidenceScopeItem[]
 }
 
 model ProgrammeItem {
-  id               String         @id @default(cuid())
+  id               String     @id @default(cuid())
   projectId        String
   title            String
   description      String?
   startDate        DateTime?
   endDate          DateTime?
-  status           ItemStatus     @default(parsed)
-  confidence       Float?         @default(0)
+  status           ItemStatus @default(parsed)
+  confidence       Float?     @default(0)
   sourceDocumentId String?
   sourcePage       Int?
   completedAt      DateTime?
-  createdAt        DateTime       @default(now())
+  createdAt        DateTime   @default(now())
 
-  project          Project        @relation(fields: [projectId], references: [id])
-  sourceDocument   ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
-  scopeLinks       ScopeProgrammeLink[]
-  evidenceLinks    EvidenceProgrammeItem[]
+  project        Project                 @relation(fields: [projectId], references: [id])
+  sourceDocument ContractDocument?       @relation(fields: [sourceDocumentId], references: [id])
+  scopeLinks     ScopeProgrammeLink[]
+  evidenceLinks  EvidenceProgrammeItem[]
 }
 
 model ScopeProgrammeLink {
-  id              String         @id @default(cuid())
+  id              String @id @default(cuid())
   scopeItemId     String
   programmeItemId String
 
-  scopeItem       ScopeItem      @relation(fields: [scopeItemId], references: [id])
-  programmeItem   ProgrammeItem  @relation(fields: [programmeItemId], references: [id])
+  scopeItem     ScopeItem     @relation(fields: [scopeItemId], references: [id])
+  programmeItem ProgrammeItem @relation(fields: [programmeItemId], references: [id])
 
   @@unique([scopeItemId, programmeItemId])
 }
 
 model MonthlyWorkRecord {
-  id            String     @id @default(cuid())
-  projectId     String
-  periodStart   DateTime
-  periodEnd     DateTime
-  completedValue Decimal   @default(0)
-  notes         String?
-  status        ItemStatus @default(draft)
-  createdAt     DateTime   @default(now())
+  id             String     @id @default(cuid())
+  projectId      String
+  periodStart    DateTime
+  periodEnd      DateTime
+  completedValue Decimal    @default(0)
+  notes          String?
+  status         ItemStatus @default(draft)
+  createdAt      DateTime   @default(now())
 
-  project       Project    @relation(fields: [projectId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
 }
 
 model Variation {
@@ -607,26 +613,26 @@ model Variation {
   sourceRef   String?
   createdAt   DateTime        @default(now())
 
-  project     Project         @relation(fields: [projectId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
 }
 
 model PaymentClaim {
-  id               String          @id @default(cuid())
+  id               String      @id @default(cuid())
   projectId        String
   claimNumber      Int
   referenceDate    DateTime
   periodStart      DateTime
   periodEnd        DateTime
-  status           ClaimStatus     @default(draft)
-  claimedAmount    Decimal         @default(0)
+  status           ClaimStatus @default(draft)
+  claimedAmount    Decimal     @default(0)
   statutoryWording String
   serviceDate      DateTime?
   pdfUrl           String?
   storageKey       String?
-  createdAt        DateTime        @default(now())
+  createdAt        DateTime    @default(now())
 
-  project          Project         @relation(fields: [projectId], references: [id])
-  evidenceLinks    EvidencePaymentClaim[]
+  project       Project                @relation(fields: [projectId], references: [id])
+  evidenceLinks EvidencePaymentClaim[]
 
   @@unique([projectId, claimNumber])
 }
@@ -642,87 +648,125 @@ model Invoice {
   storageKey    String?
   createdAt     DateTime      @default(now())
 
-  project       Project       @relation(fields: [projectId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
 
   @@unique([projectId, invoiceNumber])
 }
 
 model Evidence {
-  id          String        @id @default(cuid())
-  projectId   String
-  type        EvidenceType
-  status      EvidenceStatus @default(draft)
-  title       String?
-  fileName    String
-  fileUrl     String
-  storageKey  String
-  sourceRef   String?
-  uploadedAt  DateTime      @default(now())
+  id             String         @id @default(cuid())
+  projectId      String
+  type           EvidenceType
+  status         EvidenceStatus @default(draft)
+  title          String?
+  fileName       String
+  fileUrl        String
+  storageKey     String
+  sourceRef      String?
+  uploadedAt     DateTime       @default(now())
   inboundEmailId String?
 
-  project     Project       @relation(fields: [projectId], references: [id])
-  inboundEmail InboundEmail? @relation(fields: [inboundEmailId], references: [id])
-  scopeLinks  EvidenceScopeItem[]
-  programmeLinks EvidenceProgrammeItem[]
+  project           Project                 @relation(fields: [projectId], references: [id])
+  inboundEmail      InboundEmail?           @relation(fields: [inboundEmailId], references: [id])
+  scopeLinks        EvidenceScopeItem[]
+  programmeLinks    EvidenceProgrammeItem[]
   paymentClaimLinks EvidencePaymentClaim[]
 }
 
+// Lands via the SendGrid Inbound Parse webhook (lib/inbound-email.ts),
+// addressed to inbox+<organisationId>@<inbound domain> — organisationId is
+// always known immediately (parsed from the address), but projectId is not:
+// nothing is pre-known from which address an email arrived at, so it starts
+// null and is only ever set once a human confirms it in the Incoming Emails
+// review queue (see app/(app)/incoming-emails/page.tsx). suggested* fields
+// are Grok's best guess, shown for review — never auto-applied.
 model InboundEmail {
-  id         String      @id @default(cuid())
-  projectId  String
-  sender     String
-  subject    String
-  body       String
-  status     EmailStatus @default(new)
-  receivedAt DateTime    @default(now())
+  id             String             @id @default(cuid())
+  organisationId String
+  projectId      String?
+  sender         String
+  ccAddresses    String[]           @default([])
+  subject        String
+  body           String
+  status         InboundEmailStatus @default(pending_review)
+  receivedAt     DateTime           @default(now())
 
-  project    Project     @relation(fields: [projectId], references: [id])
-  evidence   Evidence[]
-  correspondence Correspondence?
+  // AI suggestions — advisory only, a human confirms or overrides every one
+  // of these before anything gets filed (see Incoming Emails review dialog).
+  suggestedProjectId         String?
+  suggestedProjectConfidence Float?
+  // Free text, not a locked enum — see lib/inbound-email-types.ts for the
+  // common presets offered in the UI; any custom string is also valid.
+  suggestedType              String?
+  suggestedVariationItemId   String?
+  aiSummary                  String?
+
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  dismissedAt      DateTime?
+
+  organisation           Organisation             @relation(fields: [organisationId], references: [id])
+  project                Project?                 @relation("InboundEmailProject", fields: [projectId], references: [id])
+  suggestedProject       Project?                 @relation("InboundEmailSuggestedProject", fields: [suggestedProjectId], references: [id])
+  suggestedVariationItem VariationItem?           @relation("InboundEmailSuggestedVariationItem", fields: [suggestedVariationItemId], references: [id])
+  attachments            InboundEmailAttachment[]
+  evidence               Evidence[]
+  correspondence         Correspondence?
+}
+
+model InboundEmailAttachment {
+  id             String   @id @default(cuid())
+  inboundEmailId String
+  fileName       String
+  storageKey     String
+  contentType    String
+  createdAt      DateTime @default(now())
+
+  inboundEmail InboundEmail @relation(fields: [inboundEmailId], references: [id])
 }
 
 model EvidenceScopeItem {
-  id         String   @id @default(cuid())
-  evidenceId String
+  id          String @id @default(cuid())
+  evidenceId  String
   scopeItemId String
 
-  evidence   Evidence @relation(fields: [evidenceId], references: [id])
-  scopeItem  ScopeItem @relation(fields: [scopeItemId], references: [id])
+  evidence  Evidence  @relation(fields: [evidenceId], references: [id])
+  scopeItem ScopeItem @relation(fields: [scopeItemId], references: [id])
 
   @@unique([evidenceId, scopeItemId])
 }
 
 model EvidenceProgrammeItem {
-  id             String   @id @default(cuid())
-  evidenceId     String
+  id              String @id @default(cuid())
+  evidenceId      String
   programmeItemId String
 
-  evidence       Evidence @relation(fields: [evidenceId], references: [id])
-  programmeItem  ProgrammeItem @relation(fields: [programmeItemId], references: [id])
+  evidence      Evidence      @relation(fields: [evidenceId], references: [id])
+  programmeItem ProgrammeItem @relation(fields: [programmeItemId], references: [id])
 
   @@unique([evidenceId, programmeItemId])
 }
 
 model EvidencePaymentClaim {
-  id            String   @id @default(cuid())
-  evidenceId    String
+  id             String @id @default(cuid())
+  evidenceId     String
   paymentClaimId String
 
-  evidence      Evidence @relation(fields: [evidenceId], references: [id])
-  paymentClaim  PaymentClaim @relation(fields: [paymentClaimId], references: [id])
+  evidence     Evidence     @relation(fields: [evidenceId], references: [id])
+  paymentClaim PaymentClaim @relation(fields: [paymentClaimId], references: [id])
 
   @@unique([evidenceId, paymentClaimId])
 }
 
 model Update {
-  id                String            @id @default(cuid())
-  projectId         String
-  authorId          String
-  parentId          String?
-  variationItemId   String?
-  percentComplete   Float?
-  body              String
-  createdAt         DateTime          @default(now())
+  id              String   @id @default(cuid())
+  projectId       String
+  authorId        String
+  parentId        String?
+  variationItemId String?
+  percentComplete Float?
+  body            String
+  createdAt       DateTime @default(now())
 
   // External updates are a one-way notification sent out by email (via
   // SendGrid, see lib/email.ts) rather than an internal, reply-supported
@@ -734,19 +778,19 @@ model Update {
   // normally persist (the update is only created once the user hits Send —
   // see app/api/projects/[projectId]/updates/route.ts), but is left
   // nullable rather than required in case a send needs retrying later.
-  isExternal        Boolean           @default(false)
-  externalSubject   String?
-  externalBody      String?
-  externalSentAt    DateTime?
+  isExternal      Boolean   @default(false)
+  externalSubject String?
+  externalBody    String?
+  externalSentAt  DateTime?
 
-  project           Project           @relation(fields: [projectId], references: [id])
-  author            User              @relation(fields: [authorId], references: [id])
-  parent            Update?           @relation("UpdateReplies", fields: [parentId], references: [id])
-  replies           Update[]          @relation("UpdateReplies")
-  variationItem     VariationItem?    @relation(fields: [variationItemId], references: [id])
-  attachments       UpdateAttachment[]
-  recipients        UpdateRecipient[]
-  correspondence    Correspondence[]
+  project        Project            @relation(fields: [projectId], references: [id])
+  author         User               @relation(fields: [authorId], references: [id])
+  parent         Update?            @relation("UpdateReplies", fields: [parentId], references: [id])
+  replies        Update[]           @relation("UpdateReplies")
+  variationItem  VariationItem?     @relation(fields: [variationItemId], references: [id])
+  attachments    UpdateAttachment[]
+  recipients     UpdateRecipient[]
+  correspondence Correspondence[]
 }
 
 // Who an external Update was actually sent to — a mix of saved Main
@@ -767,81 +811,85 @@ model UpdateRecipient {
 }
 
 model VariationItem {
-  id              String               @id @default(cuid())
-  projectId       String
-  type            VariationItemType
-  reference       String
-  title           String
-  description     String?
-  status          VariationItemStatus  @default(open)
-  percentComplete Float?
+  id                       String              @id @default(cuid())
+  projectId                String
+  type                     VariationItemType
+  reference                String
+  title                    String
+  description              String?
+  status                   VariationItemStatus @default(open)
+  percentComplete          Float?
   // Set when the org's completion mode is "requires_confirmation" and someone
   // tags an Update with a % complete — sits here until an Admin/PM confirms it,
   // at which point it's copied into percentComplete and cleared.
   suggestedPercentComplete Float?
-  notifiedAt      DateTime?
-  dueAt           DateTime?
-  fileName        String?
-  storageKey      String?
-  quoteFileName   String?
-  quoteStorageKey String?
+  notifiedAt               DateTime?
+  dueAt                    DateTime?
+  fileName                 String?
+  storageKey               String?
+  quoteFileName            String?
+  quoteStorageKey          String?
   // Last deadline-reminder stage sent for this item's dueAt — see ReminderStage.
-  lastReminderStage ReminderStage?
-  createdAt       DateTime             @default(now())
+  lastReminderStage        ReminderStage?
+  createdAt                DateTime            @default(now())
 
-  project         Project              @relation(fields: [projectId], references: [id])
-  updates         Update[]
-  dayWorksSheets  DayWorksSheet[]
-  photos          VariationPhoto[]
-  correspondence  Correspondence[]
+  project                   Project          @relation(fields: [projectId], references: [id])
+  updates                   Update[]
+  dayWorksSheets            DayWorksSheet[]
+  photos                    VariationPhoto[]
+  correspondence            Correspondence[]
+  // TODO: when preparing this item for submission (submitted_for_claim), surface
+  // linked `correspondence` rows (including filed inbound emails) as supporting
+  // evidence for the reviewer — not built yet, see Incoming Emails Task 4.2.
+  suggestedForInboundEmails InboundEmail[]   @relation("InboundEmailSuggestedVariationItem")
 }
 
 model DayWorksSheet {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   variationItemId String
   fileName        String
   storageKey      String
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime @default(now())
 
-  variationItem   VariationItem @relation(fields: [variationItemId], references: [id])
+  variationItem VariationItem @relation(fields: [variationItemId], references: [id])
 }
 
 model VariationPhoto {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   variationItemId String
   fileName        String
   storageKey      String
   contentType     String
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime @default(now())
 
-  variationItem   VariationItem @relation(fields: [variationItemId], references: [id])
+  variationItem VariationItem @relation(fields: [variationItemId], references: [id])
 }
 
 model Correspondence {
-  id              String               @id @default(cuid())
-  projectId       String
-  variationItemId String?
-  title           String
-  fileName        String?
-  storageKey      String?
-  source          CorrespondenceSource @default(upload)
-  inboundEmailId  String?              @unique
+  id                           String               @id @default(cuid())
+  projectId                    String
+  variationItemId              String?
+  title                        String
+  fileName                     String?
+  storageKey                   String?
+  source                       CorrespondenceSource @default(upload)
+  inboundEmailId               String?              @unique
   // Set when this row records an Insurance certificate being sent to the
   // project — references the certificate rather than duplicating its file
   // (see InsuranceCertificate). fileName/storageKey stay null on these rows.
   sourceInsuranceCertificateId String?
-  createdAt       DateTime             @default(now())
+  createdAt                    DateTime             @default(now())
 
   // AI-drafted response letter rows (source: response_letter_draft): the
   // letter text lives here directly (as well as being saved as a .txt file
   // via fileName/storageKey, for the existing download route) so it can be
   // shown/copied inline without re-fetching from S3, matching how inbound
   // email bodies are already displayed.
-  bodyText                String?
-  addressedToContactId    String?
-  sourceContractReviewId  String?
+  bodyText               String?
+  addressedToContactId   String?
+  sourceContractReviewId String?
   // JSON array of the ContractDeviation ids this letter addresses.
-  sourceDeviationIds      Json?
+  sourceDeviationIds     Json?
 
   // Outcome logging (Task 3.4) — a note, and/or a revised contract re-upload
   // that becomes this Main Contractor's new "most recent contract" for the
@@ -853,40 +901,46 @@ model Correspondence {
   // entry logs the sending of (see app/api/projects/[projectId]/updates/route.ts).
   sourceUpdateId String?
 
-  project         Project              @relation(fields: [projectId], references: [id])
-  variationItem   VariationItem?       @relation(fields: [variationItemId], references: [id])
-  inboundEmail    InboundEmail?        @relation(fields: [inboundEmailId], references: [id])
-  sourceInsuranceCertificate InsuranceCertificate? @relation(fields: [sourceInsuranceCertificateId], references: [id])
-  addressedToContact    MainContractorContact? @relation(fields: [addressedToContactId], references: [id])
-  sourceContractReview  ContractReview?         @relation(fields: [sourceContractReviewId], references: [id])
-  outcomeContractDocument ContractDocument?     @relation(fields: [outcomeContractDocumentId], references: [id])
-  sourceUpdate            Update?               @relation(fields: [sourceUpdateId], references: [id])
+  // Free-text classification (e.g. "Variation", "Programme change", "General
+  // reference") — set on source: inbound_email rows from the human-confirmed
+  // type chosen when filing an Incoming Email (see lib/inbound-email-types.ts).
+  // Not a locked enum, and searchable via the Correspondence search box.
+  category String?
+
+  project                    Project                @relation(fields: [projectId], references: [id])
+  variationItem              VariationItem?         @relation(fields: [variationItemId], references: [id])
+  inboundEmail               InboundEmail?          @relation(fields: [inboundEmailId], references: [id])
+  sourceInsuranceCertificate InsuranceCertificate?  @relation(fields: [sourceInsuranceCertificateId], references: [id])
+  addressedToContact         MainContractorContact? @relation(fields: [addressedToContactId], references: [id])
+  sourceContractReview       ContractReview?        @relation(fields: [sourceContractReviewId], references: [id])
+  outcomeContractDocument    ContractDocument?      @relation(fields: [outcomeContractDocumentId], references: [id])
+  sourceUpdate               Update?                @relation(fields: [sourceUpdateId], references: [id])
 }
 
 model SafetyDocument {
-  id         String    @id @default(cuid())
-  projectId  String
-  title      String
-  notes      String?
-  fileName   String?
-  storageKey String?
-  expiresAt  DateTime?
+  id                String         @id @default(cuid())
+  projectId         String
+  title             String
+  notes             String?
+  fileName          String?
+  storageKey        String?
+  expiresAt         DateTime?
   // Last deadline-reminder stage sent for this document's expiresAt — see ReminderStage.
   lastReminderStage ReminderStage?
-  createdAt  DateTime  @default(now())
+  createdAt         DateTime       @default(now())
 
-  project    Project   @relation(fields: [projectId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
 }
 
 model PushSubscription {
-  id         String   @id @default(cuid())
-  userId     String
-  endpoint   String   @unique
-  p256dhKey  String
-  authKey    String
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dhKey String
+  authKey   String
+  createdAt DateTime @default(now())
 
-  user       User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model UpdateAttachment {
@@ -897,5 +951,5 @@ model UpdateAttachment {
   contentType String
   createdAt   DateTime @default(now())
 
-  update      Update   @relation(fields: [updateId], references: [id])
+  update Update @relation(fields: [updateId], references: [id])
 }

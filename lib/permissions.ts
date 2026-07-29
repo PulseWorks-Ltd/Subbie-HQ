@@ -12,7 +12,8 @@ export const MODULES = [
   "evidence",
   "insurance",
   "main_contractors",
-  "quoting"
+  "quoting",
+  "incoming_emails"
 ] as const;
 
 export type ModuleKey = (typeof MODULES)[number];
@@ -44,7 +45,12 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   // placement pattern as `insurance` above (checked via hasModuleAccess
   // against OrganisationMember, not requireModuleAccess).
   main_contractors: "Main Contractors",
-  quoting: "Quoting"
+  quoting: "Quoting",
+  // Same global, organisation-level placement pattern as insurance/
+  // main_contractors above — the Incoming Emails review queue spans every
+  // project in the org, so it's gated via hasModuleAccess against
+  // OrganisationMember, not the project-scoped requireModuleAccess.
+  incoming_emails: "Incoming Emails"
 };
 
 export type PresetKey = "admin" | "operations" | "supervisor" | "health_safety_only";
@@ -72,7 +78,8 @@ export const PRESETS: Record<PresetKey, { label: string; isAdmin: boolean; modul
       evidence: true,
       insurance: true,
       main_contractors: true,
-      quoting: true
+      quoting: true,
+      incoming_emails: true
     }
   },
   supervisor: {

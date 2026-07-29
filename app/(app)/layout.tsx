@@ -16,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           isOrganisationAdmin={membership?.isAdmin ?? false}
           canSeeInsurance={hasModuleAccess(membership, "insurance")}
           canSeeMainContractors={hasModuleAccess(membership, "main_contractors")}
+          canSeeIncomingEmails={hasModuleAccess(membership, "incoming_emails")}
         />
       )}
       {children}

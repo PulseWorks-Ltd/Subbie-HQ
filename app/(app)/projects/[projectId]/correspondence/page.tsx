@@ -4,8 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
 import { CorrespondenceView, type CorrespondenceRow } from "@/components/correspondence/correspondence-view";
 
-export default async function CorrespondencePage({ params }: { params: Promise<{ projectId: string }> }) {
+export default async function CorrespondencePage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ q?: string }>;
+}) {
   const { projectId } = await params;
+  const { q } = await searchParams;
 
   const session = await auth();
   const userId = session?.user?.id;
@@ -21,10 +28,26 @@ export default async function CorrespondencePage({ params }: { params: Promise<{
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [inboundEmails, correspondence, taggableItems] = await Promise.all([
-    prisma.inboundEmail.findMany({ where: { projectId }, orderBy: { receivedAt: "desc" } }),
+  // Note: no separate InboundEmail query here — a filed inbound email is
+  // already represented by its own Correspondence row (source:
+  // inbound_email, see lib/inbound-email.ts's fileInboundEmail). Emails
+  // still awaiting review live in the org-wide Incoming Emails queue
+  // instead, not here (see app/(app)/incoming-emails).
+  const [correspondence, taggableItems] = await Promise.all([
     prisma.correspondence.findMany({
-      where: { projectId },
+      where: {
+        projectId,
+        ...(q?.trim()
+          ? {
+              OR: [
+                { title: { contains: q, mode: "insensitive" as const } },
+                { bodyText: { contains: q, mode: "insensitive" as const } },
+                { category: { contains: q, mode: "insensitive" as const } },
+                { variationItem: { reference: { contains: q, mode: "insensitive" as const } } }
+              ]
+            }
+          : {})
+      },
       include: { variationItem: { select: { id: true, reference: true, title: true } } },
       orderBy: { createdAt: "desc" }
     }),
@@ -33,26 +56,19 @@ export default async function CorrespondencePage({ params }: { params: Promise<{
       : Promise.resolve([])
   ]);
 
-  const rows: CorrespondenceRow[] = [
-    ...inboundEmails.map((email) => ({
-      id: email.id,
-      kind: "email" as const,
-      title: email.subject,
-      subtitle: email.sender,
-      body: email.body,
-      fileHref: null,
-      linkedItem: null,
-      date: email.receivedAt,
-      deletable: false,
-      outcomeNote: null,
-      hasOutcome: false
-    })),
-    ...correspondence.map((item) => ({
+  const rows: CorrespondenceRow[] = correspondence
+    .map((item) => ({
       id: item.id,
-      kind: item.source === "response_letter_draft" ? ("letter_draft" as const) : ("upload" as const),
+      kind:
+        item.source === "response_letter_draft"
+          ? ("letter_draft" as const)
+          : item.source === "inbound_email"
+            ? ("email" as const)
+            : ("upload" as const),
       title: item.title,
       subtitle: item.fileName,
       body: item.bodyText,
+      category: item.category,
       fileHref: item.storageKey
         ? `/api/projects/${projectId}/correspondence/${item.id}/file`
         : item.sourceInsuranceCertificateId
@@ -64,7 +80,7 @@ export default async function CorrespondencePage({ params }: { params: Promise<{
       outcomeNote: item.outcomeNote,
       hasOutcome: Boolean(item.outcomeNote || item.outcomeContractDocumentId)
     }))
-  ].sort((a, b) => b.date.getTime() - a.date.getTime());
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  return <CorrespondenceView projectId={projectId} rows={rows} taggableItems={taggableItems} />;
+  return <CorrespondenceView projectId={projectId} rows={rows} taggableItems={taggableItems} initialQuery={q ?? ""} />;
 }

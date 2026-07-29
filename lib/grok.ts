@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { z } from "zod";
+import { INBOUND_EMAIL_TYPE_PRESETS } from "./inbound-email-types";
 
 // Constructed lazily (not at module scope) — the OpenAI SDK validates apiKey
 // presence eagerly in its constructor, which would crash Next.js's build-time
@@ -744,4 +745,82 @@ export async function draftExternalUpdateEmail(params: {
   }
 
   return DraftedUpdateEmailSchema.parse(JSON.parse(raw));
+}
+
+const InboundEmailClassificationSchema = z.object({
+  projectId: z.string().nullable(),
+  projectConfidence: z.number().min(0).max(1).nullable(),
+  suggestedType: z.string().nullable(),
+  variationItemId: z.string().nullable(),
+  summary: z.string()
+});
+
+export type InboundEmailClassification = z.infer<typeof InboundEmailClassificationSchema>;
+
+// Triages one inbound email against the organisation's own projects — a
+// single non-map-reduce call (org-wide project/contact lists are small
+// enough to send in full, matching extractContractTermsFromClauses's
+// complexity level, not the map-reduce contract-review pipeline). Never
+// invents a project/Variation id outside the candidate lists given; returns
+// null rather than guessing when unconfident (see Incoming Emails Task 2).
+export async function classifyInboundEmail(params: {
+  sender: string;
+  ccAddresses: string[];
+  subject: string;
+  body: string;
+  attachmentNames: string[];
+  candidateProjects: {
+    id: string;
+    name: string;
+    mainContractorName: string | null;
+    contactEmails: string[];
+    openVariationItems: { id: string; reference: string; title: string }[];
+  }[];
+}): Promise<InboundEmailClassification> {
+  const projectsText = params.candidateProjects
+    .map((p) => {
+      const contacts = p.contactEmails.length ? p.contactEmails.join(", ") : "none on file";
+      const items = p.openVariationItems.length
+        ? p.openVariationItems.map((i) => `${i.id}: ${i.reference} - ${i.title}`).join("; ")
+        : "none";
+      return (
+        `Project id=${p.id} "${p.name}"${p.mainContractorName ? ` (Main Contractor: ${p.mainContractorName})` : ""}\n` +
+        `  Known contact emails: ${contacts}\n` +
+        `  Open Variations/Site Instructions: ${items}`
+      );
+    })
+    .join("\n\n");
+
+  const response = await getClient().chat.completions.create({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You triage an inbound email for a subcontractor's project-management app, so a human reviewer can quickly file it correctly. " +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"projectId": string | null, "projectConfidence": number | null, "suggestedType": string | null, "variationItemId": string | null, "summary": string}. ' +
+          "projectId: the id of whichever project below this email most likely belongs to, using every signal available — the sender's address, any CC'd addresses (a match against a project's known Main Contractor contact emails is a strong signal), subject, body content, quoted thread history, and attachment names. " +
+          "ONLY return an id that appears in the candidate list below — never invent one. If no project is a confident match, return null rather than guessing. " +
+          "projectConfidence: your confidence in the projectId match, 0 to 1 (null if projectId is null). " +
+          `suggestedType: what this email relates to — common categories include ${INBOUND_EMAIL_TYPE_PRESETS.join(", ")}, but use your own short free-text label if none of these fit well. Return null if you can't tell. ` +
+          "variationItemId: if the email clearly references a specific Variation or Site Instruction from the matched project's list below (by reference number or unambiguous context), return its id — only from that project's list, never invented, and only if projectId was also determined. Return null if uncertain or if no project was matched. " +
+          "summary: a 1-2 sentence plain-English summary of what this email is about, for a reviewer to quickly judge relevance without reading the full email."
+      },
+      {
+        role: "user",
+        content:
+          `From: ${params.sender}\nCC: ${params.ccAddresses.join(", ") || "(none)"}\nSubject: ${params.subject}\n` +
+          `Attachments: ${params.attachmentNames.join(", ") || "(none)"}\n\nBody:\n${params.body}\n\n---\n\nCANDIDATE PROJECTS:\n${projectsText}`
+      }
+    ]
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return InboundEmailClassificationSchema.parse(JSON.parse(raw));
 }

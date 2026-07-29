@@ -10,13 +10,15 @@ export function TopNav({
   userEmail,
   isOrganisationAdmin,
   canSeeInsurance,
-  canSeeMainContractors
+  canSeeMainContractors,
+  canSeeIncomingEmails
 }: {
   userName: string | null;
   userEmail: string;
   isOrganisationAdmin: boolean;
   canSeeInsurance: boolean;
   canSeeMainContractors: boolean;
+  canSeeIncomingEmails: boolean;
 }) {
   const pathname = usePathname();
   const isDashboard = pathname === "/";
@@ -24,6 +26,7 @@ export function TopNav({
   const isTeam = pathname === "/team";
   const isInsurance = pathname === "/insurance";
   const isMainContractors = pathname?.startsWith("/main-contractors") ?? false;
+  const isIncomingEmails = pathname === "/incoming-emails";
   const initial = (userName ?? userEmail).charAt(0).toUpperCase();
 
   return (
@@ -84,6 +87,17 @@ export function TopNav({
           >
             <span className="material-symbols-outlined text-lg">domain</span>
             Main Contractors
+          </Link>
+        )}
+        {canSeeIncomingEmails && (
+          <Link
+            href="/incoming-emails"
+            className={`text-sm font-bold pb-1 border-b-2 flex items-center gap-1.5 ${
+              isIncomingEmails ? "text-primary border-primary" : "text-[#4c739a] dark:text-slate-400 border-transparent hover:text-primary"
+            }`}
+          >
+            <span className="material-symbols-outlined text-lg">mark_email_unread</span>
+            Incoming Emails
           </Link>
         )}
       </div>

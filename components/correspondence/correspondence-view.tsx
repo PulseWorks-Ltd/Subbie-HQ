@@ -13,6 +13,7 @@ export type CorrespondenceRow = {
   title: string;
   subtitle: string | null;
   body: string | null;
+  category: string | null;
   fileHref: string | null;
   linkedItem: { id: string; reference: string; title: string } | null;
   date: Date;
@@ -28,21 +29,30 @@ function formatDate(date: Date) {
 export function CorrespondenceView({
   projectId,
   rows,
-  taggableItems
+  taggableItems,
+  initialQuery
 }: {
   projectId: string;
   rows: CorrespondenceRow[];
   taggableItems: VariationItem[];
+  initialQuery: string;
 }) {
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [outcomeRowId, setOutcomeRowId] = useState<string | null>(null);
+  const [query, setQuery] = useState(initialQuery);
 
   async function handleDelete(row: CorrespondenceRow) {
     if (!confirm(`Delete "${row.title}"?`)) return;
     await fetch(`/api/projects/${projectId}/correspondence/${row.id}`, { method: "DELETE" });
     router.refresh();
+  }
+
+  function handleSearch(event: React.FormEvent) {
+    event.preventDefault();
+    const trimmed = query.trim();
+    router.push(`/projects/${projectId}/correspondence${trimmed ? `?q=${encodeURIComponent(trimmed)}` : ""}`);
   }
 
   return (
@@ -62,11 +72,40 @@ export function CorrespondenceView({
         </button>
       </div>
 
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search by keyword, type, or Variation/SI reference..."
+          className="flex-1 h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+        <button
+          type="submit"
+          className="h-10 px-4 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+        >
+          Search
+        </button>
+        {initialQuery && (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              router.push(`/projects/${projectId}/correspondence`);
+            }}
+            className="h-10 px-4 rounded-lg text-sm font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
+          >
+            Clear
+          </button>
+        )}
+      </form>
+
       {rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">
-          <p className="font-bold mb-1">No correspondence yet</p>
+          <p className="font-bold mb-1">{initialQuery ? "No matches" : "No correspondence yet"}</p>
           <p className="text-sm text-[#4c739a] dark:text-slate-400">
-            Inbound emails and manually added documents will show up here.
+            {initialQuery
+              ? "Try a different keyword, type, or Variation/SI reference."
+              : "Inbound emails and manually added documents will show up here."}
           </p>
         </div>
       ) : (
@@ -84,6 +123,7 @@ export function CorrespondenceView({
                   <div className="min-w-0">
                     <p className="text-sm font-bold truncate">{row.title}</p>
                     <p className="text-xs text-[#4c739a] dark:text-slate-400">
+                      {row.category && `${row.category} · `}
                       {row.subtitle && `${row.subtitle} · `}
                       {formatDate(row.date)}
                       {row.hasOutcome && " · Outcome logged"}

@@ -1,6 +1,7 @@
-// Minimal service worker for the Subbie Updates mobile PWA.
-// Scope is restricted to /m/ at registration time (see push-notifications-button.tsx),
-// even though this file is served from the origin root.
+// Minimal service worker for the Subbie HQ mobile PWA.
+// Scope is restricted to /m at registration time (see
+// components/mobile/service-worker-registration.tsx), even though this file
+// is served from the origin root.
 
 self.addEventListener("install", () => {
   self.skipWaiting();

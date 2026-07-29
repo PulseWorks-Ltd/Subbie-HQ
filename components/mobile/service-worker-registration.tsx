@@ -12,7 +12,11 @@ import { useEffect } from "react";
 export function ServiceWorkerRegistration() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js", { scope: "/m/" }).catch(() => {});
+    // No trailing slash — every real route in this app is "/m", "/m/[id]",
+    // etc. (no trailing-slash routes exist), and SW scope matching is a
+    // strict string prefix: a scope of "/m/" would never actually match
+    // (and thus never control) a page loaded at the literal path "/m".
+    navigator.serviceWorker.register("/sw.js", { scope: "/m" }).catch(() => {});
   }, []);
 
   return null;

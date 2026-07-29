@@ -24,7 +24,7 @@ export function PushNotificationsButton() {
       return;
     }
 
-    navigator.serviceWorker.getRegistration("/m/").then((registration) => {
+    navigator.serviceWorker.getRegistration("/m").then((registration) => {
       registration?.pushManager.getSubscription().then((subscription) => {
         if (subscription) setStatus("subscribed");
       });

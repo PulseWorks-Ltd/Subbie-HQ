@@ -31,7 +31,7 @@ export function ContractReviewSection({
 }) {
   const router = useRouter();
   const [review, setReview] = useState<ReviewWithChain | null>(initialReview);
-  const [isRunning, setIsRunning] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,8 +48,21 @@ export function ContractReviewSection({
     return () => clearInterval(interval);
   }, [isBackgroundProcessing, router]);
 
+  // The review itself now runs in the background (see
+  // lib/contract-comparison.ts) rather than blocking the request — poll
+  // while it's "running" so this updates on its own, including after a
+  // fresh page load if a review was already in progress when the user
+  // navigated away and came back.
+  const isReviewRunning = review?.status === "running";
+
+  useEffect(() => {
+    if (!isReviewRunning) return;
+    const interval = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(interval);
+  }, [isReviewRunning, router]);
+
   async function runReview() {
-    setIsRunning(true);
+    setIsStarting(true);
     setError(null);
 
     const response = await fetch(`/api/projects/${projectId}/contract-documents/${documentId}/review`, {
@@ -57,10 +70,10 @@ export function ContractReviewSection({
     });
     const body = await response.json().catch(() => null);
 
-    setIsRunning(false);
+    setIsStarting(false);
 
     if (!response.ok) {
-      setError(typeof body?.error === "string" ? body.error : "Could not run the contract review.");
+      setError(typeof body?.error === "string" ? body.error : "Could not start the contract review.");
       if (body?.review) setReview(body.review);
       router.refresh();
       return;
@@ -80,14 +93,14 @@ export function ContractReviewSection({
             Contractor's previous contract once one exists.
           </p>
         </div>
-        {!isRunning && (
+        {!isReviewRunning && (
           <button
             onClick={runReview}
-            disabled={isBackgroundProcessing}
+            disabled={isBackgroundProcessing || isStarting}
             title={isBackgroundProcessing ? "This document is still being processed automatically." : undefined}
             className="h-8 px-3 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary/10"
           >
-            {review ? "Re-run Review" : "Run Contract Review"}
+            {isStarting ? "Starting..." : review ? "Re-run Review" : "Run Contract Review"}
           </button>
         )}
       </div>
@@ -105,7 +118,7 @@ export function ContractReviewSection({
 
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
-      {isRunning ? (
+      {isReviewRunning ? (
         <ReviewProgress />
       ) : review ? (
         <DeviationReportView projectId={projectId} documentId={documentId} review={review} />

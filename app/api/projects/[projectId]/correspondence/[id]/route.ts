@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { deleteFromS3, uploadToS3 } from "@/lib/s3";
 import { processContractDocument } from "@/lib/document-processing";
-import { runContractReview } from "@/lib/contract-comparison";
+import { startContractReview } from "@/lib/contract-comparison";
 
 // Logs an outcome against a response-letter-draft Correspondence entry — a
 // free-text note, and/or a revised contract re-upload. A re-uploaded
@@ -59,7 +59,7 @@ export async function PATCH(request: Request, context: { params: { projectId: st
       await processContractDocument(projectId, document.id);
       const processed = await prisma.contractDocument.findUnique({ where: { id: document.id } });
       if (processed?.processingStatus === "ready") {
-        await runContractReview(projectId, document.id);
+        await startContractReview(projectId, document.id);
       }
     })().catch((error) => {
       console.error("Unhandled error processing revised contract outcome:", error);

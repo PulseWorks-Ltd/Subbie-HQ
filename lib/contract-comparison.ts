@@ -105,51 +105,89 @@ async function findBaselineReviewForDocument(documentId: string) {
   });
 }
 
-// Orchestrates a full contract review for an uploaded document: resolves
-// whether this is the Main Contractor's first-ever contract (compare
-// against SA-2017) or a later one (compare against their most recent prior
-// contract, plus an always-run baseline shadow comparison to catch newly-
-// introduced SA-2017 drift). Persists ContractReview/ContractDeviation rows
-// and the usual suggested-ContractTerms upsert, and returns the PRIMARY
-// review (the one shown to the user) with its deviations.
-export async function runContractReview(projectId: string, documentId: string) {
+// Starts a contract review in the background and returns almost
+// immediately — the actual Grok work (16 SA-2017 bucket comparisons, terms
+// extraction, required-cover extraction, and for later contracts a second
+// prior-contract comparison pass) can take several minutes for a real
+// contract, which is far too long to hold an HTTP request open for: a user
+// navigating away mid-request used to lose all progress and have to rerun
+// it from scratch, at full Grok cost, every time. Instead this creates the
+// primary ContractReview row immediately (status defaults to "running") so
+// the UI can poll it, fires the real work off unawaited, and returns. If a
+// review is already running for this document, returns that one instead of
+// starting a duplicate (also protects against double-clicking the button).
+export async function startContractReview(projectId: string, documentId: string): Promise<{ reviewId: string }> {
+  const existingRunning = await prisma.contractReview.findFirst({
+    where: { documentId, projectId, isPrimary: true, status: "running" }
+  });
+  if (existingRunning) {
+    return { reviewId: existingRunning.id };
+  }
+
   const document = await prisma.contractDocument.findUniqueOrThrow({
     where: { id: documentId },
     include: { project: { select: { mainContractorId: true } } }
   });
-  const clauses = await prisma.clause.findMany({ where: { documentId, projectId } });
-  const clauseInputs = toClauseInputs(clauses);
   const standardForm = getStandardForm();
-
   const priorReview = document.project.mainContractorId
     ? await findPriorReview(document.project.mainContractorId, documentId)
     : null;
 
-  // Baseline comparison + contract-terms extraction + required-insurance-
-  // cover extraction all run concurrently — none depend on each other, only
-  // on the already-extracted clauses. This always runs, regardless of
-  // comparison type (see runBaselineComparison).
-  const [baseline, extractedTerms, requiredCovers] = await Promise.all([
-    runBaselineComparison(clauseInputs),
-    extractContractTermsFromClauses(clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber }))),
-    extractRequiredInsuranceCoverFromClauses(clauseInputs)
-  ]);
-  const baselineCounts = countDeviations(baseline.synthesis);
+  const review = await prisma.contractReview.create({
+    data: {
+      projectId,
+      documentId,
+      standardFormVersion: standardForm.version,
+      comparedAgainstType: priorReview ? "prior_contract" : "baseline",
+      comparedAgainstReviewId: priorReview?.id,
+      isPrimary: true
+    }
+  });
 
-  let primaryReviewId: string;
+  void runContractReviewWork(projectId, documentId, review.id, priorReview).catch((error) => {
+    console.error(`Unhandled error starting background contract review ${review.id}:`, error);
+  });
+
+  return { reviewId: review.id };
+}
+
+type PriorReview = Awaited<ReturnType<typeof findPriorReview>>;
+
+// The actual comparison work — runs fire-and-forget, kicked off by
+// startContractReview above. Updates the already-created primaryReviewId
+// row to "complete" with results, or "failed" with a message, rather than
+// creating it (that already happened so the UI has something to poll from
+// the moment the button is clicked).
+async function runContractReviewWork(
+  projectId: string,
+  documentId: string,
+  primaryReviewId: string,
+  priorReview: PriorReview
+): Promise<void> {
+  try {
+    const clauses = await prisma.clause.findMany({ where: { documentId, projectId } });
+    const clauseInputs = toClauseInputs(clauses);
+    const standardForm = getStandardForm();
+
+    // Baseline comparison + contract-terms extraction + required-insurance-
+    // cover extraction all run concurrently — none depend on each other,
+    // only on the already-extracted clauses. This always runs, regardless
+    // of comparison type (see runBaselineComparison).
+    const [baseline, extractedTerms, requiredCovers] = await Promise.all([
+      runBaselineComparison(clauseInputs),
+      extractContractTermsFromClauses(clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber }))),
+      extractRequiredInsuranceCoverFromClauses(clauseInputs)
+    ]);
+    const baselineCounts = countDeviations(baseline.synthesis);
 
   if (!priorReview) {
     // First-ever contract for this Main Contractor (or no Main Contractor
     // assigned) — the baseline comparison IS the primary report, exactly as
     // before this feature existed.
-    const review = await prisma.contractReview.create({
+    await prisma.contractReview.update({
+      where: { id: primaryReviewId },
       data: {
-        projectId,
-        documentId,
-        standardFormVersion: standardForm.version,
         status: "complete",
-        comparedAgainstType: "baseline",
-        isPrimary: true,
         executiveSummary: baseline.synthesis.executiveSummary,
         overallRiskLevel: baseline.synthesis.overallRiskLevel,
         majorDeviationCount: baselineCounts.majorDeviationCount,
@@ -159,7 +197,6 @@ export async function runContractReview(projectId: string, documentId: string) {
         deviations: { create: baseline.synthesis.deviations.map(toDeviationCreateInput) }
       }
     });
-    primaryReviewId = review.id;
   } else {
     // Later contract — persist the baseline comparison as an internal
     // shadow review (not shown to the user), then run + persist the
@@ -221,15 +258,10 @@ export async function runContractReview(projectId: string, documentId: string) {
     );
     const priorContractCounts = countDeviations(priorContractSynthesis);
 
-    const primaryReview = await prisma.contractReview.create({
+    await prisma.contractReview.update({
+      where: { id: primaryReviewId },
       data: {
-        projectId,
-        documentId,
-        standardFormVersion: standardForm.version,
         status: "complete",
-        comparedAgainstType: "prior_contract",
-        comparedAgainstReviewId: priorReview.id,
-        isPrimary: true,
         newBaselineDriftCount: newDriftDeviationIds.length,
         executiveSummary: priorContractSynthesis.executiveSummary,
         overallRiskLevel: priorContractSynthesis.overallRiskLevel,
@@ -240,7 +272,6 @@ export async function runContractReview(projectId: string, documentId: string) {
         deviations: { create: priorContractSynthesis.deviations.map(toDeviationCreateInput) }
       }
     });
-    primaryReviewId = primaryReview.id;
   }
 
   // Required insurance cover — replaced wholesale each time this project's
@@ -307,21 +338,38 @@ export async function runContractReview(projectId: string, documentId: string) {
       suggestedGeneralNoticeMethod: suggestIfUnconfirmed(existingTerms?.generalNoticeMethod, extractedTerms.generalNoticeMethod)
     }
   });
+  } catch (error) {
+    console.error(`Contract review ${primaryReviewId} failed:`, error);
+    // Stored as errorMessage so the same clear message shows whether the
+    // user is actively polling or reloads the page later and
+    // DeviationReportView re-renders the failed review.
+    const userMessage = "Could not complete an automated review of this document. You can still review it manually.";
+    await prisma.contractReview
+      .update({ where: { id: primaryReviewId }, data: { status: "failed", errorMessage: userMessage } })
+      .catch((updateError) => {
+        console.error(`Also failed to mark contract review ${primaryReviewId} as failed:`, updateError);
+      });
+  }
+}
 
-  const finalReview = await prisma.contractReview.findUniqueOrThrow({
-    where: { id: primaryReviewId },
+// Fetches a review (any status) with the same shape the frontend expects —
+// used by both the review route's GET (polling) and right after
+// startContractReview creates the placeholder, so POST and GET responses
+// are always shaped identically.
+export async function getContractReviewWithDetails(reviewId: string) {
+  const review = await prisma.contractReview.findUniqueOrThrow({
+    where: { id: reviewId },
     include: {
       deviations: { orderBy: { priorityScore: "desc" } },
       comparedAgainstReview: { include: { document: { select: { title: true, fileName: true, uploadedAt: true } } } }
     }
   });
   const driftDeviations = await getNewBaselineDriftDeviations(
-    finalReview.documentId,
-    finalReview.comparedAgainstType,
-    finalReview.newBaselineDriftCount
+    review.documentId,
+    review.comparedAgainstType,
+    review.newBaselineDriftCount
   );
-
-  return { ...finalReview, driftDeviations };
+  return { ...review, driftDeviations };
 }
 
 // The specific clauses behind a prior_contract review's newBaselineDriftCount

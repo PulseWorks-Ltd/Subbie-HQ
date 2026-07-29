@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { processContractDocument } from "@/lib/document-processing";
-import { runContractReview, getNewBaselineDriftDeviations } from "@/lib/contract-comparison";
-import { getStandardForm } from "@/lib/standard-forms/sa-2017";
+import { startContractReview, getContractReviewWithDetails, getNewBaselineDriftDeviations } from "@/lib/contract-comparison";
 
 export async function GET(
   request: Request,
@@ -94,21 +93,16 @@ export async function POST(
     }
   }
 
-  try {
-    const fullReview = await runContractReview(projectId, documentId);
-    return NextResponse.json({ review: fullReview });
-  } catch (error) {
-    console.error("Contract review failed:", error);
-
-    // Stored as errorMessage too (not just the response body) so the same
-    // clear message shows whether the user sees it immediately or reloads
-    // the page later and DeviationReportView re-renders the failed review.
-    const userMessage = "Could not complete an automated review of this document. You can still review it manually.";
-
-    const failedReview = await prisma.contractReview.create({
-      data: { projectId, documentId, standardFormVersion: getStandardForm().version, status: "failed", errorMessage: userMessage }
-    });
-    return NextResponse.json({ error: userMessage, review: failedReview }, { status: 422 });
-  }
+  // Starts the review in the background and returns almost immediately with
+  // a "running" review the frontend polls via GET — the actual Grok work
+  // can take several minutes for a real contract, far too long to hold this
+  // request open for (and if the user navigated away mid-request under the
+  // old synchronous design, all progress was lost and had to be rerun from
+  // scratch at full Grok cost). If a review is already running for this
+  // document, startContractReview returns that one rather than starting a
+  // duplicate.
+  const { reviewId } = await startContractReview(projectId, documentId);
+  const review = await getContractReviewWithDetails(reviewId);
+  return NextResponse.json({ review }, { status: 202 });
 }
 

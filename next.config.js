@@ -4,7 +4,7 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ["localhost:3000"]
     },
-    serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist"]
+    serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist", "tesseract.js"]
   }
 };
 

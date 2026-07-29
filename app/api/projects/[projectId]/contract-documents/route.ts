@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
+import { processContractDocument } from "@/lib/document-processing";
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
@@ -71,7 +72,16 @@ export async function POST(request: Request, context: { params: { projectId: str
     }
   });
 
-  // TODO: Trigger contract parsing pipeline and populate Clause records.
+  // Fire-and-forget — clause extraction (OCR-if-needed + Grok) runs in the
+  // background so the upload response stays fast. The "Run Contract Review"
+  // action waits on processingStatus rather than extracting inline. Only
+  // worth kicking off for real PDFs; other file types stay "idle" and get
+  // handled by the review route's own synchronous fallback if ever needed.
+  if (file.type === "application/pdf") {
+    void processContractDocument(projectId, document.id).catch((error) => {
+      console.error("Unhandled error in processContractDocument:", error);
+    });
+  }
 
   return NextResponse.json({ document }, { status: 201 });
 }

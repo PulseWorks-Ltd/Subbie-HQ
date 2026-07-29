@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
-import { extractProgrammeFromText } from "@/lib/grok";
+import { processProgrammeDocument } from "@/lib/document-processing";
 
 export async function POST(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
@@ -47,13 +46,6 @@ export async function POST(request: Request, context: { params: { projectId: str
     contentType: file.type
   });
 
-  // The document being replaced (if any) — only its still-unreviewed items get
-  // superseded below. Anything already confirmed by a human is left alone.
-  const previousDocument = await prisma.contractDocument.findFirst({
-    where: { projectId, documentType: "programme" },
-    orderBy: { uploadedAt: "desc" }
-  });
-
   const document = await prisma.contractDocument.create({
     data: {
       projectId,
@@ -65,62 +57,13 @@ export async function POST(request: Request, context: { params: { projectId: str
     }
   });
 
-  let extracted;
-  try {
-    const parser = new PDFParse({ data: buffer });
-    const { text } = await parser.getText();
-    await parser.destroy();
+  // Fire-and-forget — OCR-if-needed + milestone extraction (and the
+  // supersede-previous-unconfirmed-items logic) run in the background so
+  // this upload response stays fast even for large programme PDFs. The
+  // frontend polls processingStatus on this document until it's "ready".
+  void processProgrammeDocument(projectId, document.id, tradeReference).catch((error) => {
+    console.error("Unhandled error in processProgrammeDocument:", error);
+  });
 
-    if (!text.trim()) {
-      throw new Error("No extractable text in PDF.");
-    }
-
-    extracted = await extractProgrammeFromText(text, tradeReference);
-  } catch {
-    return NextResponse.json(
-      {
-        error: "Could not read this document automatically. You can still add milestones manually.",
-        document
-      },
-      { status: 422 }
-    );
-  }
-
-  let replacedCount = 0;
-  if (previousDocument) {
-    const superseded = await prisma.programmeItem.findMany({
-      where: { sourceDocumentId: previousDocument.id, status: "parsed" },
-      select: { id: true }
-    });
-    const supersededIds = superseded.map((item) => item.id);
-
-    if (supersededIds.length) {
-      await prisma.scopeProgrammeLink.deleteMany({ where: { programmeItemId: { in: supersededIds } } });
-      await prisma.evidenceProgrammeItem.deleteMany({ where: { programmeItemId: { in: supersededIds } } });
-      await prisma.programmeItem.deleteMany({ where: { id: { in: supersededIds } } });
-      replacedCount = supersededIds.length;
-    }
-  }
-
-  const items = await prisma.$transaction(
-    extracted.items.map((item) =>
-      prisma.programmeItem.create({
-        data: {
-          projectId,
-          title: item.title,
-          description: item.description ?? undefined,
-          startDate: item.startDate ? new Date(item.startDate) : undefined,
-          endDate: item.endDate ? new Date(item.endDate) : undefined,
-          status: "parsed",
-          confidence: item.confidence,
-          sourceDocumentId: document.id
-        }
-      })
-    )
-  );
-
-  return NextResponse.json(
-    { items, document, replacedCount, filterApplied: extracted.filterApplied, tradeReference },
-    { status: 201 }
-  );
+  return NextResponse.json({ document, tradeReference }, { status: 201 });
 }

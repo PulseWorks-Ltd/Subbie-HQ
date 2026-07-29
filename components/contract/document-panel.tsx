@@ -121,6 +121,9 @@ export function DocumentPanel({
             projectId={projectId}
             documentId={document.id}
             initialReview={document.reviews[0] ?? null}
+            hasClauses={document.clauses.length > 0}
+            processingStatus={document.processingStatus}
+            processingError={document.processingError}
           />
         </div>
       )}

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
 import { extractVariationItemFromText } from "@/lib/grok";
+import { extractPdfPagesWithOcrFallback, UnreadablePdfError } from "@/lib/pdf-text-extraction";
 
 function moduleForType(type: "variation" | "site_instruction") {
   return type === "variation" ? ("variations" as const) : ("site_instructions" as const);
@@ -48,24 +48,20 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   let extracted;
   try {
-    const parser = new PDFParse({ data: buffer });
-    const { text } = await parser.getText();
-    await parser.destroy();
-
-    if (!text.trim()) {
-      throw new Error("No extractable text in PDF.");
-    }
+    // Falls back to OCR automatically if the PDF's text layer looks
+    // unreadable (e.g. a broken font ToUnicode mapping from certain
+    // "print to PDF" pipelines). These documents are typically only a few
+    // pages, so this stays synchronous rather than backgrounded.
+    const pages = await extractPdfPagesWithOcrFallback(buffer);
+    const text = pages.map((p) => p.text).join("\n\n");
 
     extracted = await extractVariationItemFromText(text, type);
-  } catch {
-    return NextResponse.json(
-      {
-        error: "Could not read this document automatically. You can still fill the details in manually.",
-        fileName: file.name,
-        storageKey
-      },
-      { status: 422 }
-    );
+  } catch (error) {
+    const message =
+      error instanceof UnreadablePdfError
+        ? "This PDF's text couldn't be read automatically, even with OCR — this usually happens with documents produced by certain \"print to PDF\" tools. Please try re-exporting it, or fill the details in manually."
+        : "Could not read this document automatically. You can still fill the details in manually.";
+    return NextResponse.json({ error: message, fileName: file.name, storageKey }, { status: 422 });
   }
 
   return NextResponse.json({ extracted, fileName: file.name, storageKey });

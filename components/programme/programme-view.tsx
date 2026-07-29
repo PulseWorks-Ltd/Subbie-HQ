@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ContractDocument, ProgrammeItem } from "@prisma/client";
 import { ProgrammeItemCard } from "@/components/programme/programme-item-card";
@@ -35,10 +35,36 @@ export function ProgrammeView({
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [tradeReference, setTradeReference] = useState(initialTradeReference);
+  // Tracks the document currently being processed in the background (either
+  // one we just uploaded, or one still processing from before this page was
+  // loaded) — null once it reaches "ready"/"failed", which stops polling.
+  const [processingDocumentId, setProcessingDocumentId] = useState<string | null>(() =>
+    activeDocument?.processingStatus === "processing" || activeDocument?.processingStatus === "idle"
+      ? activeDocument.id
+      : null
+  );
 
   const sortedItems = sortItems(items);
   const completedCount = items.filter((item) => item.completedAt).length;
   const needsReviewCount = items.filter((item) => item.status === "parsed" && !item.completedAt).length;
+
+  useEffect(() => {
+    if (!processingDocumentId || activeDocument?.id !== processingDocumentId) return;
+
+    if (activeDocument.processingStatus === "ready") {
+      setUploadMessage(`Programme processed — ${items.length} milestone(s) extracted.`);
+      setProcessingDocumentId(null);
+      return;
+    }
+    if (activeDocument.processingStatus === "failed") {
+      setUploadError(activeDocument.processingError ?? "Could not read this document automatically.");
+      setProcessingDocumentId(null);
+      return;
+    }
+
+    const interval = setInterval(() => router.refresh(), 4000);
+    return () => clearInterval(interval);
+  }, [processingDocumentId, activeDocument, items.length, router]);
 
   function openCreateDialog() {
     setEditingItem(null);
@@ -96,18 +122,10 @@ export function ProgrammeView({
       return;
     }
 
-    const replacedNote = body.replacedCount > 0 ? ` ${body.replacedCount} unreviewed milestone(s) from the previous programme were replaced.` : "";
-
-    let filterNote = "";
-    if (body.tradeReference && body.filterApplied) {
-      filterNote = ` Filtered to "${body.tradeReference}" activities.`;
-    } else if (body.tradeReference && !body.filterApplied) {
-      filterNote = ` Could not identify "${body.tradeReference}"-specific activities in this document — all activities were extracted. Please review carefully, as some may belong to other trades.`;
-    } else {
-      filterNote = " No trade reference was set, so all activities in the document were extracted — set one above if this programme covers multiple trades.";
-    }
-
-    setUploadMessage(`${body.items.length} milestone(s) added from ${file.name}.${replacedNote}${filterNote}`);
+    setProcessingDocumentId(body.document.id);
+    setUploadMessage(
+      `${file.name} uploaded — processing it automatically now (this can take a little while for longer documents). This page will update on its own once milestones are ready.`
+    );
     router.refresh();
   }
 
@@ -131,9 +149,19 @@ export function ProgrammeView({
               className="h-10 w-36 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </label>
-          <label className="h-10 px-4 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800 flex items-center cursor-pointer">
-            {isUploading ? "Reading document..." : activeDocument ? "Upload revised programme" : "Upload programme"}
-            <input type="file" accept="application/pdf" onChange={handleUpload} disabled={isUploading} className="hidden" />
+          <label
+            className={`h-10 px-4 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold flex items-center ${
+              isUploading || processingDocumentId ? "opacity-60 cursor-not-allowed" : "hover:bg-[#e7edf3] dark:hover:bg-slate-800 cursor-pointer"
+            }`}
+          >
+            {isUploading ? "Uploading..." : processingDocumentId ? "Processing..." : activeDocument ? "Upload revised programme" : "Upload programme"}
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={handleUpload}
+              disabled={isUploading || !!processingDocumentId}
+              className="hidden"
+            />
           </label>
           <button
             onClick={openCreateDialog}

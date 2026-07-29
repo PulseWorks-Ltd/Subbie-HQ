@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
-import { getSignedDownloadUrl } from "@/lib/s3";
 import {
-  extractContractClausesFromText,
   compareClausesToStandardBucket,
   synthesizeContractReview,
   extractContractTermsFromClauses
 } from "@/lib/grok";
 import { getStandardForm, getStandardFormBuckets, getStandardFormClausesByBucket } from "@/lib/standard-forms/sa-2017";
-
-const PAGE_BATCH_SIZE = 8;
+import { processContractDocument } from "@/lib/document-processing";
 
 export async function GET(
   request: Request,
@@ -63,6 +59,39 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  // Clause extraction (OCR-if-needed + Grok) now happens in the background,
+  // kicked off at upload time — see lib/document-processing.ts. This route
+  // just reads whatever's already there. Reusing existing Clause rows (incl.
+  // manually-entered ones) rather than requiring processingStatus === "ready"
+  // keeps this working for documents uploaded before this change existed.
+  let clauses = await prisma.clause.findMany({ where: { documentId, projectId } });
+
+  if (clauses.length === 0) {
+    if (document.processingStatus === "processing") {
+      return NextResponse.json(
+        { error: "This document is still being processed automatically — please wait a moment and try again." },
+        { status: 409 }
+      );
+    }
+    if (document.processingStatus === "failed") {
+      return NextResponse.json(
+        { error: document.processingError ?? "Could not process this document automatically. You can still add clauses manually." },
+        { status: 422 }
+      );
+    }
+    // processingStatus is "idle" (background extraction never ran — e.g. a
+    // non-PDF upload, or a document created before this change existed) or
+    // "ready" with somehow zero clauses — either way, fall back to running
+    // extraction synchronously here, matching the old click-and-wait behavior.
+    await processContractDocument(projectId, documentId);
+    clauses = await prisma.clause.findMany({ where: { documentId, projectId } });
+    if (clauses.length === 0) {
+      const failedDocument = await prisma.contractDocument.findUniqueOrThrow({ where: { id: documentId } });
+      const message = failedDocument.processingError ?? "Could not process this document automatically. You can still add clauses manually.";
+      return NextResponse.json({ error: message }, { status: 422 });
+    }
+  }
+
   const standardForm = getStandardForm();
 
   const review = await prisma.contractReview.create({
@@ -70,51 +99,6 @@ export async function POST(
   });
 
   try {
-    // Step 0 — reuse existing Clause rows for this document if any exist
-    // (including manually-entered ones — never silently duplicate/overwrite
-    // them), otherwise extract fresh via a page-chunked pass.
-    let clauses = await prisma.clause.findMany({ where: { documentId, projectId } });
-
-    if (clauses.length === 0) {
-      const signedUrl = await getSignedDownloadUrl(document.storageKey);
-      const pdfResponse = await fetch(signedUrl);
-      const buffer = new Uint8Array(await pdfResponse.arrayBuffer());
-      const parser = new PDFParse({ data: buffer });
-      const { pages } = await parser.getText();
-      await parser.destroy();
-
-      if (!pages.length) {
-        throw new Error("No extractable text in PDF.");
-      }
-
-      const batches: typeof pages[] = [];
-      for (let i = 0; i < pages.length; i += PAGE_BATCH_SIZE) {
-        batches.push(pages.slice(i, i + PAGE_BATCH_SIZE));
-      }
-
-      const extractedBatches = await Promise.all(
-        batches.map((batch) => {
-          const batchText = batch.map((p) => `--- PAGE ${p.num} ---\n${p.text}`).join("\n\n");
-          return extractContractClausesFromText(batchText);
-        })
-      );
-      const extractedClauses = extractedBatches.flat();
-
-      await prisma.clause.createMany({
-        data: extractedClauses.map((c) => ({
-          projectId,
-          documentId,
-          clauseRef: c.clauseRef,
-          title: c.title,
-          body: c.body,
-          pageNumber: c.pageNumber,
-          status: "parsed"
-        }))
-      });
-
-      clauses = await prisma.clause.findMany({ where: { documentId, projectId } });
-    }
-
     const clauseInputs = clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body }));
 
     // Step 1 (map, parallel) + terms extraction run concurrently — both only
@@ -237,18 +221,17 @@ export async function POST(
     return NextResponse.json({ review: fullReview });
   } catch (error) {
     console.error("Contract review failed:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    // Stored as errorMessage too (not just the response body) so the same
+    // clear message shows whether the user sees it immediately or reloads
+    // the page later and DeviationReportView re-renders the failed review.
+    const userMessage = "Could not complete an automated review of this document. You can still review it manually.";
+
     const failedReview = await prisma.contractReview.update({
       where: { id: review.id },
-      data: { status: "failed", errorMessage }
+      data: { status: "failed", errorMessage: userMessage }
     });
-    return NextResponse.json(
-      {
-        error: "Could not complete an automated review of this document. You can still review it manually.",
-        review: failedReview
-      },
-      { status: 422 }
-    );
+    return NextResponse.json({ error: userMessage, review: failedReview }, { status: 422 });
   }
 }
 

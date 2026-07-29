@@ -104,6 +104,17 @@ enum ContractReviewStatus {
   failed
 }
 
+// Tracks background text-extraction (OCR-if-needed + clause/programme-item
+// creation), decoupled from any single request — kicked off right after
+// upload rather than blocking on it. "idle" only appears transiently between
+// row creation and the background job starting.
+enum DocumentProcessingStatus {
+  idle
+  processing
+  ready
+  failed
+}
+
 enum InsuranceCertificateType {
   public_liability
   contract_works
@@ -240,6 +251,8 @@ model ContractDocument {
   status      DocumentStatus @default(draft)
   documentType DocumentKind  @default(contract)
   sourceNotes String?
+  processingStatus DocumentProcessingStatus @default(idle)
+  processingError  String?
   uploadedAt  DateTime       @default(now())
 
   project     Project        @relation(fields: [projectId], references: [id])

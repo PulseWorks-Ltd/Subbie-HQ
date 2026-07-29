@@ -41,8 +41,10 @@ export function PushNotificationsButton() {
     setStatus("subscribing");
 
     try {
-      const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/m/" });
-      await navigator.serviceWorker.ready;
+      // The service worker is registered eagerly on page load (see
+      // components/mobile/service-worker-registration.tsx) — just wait for
+      // it here rather than re-registering.
+      const registration = await navigator.serviceWorker.ready;
 
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {

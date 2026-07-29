@@ -10,6 +10,13 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// No caching strategy — just a network passthrough. Some browsers still use
+// "has a fetch handler" as a PWA-installability signal even though it's no
+// longer a hard requirement in modern Chrome.
+self.addEventListener("fetch", (event) => {
+  event.respondWith(fetch(event.request));
+});
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 

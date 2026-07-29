@@ -47,7 +47,7 @@ export function InstallPrompt() {
     dismiss();
   }
 
-  if (isDismissed || (!deferredPrompt && !isIos)) return null;
+  if (isDismissed) return null;
 
   return (
     <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3 mb-4">
@@ -57,7 +57,7 @@ export function InstallPrompt() {
           <>
             <p className="text-sm font-bold mb-1">Install this app</p>
             <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-3">
-              Add Subbie Updates to your home screen for quick, offline-friendly access.
+              Add Subbie HQ to your home screen for quick, offline-friendly access.
             </p>
             <button
               onClick={handleInstall}
@@ -66,12 +66,26 @@ export function InstallPrompt() {
               Install App
             </button>
           </>
-        ) : (
+        ) : isIos ? (
           <>
             <p className="text-sm font-bold mb-1">Add to Home Screen</p>
             <p className="text-xs text-[#4c739a] dark:text-slate-400">
               Tap the Share icon <span className="font-bold">⬆</span>, then{" "}
               <span className="font-bold text-[#0d141b] dark:text-slate-50">Add to Home Screen</span>.
+            </p>
+          </>
+        ) : (
+          // The browser hasn't (yet) fired beforeinstallprompt — happens if
+          // it's still evaluating installability, this is a browser that
+          // doesn't support the prompt event (e.g. Firefox for Android), or
+          // this is an in-app/WebView browser from a QR-scanner or camera
+          // app. Give explicit manual steps instead of showing nothing.
+          <>
+            <p className="text-sm font-bold mb-1">Add to Home Screen</p>
+            <p className="text-xs text-[#4c739a] dark:text-slate-400">
+              Open this page in Chrome, then tap the <span className="font-bold">⋮</span> menu and choose{" "}
+              <span className="font-bold text-[#0d141b] dark:text-slate-50">Install app</span> or{" "}
+              <span className="font-bold text-[#0d141b] dark:text-slate-50">Add to Home screen</span>.
             </p>
           </>
         )}

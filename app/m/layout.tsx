@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { PushNotificationsButton } from "@/components/mobile/push-notifications-button";
+import { ServiceWorkerRegistration } from "@/components/mobile/service-worker-registration";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function MobileLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export default async function MobileLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-screen flex flex-col">
+      <ServiceWorkerRegistration />
       <link rel="manifest" href="/manifest.webmanifest" />
       <meta name="theme-color" content="#137fec" />
       <header className="sticky top-0 z-50 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-[#e7edf3] dark:border-slate-800 px-4 py-3">

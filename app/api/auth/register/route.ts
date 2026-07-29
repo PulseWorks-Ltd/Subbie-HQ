@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { PRESETS } from "@/lib/permissions";
+import { sendWelcomeEmail } from "@/lib/email";
 
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -40,6 +41,12 @@ export async function POST(request: Request) {
       }
     },
     select: { id: true, email: true, name: true }
+  });
+
+  // Fire-and-forget — a failed welcome email should never block account
+  // creation, which has already succeeded by this point.
+  await sendWelcomeEmail({ to: user.email, name: payload.name }).catch((error) => {
+    console.error("Failed to send welcome email:", error);
   });
 
   return NextResponse.json({ user }, { status: 201 });

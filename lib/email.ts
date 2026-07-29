@@ -104,6 +104,30 @@ export async function sendExternalUpdateEmail(params: {
   });
 }
 
+// Plain HTML rather than a SendGrid dynamic template — same reasoning as
+// sendReminderEmail: no SENDGRID_WELCOME_TEMPLATE_ID exists yet. Fire-and-
+// forget like the other notification emails — a failed welcome email should
+// never block account creation, which already succeeded by the time this
+// is called (see app/api/auth/register/route.ts).
+export async function sendWelcomeEmail(params: { to: string; name: string }) {
+  const config = getConfiguredSendGrid();
+  if (!config) return;
+
+  const baseUrl = process.env.AUTH_URL ?? "";
+
+  await sgMail.send({
+    to: params.to,
+    from: { email: config.fromEmail, name: "Subbie HQ" },
+    subject: "Welcome to Subbie HQ",
+    html: `
+      <p><img src="${baseUrl}/icons/icon-512.png" alt="Subbie HQ" width="48" height="48" /></p>
+      <p>Hi ${params.name},</p>
+      <p>Welcome to Subbie HQ — your workspace for contract intelligence, payment claims, and project updates is ready.</p>
+      <p><a href="${baseUrl}/projects">Create your first project</a> to get started, or <a href="${baseUrl}/get-app">install the mobile app</a> to post site updates on the go.</p>
+    `
+  });
+}
+
 export async function sendOrganisationInviteEmail(params: {
   to: string;
   organisationName: string;

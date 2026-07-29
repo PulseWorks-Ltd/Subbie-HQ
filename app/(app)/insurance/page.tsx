@@ -19,7 +19,10 @@ export default async function InsurancePage() {
   const [certificates, activeProjects] = await Promise.all([
     prisma.insuranceCertificate.findMany({
       where: { organisationId: membership!.organisationId },
-      include: { distributions: { include: { project: { select: { id: true, name: true } } }, orderBy: { sentAt: "desc" } } },
+      include: {
+        distributions: { include: { project: { select: { id: true, name: true } } }, orderBy: { sentAt: "desc" } },
+        covers: { orderBy: { createdAt: "asc" } }
+      },
       orderBy: { createdAt: "desc" }
     }),
     prisma.project.findMany({

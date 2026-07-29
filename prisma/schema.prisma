@@ -243,6 +243,7 @@ model Project {
   contractReviews    ContractReview[]
   contractTerms      ContractTerms?
   insuranceDistributions InsuranceDistribution[]
+  contractRequiredCovers ContractRequiredCover[]
 }
 
 model ProjectMember {
@@ -279,6 +280,7 @@ model ContractDocument {
   reviews     ContractReview[]
   contractTermsSourced ContractTerms[]
   correspondenceOutcomes Correspondence[]
+  contractRequiredCoversSourced ContractRequiredCover[]
 }
 
 model Clause {
@@ -423,6 +425,44 @@ model InsuranceCertificate {
   organisation  Organisation             @relation(fields: [organisationId], references: [id])
   distributions InsuranceDistribution[]
   correspondence Correspondence[]
+  covers        InsuranceCertificateCover[]
+}
+
+// A single certificate can carry multiple types of cover (e.g. a combined
+// policy covering both Public Liability and Contract Works), each with its
+// own value — coverType is free text with UI-suggested presets (see
+// lib/insurance-cover-types.ts), same light-enum-plus-custom pattern as
+// MainContractorContact.role, rather than InsuranceCertificate.type's fixed
+// enum (which stays as the certificate's own overall/primary classification).
+model InsuranceCertificateCover {
+  id                     String   @id @default(cuid())
+  insuranceCertificateId String
+  coverType              String
+  value                  Decimal
+  createdAt              DateTime @default(now())
+
+  insuranceCertificate InsuranceCertificate @relation(fields: [insuranceCertificateId], references: [id])
+}
+
+// Minimum insurance cover a governing contract states the subcontractor
+// must hold, extracted alongside ContractTerms during runContractReview
+// (lib/contract-comparison.ts) from the same already-extracted Clause[] —
+// one row per cover type found, replaced wholesale each time the project's
+// contract is (re)reviewed. Compared live against currently-held
+// InsuranceCertificateCover rows at render time (lib/insurance-cover-comparison.ts)
+// — never stored as a point-in-time snapshot, so a certificate renewal is
+// reflected immediately without needing to re-run the contract review.
+model ContractRequiredCover {
+  id                     String   @id @default(cuid())
+  projectId              String
+  coverType              String
+  requiredValue          Decimal
+  sourceDocumentId       String?
+  sourceContractReviewId String?
+  createdAt              DateTime @default(now())
+
+  project        Project           @relation(fields: [projectId], references: [id])
+  sourceDocument ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
 }
 
 // Tracks which projects have received a given certificate — the "paper

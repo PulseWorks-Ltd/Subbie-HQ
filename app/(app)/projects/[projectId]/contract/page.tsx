@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
 import { getNewBaselineDriftDeviations } from "@/lib/contract-comparison";
+import { getCoverComparisonForProject } from "@/lib/insurance-cover-comparison";
 import { ContractView } from "@/components/contract/contract-view";
 
 export default async function ContractPage({ params }: { params: Promise<{ projectId: string }> }) {
@@ -31,18 +32,21 @@ export default async function ContractPage({ params }: { params: Promise<{ proje
     orderBy: { uploadedAt: "desc" }
   });
 
-  const documents = await Promise.all(
-    rawDocuments.map(async (document) => {
-      const review = document.reviews[0];
-      if (!review) return { ...document, reviews: [] as never[] };
-      const driftDeviations = await getNewBaselineDriftDeviations(
-        review.documentId,
-        review.comparedAgainstType,
-        review.newBaselineDriftCount
-      );
-      return { ...document, reviews: [{ ...review, driftDeviations }] };
-    })
-  );
+  const [documents, coverComparison] = await Promise.all([
+    Promise.all(
+      rawDocuments.map(async (document) => {
+        const review = document.reviews[0];
+        if (!review) return { ...document, reviews: [] as never[] };
+        const driftDeviations = await getNewBaselineDriftDeviations(
+          review.documentId,
+          review.comparedAgainstType,
+          review.newBaselineDriftCount
+        );
+        return { ...document, reviews: [{ ...review, driftDeviations }] };
+      })
+    ),
+    getCoverComparisonForProject(projectId)
+  ]);
 
-  return <ContractView projectId={projectId} documents={documents} />;
+  return <ContractView projectId={projectId} documents={documents} coverComparison={coverComparison} />;
 }

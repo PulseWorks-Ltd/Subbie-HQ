@@ -4,6 +4,7 @@ import {
   compareClausesToPriorContract,
   synthesizeContractReview,
   extractContractTermsFromClauses,
+  extractRequiredInsuranceCoverFromClauses,
   type BucketDeviation,
   type SynthesisResult
 } from "./grok";
@@ -124,12 +125,14 @@ export async function runContractReview(projectId: string, documentId: string) {
     ? await findPriorReview(document.project.mainContractorId, documentId)
     : null;
 
-  // Baseline comparison + contract-terms extraction run concurrently — both
-  // only depend on the already-extracted clauses, not on each other. This
-  // always runs, regardless of comparison type (see runBaselineComparison).
-  const [baseline, extractedTerms] = await Promise.all([
+  // Baseline comparison + contract-terms extraction + required-insurance-
+  // cover extraction all run concurrently — none depend on each other, only
+  // on the already-extracted clauses. This always runs, regardless of
+  // comparison type (see runBaselineComparison).
+  const [baseline, extractedTerms, requiredCovers] = await Promise.all([
     runBaselineComparison(clauseInputs),
-    extractContractTermsFromClauses(clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber })))
+    extractContractTermsFromClauses(clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber }))),
+    extractRequiredInsuranceCoverFromClauses(clauseInputs)
   ]);
   const baselineCounts = countDeviations(baseline.synthesis);
 
@@ -239,6 +242,26 @@ export async function runContractReview(projectId: string, documentId: string) {
     });
     primaryReviewId = primaryReview.id;
   }
+
+  // Required insurance cover — replaced wholesale each time this project's
+  // contract is (re)reviewed, since it reflects whatever the CURRENTLY
+  // governing contract states, not an accumulating history. Compared live
+  // against currently-held cover at render time, not stored as a snapshot
+  // (see lib/insurance-cover-comparison.ts).
+  await prisma.$transaction([
+    prisma.contractRequiredCover.deleteMany({ where: { projectId } }),
+    ...requiredCovers.map((cover) =>
+      prisma.contractRequiredCover.create({
+        data: {
+          projectId,
+          coverType: cover.coverType,
+          requiredValue: cover.requiredValue,
+          sourceDocumentId: documentId,
+          sourceContractReviewId: primaryReviewId
+        }
+      })
+    )
+  ]);
 
   // Suggested ContractTerms — unaffected by comparison type, always sourced
   // from this contract's own extracted terms. Only suggest a field the

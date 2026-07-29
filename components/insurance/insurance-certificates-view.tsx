@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import type { InsuranceCertificate, InsuranceDistribution, Project } from "@prisma/client";
+import type { InsuranceCertificate, InsuranceCertificateCover, InsuranceDistribution, Project } from "@prisma/client";
 import { InsuranceCertificateCard } from "@/components/insurance/insurance-certificate-card";
 import { InsuranceCertificateFormDialog } from "@/components/insurance/insurance-certificate-form-dialog";
 
 export type InsuranceCertificateRow = InsuranceCertificate & {
   distributions: (InsuranceDistribution & { project: Pick<Project, "id" | "name"> })[];
+  covers: InsuranceCertificateCover[];
 };
 
 export function InsuranceCertificatesView({

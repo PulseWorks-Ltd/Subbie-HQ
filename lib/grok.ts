@@ -584,3 +584,99 @@ export async function draftResponseLetter(
 
   return DraftedLetterSchema.parse(JSON.parse(raw));
 }
+
+const ExtractedCertificateCoverSchema = z.object({
+  coverType: z.string(),
+  value: z.number()
+});
+const ExtractedInsuranceCertificateSchema = z.object({
+  provider: z.string().nullable(),
+  policyNumber: z.string().nullable(),
+  expiryDate: z.string().nullable(),
+  covers: z.array(ExtractedCertificateCoverSchema)
+});
+
+export type ExtractedInsuranceCertificate = z.infer<typeof ExtractedInsuranceCertificateSchema>;
+
+// Extracts insurer/policy/expiry plus every distinct cover type + value
+// found on an insurance certificate PDF's text — used to pre-fill the
+// certificate form for the user to review/correct, never saved directly
+// (see app/api/organisation/insurance-certificates/parse/route.ts). Never
+// guesses: fields with nothing confidently stated come back null/empty
+// rather than a fabricated value.
+export async function extractInsuranceCertificateFromText(documentText: string): Promise<ExtractedInsuranceCertificate> {
+  const response = await getClient().chat.completions.create({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You extract structured data from an insurance certificate of currency document. " +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"provider": string | null, "policyNumber": string | null, "expiryDate": string | null, "covers": [{"coverType": string, "value": number}]}. ' +
+          "provider: the insurer/underwriter's name (not the broker, if both are shown), or null if not stated. " +
+          "policyNumber: the policy number exactly as printed, or null if not stated. " +
+          "expiryDate: the policy's expiry/renewal date as an ISO 8601 date (YYYY-MM-DD), or null if not stated. " +
+          "covers: one entry per distinct type of cover shown with a monetary limit (e.g. Public Liability, Professional Indemnity, Contract Works, Employers Liability, Statutory Liability, Product Liability). " +
+          'coverType: a short label for the cover type — prefer these exact labels when the document\'s wording clearly matches one: "Public Liability", "Professional Indemnity", "Contract Works", "Employers Liability" — otherwise use a short label close to the document\'s own wording. ' +
+          "value: the limit of indemnity / sum insured for that cover type, as a plain number (no currency symbols or commas) — use the 'each and every claim' or per-occurrence limit if multiple limits are shown for the same cover, not the aggregate. " +
+          "Only include a cover entry when both a clear type AND a clear numeric value are stated — do not include a type with no value, and do not invent a value. If nothing on the document confidently identifies a field, use null (or an empty covers array) rather than guessing."
+      },
+      { role: "user", content: documentText }
+    ]
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return ExtractedInsuranceCertificateSchema.parse(JSON.parse(raw));
+}
+
+const ExtractedRequiredCoverSchema = z.object({
+  coverType: z.string(),
+  requiredValue: z.number()
+});
+const ExtractedRequiredCoverListSchema = z.object({ covers: z.array(ExtractedRequiredCoverSchema) });
+
+export type ExtractedRequiredCover = z.infer<typeof ExtractedRequiredCoverSchema>;
+
+// Runs on the already-extracted Clause[] from Contract Review's Step 0 (no
+// new PDF parsing), alongside extractContractTermsFromClauses — scans for
+// stated MINIMUM insurance cover requirements per type (e.g. "the
+// Subcontractor shall hold Public Liability insurance of not less than
+// $20,000,000"). Partial results are expected and fine (most contracts
+// don't state every cover type) — only returns types with a clearly stated
+// numeric minimum, never a fabricated/guessed one.
+export async function extractRequiredInsuranceCoverFromClauses(
+  clauses: { clauseRef: string; title: string | null; body: string }[]
+): Promise<ExtractedRequiredCover[]> {
+  const documentText = clauses.map((c) => `[${c.clauseRef}]${c.title ? ` ${c.title}` : ""}\n${c.body}`).join("\n\n");
+
+  const response = await getClient().chat.completions.create({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You extract stated MINIMUM insurance cover requirements from a construction subcontract agreement's clauses — the levels of insurance the subcontract requires the subcontractor to hold or maintain. " +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"covers": [{"coverType": string, "requiredValue": number}]}. ' +
+          'coverType: prefer these exact labels when the clause\'s wording clearly matches one: "Public Liability", "Professional Indemnity", "Contract Works", "Employers Liability" — otherwise a short label close to the clause\'s own wording. ' +
+          "requiredValue: the stated minimum cover amount as a plain number (no currency symbols or commas). " +
+          "Only include an entry when the clauses state a clear minimum/required numeric amount for that specific cover type — most contracts only mention some cover types, or none at all with a specific number, and that's expected; return an empty array rather than inventing a requirement that isn't clearly stated."
+      },
+      { role: "user", content: documentText }
+    ]
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return ExtractedRequiredCoverListSchema.parse(JSON.parse(raw)).covers;
+}

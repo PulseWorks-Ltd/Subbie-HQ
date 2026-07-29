@@ -3,18 +3,22 @@
 import { useState } from "react";
 import type { Clause, ContractDocument } from "@prisma/client";
 import type { ReviewWithChain } from "@/components/contract/contract-review-section";
+import type { CoverComparisonRow } from "@/lib/insurance-cover-comparison";
 import { UploadDocumentDialog } from "@/components/contract/upload-document-dialog";
 import { DocumentPanel } from "@/components/contract/document-panel";
+import { InsuranceCoverComparison } from "@/components/contract/insurance-cover-comparison";
 
 export function ContractView({
   projectId,
-  documents
+  documents,
+  coverComparison
 }: {
   projectId: string;
   documents: (ContractDocument & {
     clauses: Clause[];
     reviews: ReviewWithChain[];
   })[];
+  coverComparison: CoverComparisonRow[];
 }) {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
@@ -34,6 +38,8 @@ export function ContractView({
           Upload Document
         </button>
       </div>
+
+      <InsuranceCoverComparison rows={coverComparison} />
 
       {documents.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">

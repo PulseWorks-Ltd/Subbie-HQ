@@ -17,7 +17,9 @@
     "db:staging:migrate": "node scripts/with-staging-db.js prisma migrate dev",
     "db:staging:studio": "node scripts/with-staging-db.js prisma studio",
     "db:staging:reset": "node scripts/with-staging-db.js prisma migrate reset --force",
-    "db:prod:migrate:deploy": "node scripts/check-db-target.js migrate deploy && prisma migrate deploy"
+    "db:staging:wipe-projects": "node scripts/with-staging-db.js node scripts/wipe-projects.mjs",
+    "db:prod:migrate:deploy": "node scripts/check-db-target.js migrate deploy && prisma migrate deploy",
+    "db:prod:wipe-projects": "node scripts/check-db-target.js wipe-projects && node scripts/wipe-projects.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1095.0",

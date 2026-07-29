@@ -10,6 +10,11 @@ function formatDate(date: Date) {
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function formatValue(value: unknown) {
+  const num = Number(value);
+  return Number.isFinite(num) ? `$${num.toLocaleString("en-NZ")}` : String(value);
+}
+
 export function InsuranceCertificateCard({
   certificate,
   activeProjectCount,
@@ -56,6 +61,11 @@ export function InsuranceCertificateCard({
             <p className="text-xs text-[#4c739a] dark:text-slate-400">
               {certificate.policyNumber ? `Policy ${certificate.policyNumber}` : "No policy number recorded"}
             </p>
+            {certificate.covers.length > 0 && (
+              <p className="text-xs text-[#4c739a] dark:text-slate-400 mt-1">
+                {certificate.covers.map((c) => `${c.coverType} — ${formatValue(c.value)}`).join(" · ")}
+              </p>
+            )}
           </div>
         </button>
 

@@ -26,7 +26,10 @@ export async function GET(request: Request) {
 
   const insuranceCertificates = await prisma.insuranceCertificate.findMany({
     where: { organisationId: membership!.organisationId },
-    include: { distributions: { include: { project: { select: { id: true, name: true } } } } },
+    include: {
+      distributions: { include: { project: { select: { id: true, name: true } } } },
+      covers: { orderBy: { createdAt: "asc" } }
+    },
     orderBy: { createdAt: "desc" }
   });
 
@@ -49,13 +52,17 @@ export async function POST(request: Request) {
   const policyNumber = formData.get("policyNumber")?.toString();
   const expiryAt = formData.get("expiryAt")?.toString();
   const file = formData.get("file");
+  // From the /parse preview step — already uploaded, no need to re-upload.
+  const existingFileName = formData.get("fileName")?.toString();
+  const existingStorageKey = formData.get("storageKey")?.toString();
+  const coversRaw = formData.get("covers")?.toString();
 
   if (!provider) {
     return NextResponse.json({ error: "Provider is required" }, { status: 400 });
   }
 
-  let fileName: string | undefined;
-  let storageKey: string | undefined;
+  let fileName: string | undefined = existingFileName || undefined;
+  let storageKey: string | undefined = existingStorageKey || undefined;
 
   if (file instanceof File && file.size > 0) {
     const buffer = new Uint8Array(await file.arrayBuffer());
@@ -65,6 +72,8 @@ export async function POST(request: Request) {
     storageKey = uploaded.storageKey;
   }
 
+  const covers: { coverType: string; value: number }[] = coversRaw ? JSON.parse(coversRaw) : [];
+
   const insuranceCertificate = await prisma.insuranceCertificate.create({
     data: {
       organisationId: admin.organisationId,
@@ -73,8 +82,14 @@ export async function POST(request: Request) {
       policyNumber: policyNumber || undefined,
       expiryAt: expiryAt ? new Date(expiryAt) : undefined,
       fileName,
-      storageKey
-    }
+      storageKey,
+      covers: {
+        create: covers
+          .filter((c) => c.coverType.trim() && Number.isFinite(c.value))
+          .map((c) => ({ coverType: c.coverType.trim(), value: c.value }))
+      }
+    },
+    include: { covers: true }
   });
 
   return NextResponse.json({ insuranceCertificate }, { status: 201 });

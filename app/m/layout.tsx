@@ -17,6 +17,13 @@ export default async function MobileLayout({ children }: { children: React.React
   return (
     <div className="min-h-screen flex flex-col">
       <ServiceWorkerRegistration />
+      {/* public/manifest.webmanifest carries an explicit "id" — Chrome/Android
+          key "is this already installed" off manifest id (defaulting to
+          start_url when absent), tracked at the OS/WebAPK level, independent
+          of browser profile or incognito. Any device that installed an
+          earlier build (identity defaulted to start_url "/m") is permanently
+          treated as "already installed" and never re-offered the install
+          prompt. Bump the id's query value again if this recurs. */}
       <link rel="manifest" href="/manifest.webmanifest" />
       <meta name="theme-color" content="#137fec" />
       <header className="sticky top-0 z-50 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-[#e7edf3] dark:border-slate-800 px-4 py-3">

@@ -16,7 +16,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <TopNav
             userName={session.user.name ?? null}
             userEmail={session.user.email ?? ""}
-            isOrganisationAdmin={membership?.isAdmin ?? false}
             canSeeInsurance={hasModuleAccess(membership, "insurance")}
             canSeeMainContractors={hasModuleAccess(membership, "main_contractors")}
             canSeeIncomingEmails={hasModuleAccess(membership, "incoming_emails")}

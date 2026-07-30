@@ -175,6 +175,11 @@ model User {
 model Organisation {
   id                      String                  @id @default(cuid())
   name                    String
+  // Free text, not an enum — the preset list (lib/trades.ts) is a starting
+  // set meant to be easy to extend without a migration; "Other" just stores
+  // whatever the user typed. Nullable since existing organisations won't
+  // have one set and shouldn't be forced to pick one.
+  trade                   String?
   variationCompletionMode VariationCompletionMode @default(requires_confirmation)
   createdAt               DateTime                @default(now())
   members                 OrganisationMember[]

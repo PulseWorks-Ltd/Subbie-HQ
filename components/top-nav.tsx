@@ -2,20 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AccountMenu } from "@/components/account-menu";
 
 export function TopNav({
   userName,
   userEmail,
-  isOrganisationAdmin,
   canSeeInsurance,
   canSeeMainContractors,
   canSeeIncomingEmails
 }: {
   userName: string | null;
   userEmail: string;
-  isOrganisationAdmin: boolean;
   canSeeInsurance: boolean;
   canSeeMainContractors: boolean;
   canSeeIncomingEmails: boolean;
@@ -23,11 +21,9 @@ export function TopNav({
   const pathname = usePathname();
   const isDashboard = pathname === "/";
   const isProjects = pathname === "/projects";
-  const isTeam = pathname === "/team";
   const isInsurance = pathname === "/insurance";
   const isMainContractors = pathname?.startsWith("/main-contractors") ?? false;
   const isIncomingEmails = pathname === "/incoming-emails";
-  const initial = (userName ?? userEmail).charAt(0).toUpperCase();
 
   return (
     <header className="flex items-center justify-between border-b border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark px-8 py-3 sticky top-0 z-50">
@@ -56,17 +52,6 @@ export function TopNav({
           <span className="material-symbols-outlined text-lg">apartment</span>
           Projects
         </Link>
-        {isOrganisationAdmin && (
-          <Link
-            href="/team"
-            className={`text-sm font-bold pb-1 border-b-2 flex items-center gap-1.5 ${
-              isTeam ? "text-primary border-primary" : "text-[#4c739a] dark:text-slate-400 border-transparent hover:text-primary"
-            }`}
-          >
-            <span className="material-symbols-outlined text-lg">group</span>
-            Team
-          </Link>
-        )}
         {canSeeInsurance && (
           <Link
             href="/insurance"
@@ -111,18 +96,7 @@ export function TopNav({
           <span className="material-symbols-outlined text-lg">phone_iphone</span>
           <span className="hidden sm:inline">Get the app</span>
         </Link>
-        <div className="hidden sm:flex flex-col items-end leading-tight">
-          <span className="text-sm font-medium">{userName ?? userEmail}</span>
-        </div>
-        <div className="size-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm ring-2 ring-primary/10">
-          {initial}
-        </div>
-        <button
-          onClick={() => signOut({ redirectTo: "/login" })}
-          className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-medium hover:bg-[#e7edf3] dark:hover:bg-slate-800"
-        >
-          Sign out
-        </button>
+        <AccountMenu userName={userName} userEmail={userEmail} />
       </div>
     </header>
   );

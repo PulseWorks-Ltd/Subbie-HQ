@@ -5,7 +5,9 @@ import { requireUserId } from "@/lib/auth";
 import { requireOrganisationAdmin } from "@/lib/organisation";
 
 const updateOrganisationSchema = z.object({
-  variationCompletionMode: z.enum(["auto", "requires_confirmation"]).optional()
+  variationCompletionMode: z.enum(["auto", "requires_confirmation"]).optional(),
+  name: z.string().min(1).optional(),
+  trade: z.string().min(1).nullable().optional()
 });
 
 export async function PATCH(request: Request) {
@@ -22,7 +24,11 @@ export async function PATCH(request: Request) {
 
   const organisation = await prisma.organisation.update({
     where: { id: admin.organisationId },
-    data: { variationCompletionMode: payload.variationCompletionMode }
+    data: {
+      variationCompletionMode: payload.variationCompletionMode,
+      name: payload.name,
+      trade: payload.trade
+    }
   });
 
   return NextResponse.json({ organisation });

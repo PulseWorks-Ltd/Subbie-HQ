@@ -32,9 +32,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     })
   ],
   callbacks: {
-    jwt: async ({ token, user }) => {
+    jwt: async ({ token, user, trigger, session }) => {
       if (user?.id) {
         token.userId = user.id;
+      }
+      // Fired by the client calling useSession()'s update({ name }) after a
+      // successful My Settings save (see components/settings/my-settings-tab.tsx)
+      // — without this, session.user.name (and therefore TopNav) would keep
+      // showing the old name until the next login, since JWT sessions don't
+      // otherwise refresh mid-session.
+      if (trigger === "update" && session?.name !== undefined) {
+        token.name = session.name;
       }
       return token;
     },

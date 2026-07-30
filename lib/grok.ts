@@ -747,11 +747,20 @@ export async function draftExternalUpdateEmail(params: {
   return DraftedUpdateEmailSchema.parse(JSON.parse(raw));
 }
 
+// .nullish() (not .nullable()) — same failure mode already found and fixed
+// once in the contract-review synthesis schema: this model reliably writes
+// explicit null for a field it considered, but sometimes omits a key
+// entirely for one it saw no reason to include at all (e.g. no
+// projectConfidence when projectId is null). .nullable() rejects a missing
+// key with a ZodError and silently kills the whole classification (caught
+// by classifyAndSuggest's try/catch, see lib/inbound-email.ts) — leaving
+// the email fully blank with zero indication anything went wrong, which is
+// exactly what was reported. .nullish() accepts both forms.
 const InboundEmailClassificationSchema = z.object({
-  projectId: z.string().nullable(),
-  projectConfidence: z.number().min(0).max(1).nullable(),
-  suggestedType: z.string().nullable(),
-  variationItemId: z.string().nullable(),
+  projectId: z.string().nullish(),
+  projectConfidence: z.number().min(0).max(1).nullish(),
+  suggestedType: z.string().nullish(),
+  variationItemId: z.string().nullish(),
   summary: z.string()
 });
 
@@ -768,7 +777,7 @@ export async function classifyInboundEmail(params: {
   ccAddresses: string[];
   subject: string;
   body: string;
-  attachmentNames: string[];
+  attachments: { fileName: string; extractedText: string | null }[];
   candidateProjects: {
     id: string;
     name: string;
@@ -791,6 +800,20 @@ export async function classifyInboundEmail(params: {
     })
     .join("\n\n");
 
+  // Attachment TEXT, not just filenames — a scanned/exported document titled
+  // "scan0042.pdf" gives the model nothing to go on from its name alone, but
+  // an attached Site Instruction's actual content is often the single
+  // strongest signal for both project and type classification.
+  const attachmentsText = params.attachments.length
+    ? params.attachments
+        .map((a) =>
+          a.extractedText
+            ? `--- Attachment "${a.fileName}" (extracted text) ---\n${a.extractedText}`
+            : `--- Attachment "${a.fileName}" (content not extractable — judge from filename/email context only) ---`
+        )
+        .join("\n\n")
+    : "(no attachments)";
+
   const response = await getClient().chat.completions.create({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
@@ -801,18 +824,19 @@ export async function classifyInboundEmail(params: {
           "You triage an inbound email for a subcontractor's project-management app, so a human reviewer can quickly file it correctly. " +
           "Respond with only a JSON object matching this exact shape: " +
           '{"projectId": string | null, "projectConfidence": number | null, "suggestedType": string | null, "variationItemId": string | null, "summary": string}. ' +
-          "projectId: the id of whichever project below this email most likely belongs to, using every signal available — the sender's address, any CC'd addresses (a match against a project's known Main Contractor contact emails is a strong signal), subject, body content, quoted thread history, and attachment names. " +
-          "ONLY return an id that appears in the candidate list below — never invent one. If no project is a confident match, return null rather than guessing. " +
+          "projectId: the id of whichever project below this email most likely belongs to, using every signal available — the sender's address, any CC'd addresses (a match against a project's known Main Contractor contact emails is a strong signal), subject, body content, quoted thread history, and attachment content. " +
+          "People refer to projects informally and inconsistently — a project named \"St Lukes - Block 10\" in the system might be written in an email as \"10 St Luke's\", \"St Luke's site 10\", \"the St Lukes Block 10 job\", or similar. Reason about likely matches the way an experienced person on the team would (word order, minor spelling/punctuation differences, and reordered numbers/street names are all still the same project) — don't require a literal or exact string match. " +
+          "ONLY return an id that appears in the candidate list below — never invent one. Only return null if genuinely no project in the list is a plausible match, not merely because the wording differs from the system name. " +
           "projectConfidence: your confidence in the projectId match, 0 to 1 (null if projectId is null). " +
-          `suggestedType: what this email relates to — common categories include ${INBOUND_EMAIL_TYPE_PRESETS.join(", ")}, but use your own short free-text label if none of these fit well. Return null if you can't tell. ` +
-          "variationItemId: if the email clearly references a specific Variation or Site Instruction from the matched project's list below (by reference number or unambiguous context), return its id — only from that project's list, never invented, and only if projectId was also determined. Return null if uncertain or if no project was matched. " +
-          "summary: a 1-2 sentence plain-English summary of what this email is about, for a reviewer to quickly judge relevance without reading the full email."
+          `suggestedType: what this email relates to — common categories include ${INBOUND_EMAIL_TYPE_PRESETS.join(", ")}, but use your own short free-text label if none of these fit well. An attached document's own title/content (e.g. a document headed "Site Instruction") is a strong signal — weigh it accordingly. Return null if you genuinely can't tell. ` +
+          "variationItemId: if the email or an attachment clearly references a specific Variation or Site Instruction from the matched project's list below (by reference number or unambiguous context), return its id — only from that project's list, never invented, and only if projectId was also determined. Return null if uncertain or if no project was matched. " +
+          "summary: a 1-2 sentence plain-English summary of what this email (and any attachments) is about, for a reviewer to quickly judge relevance without reading the full email."
       },
       {
         role: "user",
         content:
-          `From: ${params.sender}\nCC: ${params.ccAddresses.join(", ") || "(none)"}\nSubject: ${params.subject}\n` +
-          `Attachments: ${params.attachmentNames.join(", ") || "(none)"}\n\nBody:\n${params.body}\n\n---\n\nCANDIDATE PROJECTS:\n${projectsText}`
+          `From: ${params.sender}\nCC: ${params.ccAddresses.join(", ") || "(none)"}\nSubject: ${params.subject}\n\n` +
+          `Body:\n${params.body}\n\n---\n\n${attachmentsText}\n\n---\n\nCANDIDATE PROJECTS:\n${projectsText}`
       }
     ]
   });

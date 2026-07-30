@@ -700,6 +700,12 @@ model InboundEmail {
   suggestedType              String?
   suggestedVariationItemId   String?
   aiSummary                  String?
+  // Set when classifyAndSuggest (lib/inbound-email.ts) throws — a short,
+  // human-readable reason, surfaced in the Incoming Emails UI so a failed
+  // classification is visibly distinct from "AI genuinely found nothing"
+  // rather than silently leaving the row blank either way. Cleared on a
+  // successful (re)classification.
+  classificationError        String?
 
   reviewedByUserId String?
   reviewedAt       DateTime?

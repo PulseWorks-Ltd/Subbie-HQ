@@ -16,13 +16,14 @@ function formatDate(date: Date) {
 export function IncomingEmailCard({
   email,
   onReview,
-  onDismissed
+  onChanged
 }: {
   email: IncomingEmailRow;
   onReview: () => void;
-  onDismissed: () => void;
+  onChanged: () => void;
 }) {
   const [isDismissing, setIsDismissing] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   async function handleDismiss() {
     if (!confirm("Dismiss this email? It won't be filed anywhere, but the record is kept in case you need it later.")) {
@@ -35,7 +36,18 @@ export function IncomingEmailCard({
       body: JSON.stringify({ action: "dismiss" })
     });
     setIsDismissing(false);
-    onDismissed();
+    onChanged();
+  }
+
+  async function handleRetryClassification() {
+    setIsRetrying(true);
+    await fetch(`/api/organisation/incoming-emails/${email.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reclassify" })
+    });
+    setIsRetrying(false);
+    onChanged();
   }
 
   return (
@@ -51,36 +63,58 @@ export function IncomingEmailCard({
         <p className="text-xs text-[#4c739a] dark:text-slate-400 shrink-0">{formatDate(email.receivedAt)}</p>
       </div>
 
-      {email.aiSummary && <p className="text-sm text-[#0d141b] dark:text-slate-200">{email.aiSummary}</p>}
+      {email.classificationError ? (
+        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 p-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-red-700 dark:text-red-400">AI classification failed</p>
+            <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{email.classificationError}</p>
+            <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-0.5">
+              This is different from "nothing detected" — the AI call itself didn't complete. You can still file this
+              manually, or try again below.
+            </p>
+          </div>
+          <button
+            onClick={handleRetryClassification}
+            disabled={isRetrying}
+            className="h-8 px-3 rounded-lg border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 text-xs font-bold disabled:opacity-60 shrink-0"
+          >
+            {isRetrying ? "Retrying..." : "Retry"}
+          </button>
+        </div>
+      ) : (
+        <>
+          {email.aiSummary && <p className="text-sm text-[#0d141b] dark:text-slate-200">{email.aiSummary}</p>}
 
-      <div className="flex flex-wrap gap-2">
-        <span
-          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
-            email.suggestedProject
-              ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-          }`}
-        >
-          Project: {email.suggestedProject?.name ?? "not detected"}
-          {email.suggestedProject && email.suggestedProjectConfidence != null && (
-            <span className="ml-1 opacity-70">({Math.round(email.suggestedProjectConfidence * 100)}%)</span>
-          )}
-        </span>
-        <span
-          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
-            email.suggestedType
-              ? "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-          }`}
-        >
-          Type: {email.suggestedType ?? "not detected"}
-        </span>
-        {email.suggestedVariationItem && (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-            Linked: {email.suggestedVariationItem.reference}
-          </span>
-        )}
-      </div>
+          <div className="flex flex-wrap gap-2">
+            <span
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                email.suggestedProject
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              }`}
+            >
+              Project: {email.suggestedProject?.name ?? "not detected"}
+              {email.suggestedProject && email.suggestedProjectConfidence != null && (
+                <span className="ml-1 opacity-70">({Math.round(email.suggestedProjectConfidence * 100)}%)</span>
+              )}
+            </span>
+            <span
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                email.suggestedType
+                  ? "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                  : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              }`}
+            >
+              Type: {email.suggestedType ?? "not detected"}
+            </span>
+            {email.suggestedVariationItem && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                Linked: {email.suggestedVariationItem.reference}
+              </span>
+            )}
+          </div>
+        </>
+      )}
 
       {email.attachments.length > 0 && (
         <div className="flex flex-wrap gap-2">

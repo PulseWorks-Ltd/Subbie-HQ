@@ -1,5 +1,13 @@
 import { prisma } from "./prisma";
 import { classifyInboundEmail } from "./grok";
+import { getSignedDownloadUrl } from "./s3";
+import { extractPdfPagesWithOcrFallback, UnreadablePdfError } from "./pdf-text-extraction";
+
+// Keeps a single pathological attachment (a huge multi-hundred-page PDF)
+// from blowing out the classification prompt — inbound-email attachments
+// (Site Instructions, variation notices) are realistically a handful of
+// pages, so this is a generous safety cap, not a real-world limit.
+const MAX_ATTACHMENT_TEXT_CHARS = 12_000;
 
 // Each Organisation gets its own address via a "+" tag on one shared
 // SendGrid Inbound Parse domain (see docs/staging.md / .env.example for the
@@ -109,25 +117,60 @@ async function getCandidateProjectsForClassification(organisationId: string) {
   }));
 }
 
+// PDF-only (matches the existing extractPdfPagesWithOcrFallback tool this
+// reuses, see lib/pdf-text-extraction.ts) — a non-PDF attachment (image,
+// Word doc) still gets classified from filename + email context alone,
+// same as before this fix, rather than failing the whole email over one
+// attachment type this doesn't yet handle.
+async function extractAttachmentText(attachment: { storageKey: string; contentType: string }): Promise<string | null> {
+  if (attachment.contentType !== "application/pdf") return null;
+
+  try {
+    const signedUrl = await getSignedDownloadUrl(attachment.storageKey);
+    const response = await fetch(signedUrl);
+    const buffer = new Uint8Array(await response.arrayBuffer());
+    const pages = await extractPdfPagesWithOcrFallback(buffer);
+    const text = pages.map((p) => p.text).join("\n\n");
+    return text.slice(0, MAX_ATTACHMENT_TEXT_CHARS);
+  } catch (error) {
+    // A genuinely unreadable PDF (UnreadablePdfError) or any other
+    // extraction failure shouldn't kill the whole classification — just
+    // fall back to filename-only for this one attachment, same as a
+    // non-PDF file.
+    console.error(`Could not extract text from attachment ${attachment.storageKey}:`, error);
+    return null;
+  }
+}
+
 // Runs Grok classification for a just-received InboundEmail and writes the
 // suggested* fields back — deliberately NOT awaited by the webhook route
 // (see app/api/webhooks/inbound-email/route.ts) so SendGrid gets a fast 200
-// regardless of how long the AI call takes; any failure here just leaves the
-// suggestions blank, which is the same safe "not detected" state a low-
-// confidence result would produce anyway (see Incoming Emails Task 2).
+// regardless of how long the AI call takes. A failure here now persists a
+// visible classificationError on the row (see Task 1.1) instead of silently
+// leaving it indistinguishable from a genuinely low-confidence "not
+// detected" result — the two are different situations and a reviewer
+// should be able to tell them apart.
 export async function classifyAndSuggest(emailId: string): Promise<void> {
   try {
     const email = await prisma.inboundEmail.findUnique({ where: { id: emailId }, include: { attachments: true } });
     if (!email) return;
 
-    const candidateProjects = await getCandidateProjectsForClassification(email.organisationId);
+    const [candidateProjects, attachments] = await Promise.all([
+      getCandidateProjectsForClassification(email.organisationId),
+      Promise.all(
+        email.attachments.map(async (attachment) => ({
+          fileName: attachment.fileName,
+          extractedText: await extractAttachmentText(attachment)
+        }))
+      )
+    ]);
 
     const result = await classifyInboundEmail({
       sender: email.sender,
       ccAddresses: email.ccAddresses,
       subject: email.subject,
       body: email.body,
-      attachmentNames: email.attachments.map((a) => a.fileName),
+      attachments,
       candidateProjects
     });
 
@@ -146,11 +189,16 @@ export async function classifyAndSuggest(emailId: string): Promise<void> {
         suggestedProjectConfidence: matchedProject ? result.projectConfidence : null,
         suggestedType: result.suggestedType,
         suggestedVariationItemId: matchedVariationItem?.id,
-        aiSummary: result.summary
+        aiSummary: result.summary,
+        classificationError: null
       }
     });
   } catch (error) {
     console.error(`Failed to classify inbound email ${emailId}:`, error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    await prisma.inboundEmail
+      .update({ where: { id: emailId }, data: { classificationError: message.slice(0, 500) } })
+      .catch(() => {});
   }
 }
 

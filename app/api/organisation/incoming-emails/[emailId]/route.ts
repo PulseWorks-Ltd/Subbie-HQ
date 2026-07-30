@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
 import { getOrganisationMembership } from "@/lib/organisation";
 import { hasModuleAccess } from "@/lib/permissions";
-import { dismissInboundEmail, fileInboundEmail } from "@/lib/inbound-email";
+import { classifyAndSuggest, dismissInboundEmail, fileInboundEmail } from "@/lib/inbound-email";
 
 const patchSchema = z.discriminatedUnion("action", [
   z.object({
@@ -13,7 +13,8 @@ const patchSchema = z.discriminatedUnion("action", [
     category: z.string().min(1),
     variationItemId: z.string().optional()
   }),
-  z.object({ action: z.literal("dismiss") })
+  z.object({ action: z.literal("dismiss") }),
+  z.object({ action: z.literal("reclassify") })
 ]);
 
 export async function PATCH(request: Request, context: { params: { emailId: string } }) {
@@ -40,6 +41,18 @@ export async function PATCH(request: Request, context: { params: { emailId: stri
     const result = await dismissInboundEmail(emailId, userId);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (payload.action === "reclassify") {
+    // Awaited here (unlike the webhook's fire-and-forget call) — this is a
+    // deliberate user action clicking "Retry," so the response should
+    // reflect the actual outcome rather than returning immediately.
+    await classifyAndSuggest(emailId);
+    const updated = await prisma.inboundEmail.findUnique({ where: { id: emailId } });
+    if (updated?.classificationError) {
+      return NextResponse.json({ error: updated.classificationError }, { status: 422 });
     }
     return NextResponse.json({ ok: true });
   }

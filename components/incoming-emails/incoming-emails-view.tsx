@@ -19,6 +19,7 @@ export type IncomingEmailRow = {
   suggestedType: string | null;
   suggestedVariationItem: { id: string; reference: string; title: string } | null;
   aiSummary: string | null;
+  classificationError: string | null;
   attachments: IncomingEmailAttachment[];
 };
 export type ProjectOption = {
@@ -92,7 +93,7 @@ export function IncomingEmailsView({
               key={email.id}
               email={email}
               onReview={() => setReviewingEmailId(email.id)}
-              onDismissed={() => router.refresh()}
+              onChanged={() => router.refresh()}
             />
           ))}
         </div>

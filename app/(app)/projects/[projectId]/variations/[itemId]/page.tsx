@@ -25,7 +25,9 @@ export default async function VariationItemPage({
     redirect(`/projects/${projectId}/variations`);
   }
 
-  const [dayWorksSheets, photos, correspondence, updates] = await Promise.all([
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { mainContractorId: true } });
+
+  const [dayWorksSheets, photos, correspondence, updates, contacts] = await Promise.all([
     prisma.dayWorksSheet.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.variationPhoto.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.correspondence.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
@@ -44,7 +46,14 @@ export default async function VariationItemPage({
         }
       },
       orderBy: { createdAt: "desc" }
-    })
+    }),
+    project?.mainContractorId
+      ? prisma.mainContractorContact.findMany({
+          where: { mainContractorId: project.mainContractorId },
+          select: { id: true, name: true, email: true, role: true },
+          orderBy: { name: "asc" }
+        })
+      : Promise.resolve([])
   ]);
 
   return (
@@ -55,6 +64,7 @@ export default async function VariationItemPage({
       photos={photos}
       correspondence={correspondence}
       updates={updates}
+      contacts={contacts}
     />
   );
 }

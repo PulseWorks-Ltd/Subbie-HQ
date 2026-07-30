@@ -15,6 +15,7 @@ import { VariationLinkedUpdatesSection } from "@/components/variations/variation
 
 type Author = { id: string; name: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
@@ -33,7 +34,8 @@ export function VariationDetailView({
   dayWorksSheets,
   photos,
   correspondence,
-  updates
+  updates,
+  contacts
 }: {
   projectId: string;
   item: VariationItem;
@@ -41,6 +43,7 @@ export function VariationDetailView({
   photos: VariationPhoto[];
   correspondence: Correspondence[];
   updates: UpdateWithReplies[];
+  contacts: ContactOption[];
 }) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -142,7 +145,7 @@ export function VariationDetailView({
         <VariationCorrespondenceSection projectId={projectId} itemId={item.id} correspondence={correspondence} />
       </div>
 
-      <VariationLinkedUpdatesSection projectId={projectId} updates={updates} />
+      <VariationLinkedUpdatesSection projectId={projectId} updates={updates} contacts={contacts} />
 
       <VariationItemFormDialog
         projectId={projectId}

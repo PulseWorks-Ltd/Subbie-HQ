@@ -3,6 +3,7 @@ import { UpdateThread } from "@/components/updates/update-thread";
 
 type Author = { id: string; name: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
@@ -12,10 +13,12 @@ type UpdateWithReplies = Update & {
 
 export function VariationLinkedUpdatesSection({
   projectId,
-  updates
+  updates,
+  contacts
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
+  contacts: ContactOption[];
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -25,7 +28,7 @@ export function VariationLinkedUpdatesSection({
       ) : (
         <div className="flex flex-col gap-3">
           {updates.map((update) => (
-            <UpdateThread key={update.id} projectId={projectId} update={update} />
+            <UpdateThread key={update.id} projectId={projectId} update={update} contacts={contacts} />
           ))}
         </div>
       )}

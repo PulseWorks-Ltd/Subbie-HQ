@@ -747,6 +747,56 @@ export async function draftExternalUpdateEmail(params: {
   return DraftedUpdateEmailSchema.parse(JSON.parse(raw));
 }
 
+// Same drafted shape as draftExternalUpdateEmail, but for summarising an
+// entire existing Update thread (the original update plus every reply, in
+// order) into one outbound email — used when generating a follow-up email
+// from a thread after the fact, rather than while composing a brand-new
+// update. See app/api/projects/[projectId]/updates/[updateId]/draft-summary-email
+// — same "draft, then human reviews before sending" rule applies.
+export async function draftUpdateThreadSummaryEmail(params: {
+  projectName: string;
+  authorName: string;
+  entries: { authorName: string; createdAt: Date; body: string }[];
+  photoCount: number;
+}): Promise<DraftedUpdateEmail> {
+  const threadText = params.entries
+    .map((entry) => `[${entry.createdAt.toISOString().slice(0, 10)}] ${entry.authorName}: ${entry.body}`)
+    .join("\n\n");
+
+  const response = await getClient().chat.completions.create({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You summarise an internal discussion thread — a subcontractor's progress-update thread with several back-and-forth entries — into a single professional progress-update email suitable for sending to a Main Contractor or client. " +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"subject": string, "body": string}. ' +
+          "subject: a short, clear subject line referencing the project and that this is a progress update. " +
+          "body: a complete, ready-to-send email that summarises the WHOLE thread — cover every distinct point raised across all entries below, not just the most recent one, written as one coherent narrative rather than a list of separate messages. Do not invent details not present in the thread. " +
+          (params.photoCount > 0
+            ? `a brief mention that ${params.photoCount} photo${params.photoCount === 1 ? " is" : "s are"} attached, `
+            : "") +
+          "a professional sign-off. " +
+          "Do not include placeholder brackets like [Your Name] — sign off with the author's name given below (the person sending this summary, not necessarily every author quoted in the thread). " +
+          "Professional tone throughout — this is going to a Main Contractor or client, not an internal team chat. Do not fabricate figures, dates, or claims the thread doesn't support."
+      },
+      {
+        role: "user",
+        content: `Project: ${params.projectName}\nAuthor (sending this email): ${params.authorName}\n\nDiscussion thread, chronological:\n${threadText}`
+      }
+    ]
+  });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return DraftedUpdateEmailSchema.parse(JSON.parse(raw));
+}
+
 // .nullish() (not .nullable()) — same failure mode already found and fixed
 // once in the contract-review synthesis schema: this model reliably writes
 // explicit null for a field it considered, but sometimes omits a key

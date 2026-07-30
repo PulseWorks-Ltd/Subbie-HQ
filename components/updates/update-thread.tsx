@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Update, UpdateAttachment } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
+import { GenerateOutboundEmailPanel } from "@/components/updates/generate-outbound-email-panel";
 
 type Author = { id: string; name: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
@@ -28,12 +30,40 @@ function authorLabel(author: Author) {
   return author.name ?? author.email;
 }
 
-export function UpdateThread({ projectId, update }: { projectId: string; update: UpdateWithReplies }) {
+export function UpdateThread({
+  projectId,
+  update,
+  contacts
+}: {
+  projectId: string;
+  update: UpdateWithReplies;
+  contacts: ContactOption[];
+}) {
   const router = useRouter();
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
+  const [sentMessage, setSentMessage] = useState<string | null>(null);
+
+  // Every photo across the whole thread (the top-level update plus every
+  // reply), so the outbound-email panel can offer them all for selection —
+  // not just the ones on the most recent entry.
+  const photoOptions = [
+    ...update.attachments.map((attachment) => ({
+      id: attachment.id,
+      fileName: attachment.fileName,
+      authorLabel: authorLabel(update.author)
+    })),
+    ...update.replies.flatMap((reply) =>
+      reply.attachments.map((attachment) => ({
+        id: attachment.id,
+        fileName: attachment.fileName,
+        authorLabel: authorLabel(reply.author)
+      }))
+    )
+  ];
 
   async function handleReply(event: React.FormEvent) {
     event.preventDefault();
@@ -138,14 +168,35 @@ export function UpdateThread({ projectId, update }: { projectId: string; update:
               </button>
             </div>
           </form>
+        ) : isGeneratingEmail ? (
+          <GenerateOutboundEmailPanel
+            projectId={projectId}
+            updateId={update.id}
+            contacts={contacts}
+            photoOptions={photoOptions}
+            onCancel={() => setIsGeneratingEmail(false)}
+            onSent={() => {
+              setIsGeneratingEmail(false);
+              setSentMessage("Outbound email sent and logged to Correspondence.");
+            }}
+          />
         ) : (
-          <button
-            onClick={() => setIsReplying(true)}
-            className="text-xs font-bold text-primary hover:underline"
-          >
-            Reply
-          </button>
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsReplying(true)} className="text-xs font-bold text-primary hover:underline">
+              Reply
+            </button>
+            <button
+              onClick={() => {
+                setSentMessage(null);
+                setIsGeneratingEmail(true);
+              }}
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              Generate outbound email
+            </button>
+          </div>
         )}
+        {sentMessage && <p className="text-xs text-green-600 dark:text-green-400 mt-2">{sentMessage}</p>}
       </div>
     </div>
   );

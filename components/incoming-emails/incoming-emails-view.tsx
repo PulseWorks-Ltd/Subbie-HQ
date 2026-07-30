@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CopyLinkButton } from "@/components/get-app/copy-link-button";
 import { IncomingEmailCard } from "@/components/incoming-emails/incoming-email-card";
@@ -46,6 +46,24 @@ export function IncomingEmailsView({
   const router = useRouter();
   const [reviewingEmailId, setReviewingEmailId] = useState<string | null>(null);
   const reviewingEmail = emails.find((email) => email.id === reviewingEmailId) ?? null;
+
+  // This page is a Server Component fetched once on load — nothing was
+  // ever re-fetching it while the user just sat here, so a genuinely new
+  // inbound email never appeared until they manually refreshed or
+  // navigated away and back. Poll the same server refresh the approve/
+  // dismiss actions below already use (20s, matching the Dashboard's
+  // unread-updates poll interval) rather than building a separate
+  // client-fetch path. Paused while the review dialog is open so a poll
+  // can never yank it closed out from under an in-progress review — it
+  // resumes the instant the dialog closes.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!reviewingEmailId) {
+        router.refresh();
+      }
+    }, 20_000);
+    return () => clearInterval(interval);
+  }, [reviewingEmailId, router]);
 
   function handleDone() {
     setReviewingEmailId(null);

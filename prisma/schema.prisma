@@ -165,6 +165,7 @@ model User {
   sentInvites             OrganisationInvite[]
   updates                 Update[]
   pushSubscriptions       PushSubscription[]
+  updateReads             UpdateRead[]
 }
 
 model Organisation {
@@ -797,6 +798,23 @@ model Update {
   attachments    UpdateAttachment[]
   recipients     UpdateRecipient[]
   correspondence Correspondence[]
+  reads          UpdateRead[]
+}
+
+// Per-user read state for an Update — private to each user (one user
+// marking an Update read has no effect on whether it still shows unread for
+// anyone else with access to the same project). Pre-existing Updates have
+// no row here for anyone, so they correctly default to "unread" on rollout.
+model UpdateRead {
+  id       String   @id @default(cuid())
+  userId   String
+  updateId String
+  readAt   DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  update Update @relation(fields: [updateId], references: [id])
+
+  @@unique([userId, updateId])
 }
 
 // Who an external Update was actually sent to — a mix of saved Main

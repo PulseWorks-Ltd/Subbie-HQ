@@ -182,6 +182,11 @@ export async function POST(request: Request, context: { params: { projectId: str
     }
   });
 
+  // The author has obviously "read" what they just wrote — without this,
+  // every update they post would immediately show up as unread in their own
+  // Dashboard Updates section.
+  await prisma.updateRead.create({ data: { userId, updateId: update.id } });
+
   // Applying a tagged % complete depends on the organisation's completion-update
   // setting: auto-apply straight to percentComplete, or park it as a suggestion
   // pending Admin/PM confirmation. Projects with no organisation (legacy/personal)

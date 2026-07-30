@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { DashboardItem, DashboardItemType } from "@/lib/dashboard";
+import type { UnreadUpdateItem } from "@/lib/updates-feed";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
+import { DashboardItemRow } from "@/components/dashboard/dashboard-item-row";
+import { UpdatesDashboardSection } from "@/components/dashboard/updates-dashboard-section";
 
 const SECTIONS: { key: DashboardItemType; label: string; icon: string }[] = [
   { key: "site-instruction", label: "Site Instructions", icon: "assignment" },
@@ -17,7 +20,13 @@ function sortItems(items: DashboardItem[]) {
   });
 }
 
-export function DashboardView({ initialItems }: { initialItems: DashboardItem[] }) {
+export function DashboardView({
+  initialItems,
+  initialUnreadUpdates
+}: {
+  initialItems: DashboardItem[];
+  initialUnreadUpdates: UnreadUpdateItem[];
+}) {
   const sections = SECTIONS.map((section) => {
     const items = sortItems(initialItems.filter((item) => item.type === section.key));
     const overdueCount = items.filter((item) => item.isOverdue).length;
@@ -74,13 +83,31 @@ export function DashboardView({ initialItems }: { initialItems: DashboardItem[] 
                 label={section.label}
                 icon={section.icon}
                 items={section.items}
-                overdueCount={section.overdueCount}
-                upcomingCount={section.upcomingCount}
+                itemKey={(item) => `${item.type}-${item.id}`}
+                renderItem={(item) => <DashboardItemRow item={item} />}
                 defaultExpanded={section.overdueCount > 0}
+                badges={
+                  <>
+                    {section.overdueCount > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                        {section.overdueCount} overdue
+                      </span>
+                    )}
+                    {section.upcomingCount > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        {section.upcomingCount} upcoming
+                      </span>
+                    )}
+                  </>
+                }
               />
             ))}
           </div>
         )}
+
+        <div className="mt-4">
+          <UpdatesDashboardSection initialItems={initialUnreadUpdates} />
+        </div>
       </div>
     </main>
   );

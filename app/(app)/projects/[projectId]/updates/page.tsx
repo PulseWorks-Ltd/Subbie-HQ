@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
+import { markProjectUpdatesRead } from "@/lib/updates-feed";
 import { UpdatesView } from "@/components/updates/updates-view";
 
 export default async function UpdatesPage({ params }: { params: Promise<{ projectId: string }> }) {
@@ -9,10 +10,18 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
 
   const session = await auth();
   const userId = session?.user?.id;
-  const canAccess = userId ? await requireModuleAccess(projectId, userId, "updates") : false;
+  if (!userId) {
+    redirect(`/projects/${projectId}`);
+  }
+  const canAccess = await requireModuleAccess(projectId, userId, "updates");
   if (!canAccess) {
     redirect(`/projects/${projectId}`);
   }
+
+  // Loading this page IS viewing every Update on it in full (see
+  // lib/updates-feed.ts's markProjectUpdatesRead) — covers both a direct
+  // visit and navigating here from the Dashboard's Updates section.
+  await markProjectUpdatesRead(projectId, userId);
 
   const canSeeVariations = userId ? await requireModuleAccess(projectId, userId, "variations") : false;
   const canSeeSiteInstructions = userId ? await requireModuleAccess(projectId, userId, "site_instructions") : false;

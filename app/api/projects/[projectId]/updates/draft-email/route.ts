@@ -33,7 +33,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   const payload = requestSchema.parse(await request.json());
 
   const [project, user] = await Promise.all([
-    prisma.project.findUnique({ where: { id: projectId }, select: { name: true } }),
+    prisma.project.findUnique({ where: { id: projectId }, select: { name: true, organisationId: true } }),
     prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, email: true } })
   ]);
   if (!project) {
@@ -41,12 +41,15 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
 
   try {
-    const drafted = await draftExternalUpdateEmail({
-      roughText: payload.body,
-      projectName: project.name,
-      authorName: (user ? formatUserName(user) : null) ?? user?.email ?? "The team",
-      photoCount: payload.photoCount
-    });
+    const drafted = await draftExternalUpdateEmail(
+      {
+        roughText: payload.body,
+        projectName: project.name,
+        authorName: (user ? formatUserName(user) : null) ?? user?.email ?? "The team",
+        photoCount: payload.photoCount
+      },
+      { organisationId: project.organisationId, userId }
+    );
     return NextResponse.json({ drafted });
   } catch (error) {
     console.error("Drafting external update email failed:", error);

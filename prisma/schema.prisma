@@ -163,6 +163,11 @@ model User {
   // Free text — e.g. "Director", "Site Manager", "Quantity Surveyor", not a
   // fixed enum. Optional, same as MainContractorContact.role elsewhere.
   jobTitle                String?
+  // Grants access to /platform-admin (AI usage cost dashboard) — deliberately
+  // NOT settable from any UI/API, since this is a single-person,
+  // manually-granted capability for the platform owner, not an org-level
+  // role. Only ever flipped via a direct database write.
+  isPlatformAdmin         Boolean              @default(false)
   createdAt               DateTime             @default(now())
   memberships             ProjectMember[]
   organisationMemberships OrganisationMember[]
@@ -1000,4 +1005,59 @@ model UpdateAttachment {
   createdAt   DateTime @default(now())
 
   update Update @relation(fields: [updateId], references: [id])
+}
+
+// One row per AI (Grok) call, written by lib/ai-usage.ts — the single place
+// every lib/grok.ts function and lib/transcription.ts's STT call reports
+// through, so cost math and logging never gets duplicated per call site.
+// Deliberately has NO relations (plain String org/user ids, no @relation) —
+// this is a durable, append-only cost ledger that must keep every row even
+// if the referenced org/user/project is later deleted, and must never be
+// blocked by an FK constraint from a fire-and-forget background job whose
+// org/user context is genuinely unknown (e.g. the inbound-email webhook).
+// feature is a plain string, not an enum, matching this codebase's existing
+// "extensible preset list" convention (see lib/trades.ts, TRADE_PRESETS) —
+// new AI features shouldn't need a migration to start logging.
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  feature          String
+  organisationId   String?
+  userId           String?
+  model            String
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  // Computed from ACTUAL promptTokens/completionTokens returned by the Grok
+  // response against the AiModelPricing row for `model` at call time — never
+  // a flat per-feature estimate. Null when a call fails before usage is
+  // known, or when a matching pricing row doesn't exist.
+  costUsd          Decimal? @db.Decimal(10, 6)
+  success          Boolean
+  errorMessage     String?
+  // Optional, cheap trace-back to whatever triggered this specific call
+  // (e.g. a contractReviewId, documentId, or inboundEmailId) — deliberately
+  // just a free-text label, not a relation, per the "don't over-engineer
+  // this" instruction; only meant for spotting an outlier and knowing where
+  // to look, not for joining.
+  contextRef       String?
+  createdAt        DateTime @default(now())
+
+  @@index([feature, createdAt])
+  @@index([organisationId, createdAt])
+}
+
+// Configurable per-model $/token pricing, so a rate change (xAI repricing,
+// or switching GROK_MODEL to a different tier) never requires a code
+// change — lib/ai-usage.ts looks up the row matching the model string used
+// for a given call. Single current rate per model, no historical
+// effective-dating: a rate change going forward is fine to apply from the
+// moment it's edited, since this dashboard is for cost/usage trend-spotting,
+// not for reproducing an exact historical invoice.
+model AiModelPricing {
+  id                    String   @id @default(cuid())
+  model                 String   @unique
+  inputPricePerMillion  Decimal  @db.Decimal(10, 4)
+  outputPricePerMillion Decimal  @db.Decimal(10, 4)
+  updatedAt             DateTime @updatedAt
+  createdAt             DateTime @default(now())
 }

@@ -33,9 +33,9 @@ export async function POST(request: Request, context: { params: { projectId: str
     return NextResponse.json({ error: "Only PDF files can be parsed automatically." }, { status: 400 });
   }
 
-  if (tradeReference) {
-    await prisma.project.update({ where: { id: projectId }, data: { tradeReference } });
-  }
+  const projectForOrg = tradeReference
+    ? await prisma.project.update({ where: { id: projectId }, data: { tradeReference }, select: { organisationId: true } })
+    : await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
 
   const buffer = new Uint8Array(await file.arrayBuffer());
   const uploadKey = `projects/${projectId}/programme/${Date.now()}-${file.name}`;
@@ -61,7 +61,10 @@ export async function POST(request: Request, context: { params: { projectId: str
   // supersede-previous-unconfirmed-items logic) run in the background so
   // this upload response stays fast even for large programme PDFs. The
   // frontend polls processingStatus on this document until it's "ready".
-  void processProgrammeDocument(projectId, document.id, tradeReference).catch((error) => {
+  void processProgrammeDocument(projectId, document.id, tradeReference, {
+    organisationId: projectForOrg?.organisationId ?? null,
+    userId
+  }).catch((error) => {
     console.error("Unhandled error in processProgrammeDocument:", error);
   });
 

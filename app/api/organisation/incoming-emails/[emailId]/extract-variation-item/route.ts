@@ -33,7 +33,7 @@ export async function POST(request: Request, context: { params: { emailId: strin
   const payload = requestSchema.parse(await request.json());
 
   try {
-    const extracted = await extractVariationItemDetailsFromEmail(emailId, payload.type);
+    const extracted = await extractVariationItemDetailsFromEmail(emailId, payload.type, userId);
     return NextResponse.json({ extracted });
   } catch (error) {
     console.error(`Failed to extract variation item details from inbound email ${emailId}:`, error);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { transcribeAudio } from "@/lib/transcription";
+import { prisma } from "@/lib/prisma";
 
 // Pure utility endpoint — transcribes a recorded voice note into text for
 // the update composer to pre-fill (see components/updates/update-composer.tsx).
@@ -28,7 +29,11 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
 
   const buffer = new Uint8Array(await audio.arrayBuffer());
-  const text = await transcribeAudio(buffer, audio.name || "recording.webm");
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
+  const text = await transcribeAudio(buffer, audio.name || "recording.webm", {
+    organisationId: project?.organisationId ?? null,
+    userId
+  });
 
   if (text === null) {
     return NextResponse.json(

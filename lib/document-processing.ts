@@ -34,7 +34,11 @@ function unreadableMessage(): string {
 // processingStatus. Never throws to its caller — always resolves, recording
 // success/failure on the ContractDocument row itself, since by design
 // nothing is awaiting this call directly.
-export async function processContractDocument(projectId: string, documentId: string): Promise<void> {
+export async function processContractDocument(
+  projectId: string,
+  documentId: string,
+  trigger: { organisationId: string | null; userId: string | null }
+): Promise<void> {
   await prisma.contractDocument.update({ where: { id: documentId }, data: { processingStatus: "processing" } });
 
   try {
@@ -42,10 +46,11 @@ export async function processContractDocument(projectId: string, documentId: str
     const buffer = await fetchPdfBuffer(document.storageKey);
     const pages = await extractPdfPagesWithOcrFallback(buffer);
 
+    const usageContext = { organisationId: trigger.organisationId, userId: trigger.userId, contextRef: documentId };
     const extractedBatches = await Promise.all(
       batchPages(pages).map((batch) => {
         const batchText = batch.map((p) => `--- PAGE ${p.num} ---\n${p.text}`).join("\n\n");
-        return extractContractClausesFromText(batchText);
+        return extractContractClausesFromText(batchText, usageContext);
       })
     );
     const extractedClauses = extractedBatches.flat();
@@ -83,7 +88,8 @@ export async function processContractDocument(projectId: string, documentId: str
 export async function processProgrammeDocument(
   projectId: string,
   documentId: string,
-  tradeReference: string | undefined
+  tradeReference: string | undefined,
+  trigger: { organisationId: string | null; userId: string | null }
 ): Promise<void> {
   await prisma.contractDocument.update({ where: { id: documentId }, data: { processingStatus: "processing" } });
 
@@ -93,7 +99,11 @@ export async function processProgrammeDocument(
     const pages = await extractPdfPagesWithOcrFallback(buffer);
     const fullText = pages.map((p) => `--- PAGE ${p.num} ---\n${p.text}`).join("\n\n");
 
-    const extracted = await extractProgrammeFromText(fullText, tradeReference);
+    const extracted = await extractProgrammeFromText(fullText, tradeReference, {
+      organisationId: trigger.organisationId,
+      userId: trigger.userId,
+      contextRef: documentId
+    });
 
     const previousDocument = await prisma.contractDocument.findFirst({
       where: { projectId, documentType: "programme", id: { not: documentId } },

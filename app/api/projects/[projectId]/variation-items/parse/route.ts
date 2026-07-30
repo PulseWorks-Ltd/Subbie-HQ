@@ -3,6 +3,7 @@ import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/
 import { uploadToS3 } from "@/lib/s3";
 import { extractVariationItemFromText } from "@/lib/grok";
 import { extractPdfPagesWithOcrFallback, UnreadablePdfError } from "@/lib/pdf-text-extraction";
+import { prisma } from "@/lib/prisma";
 
 function moduleForType(type: "variation" | "site_instruction") {
   return type === "variation" ? ("variations" as const) : ("site_instructions" as const);
@@ -55,7 +56,8 @@ export async function POST(request: Request, context: { params: { projectId: str
     const pages = await extractPdfPagesWithOcrFallback(buffer);
     const text = pages.map((p) => p.text).join("\n\n");
 
-    extracted = await extractVariationItemFromText(text, type);
+    const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
+    extracted = await extractVariationItemFromText(text, type, { organisationId: project?.organisationId ?? null, userId });
   } catch (error) {
     const message =
       error instanceof UnreadablePdfError

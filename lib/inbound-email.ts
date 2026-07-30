@@ -193,14 +193,22 @@ async function getCombinedEmailText(email: { body: string; attachments: { storag
 // uploaded PDF's. Called once a reviewer picks "create a new item" for a
 // Variation/Site Instruction-classified email; they review/edit the result
 // before it's ever saved (see fileInboundEmail's createVariationItem).
-export async function extractVariationItemDetailsFromEmail(emailId: string, itemType: "variation" | "site_instruction") {
+export async function extractVariationItemDetailsFromEmail(
+  emailId: string,
+  itemType: "variation" | "site_instruction",
+  triggeredByUserId?: string
+) {
   const email = await prisma.inboundEmail.findUnique({ where: { id: emailId }, include: { attachments: true } });
   if (!email) {
     throw new Error("Email not found.");
   }
 
   const combinedText = await getCombinedEmailText(email);
-  return extractVariationItemFromText(combinedText, itemType);
+  return extractVariationItemFromText(combinedText, itemType, {
+    organisationId: email.organisationId,
+    userId: triggeredByUserId ?? null,
+    contextRef: emailId
+  });
 }
 
 // Runs Grok classification for a just-received InboundEmail and writes the
@@ -211,7 +219,7 @@ export async function extractVariationItemDetailsFromEmail(emailId: string, item
 // leaving it indistinguishable from a genuinely low-confidence "not
 // detected" result — the two are different situations and a reviewer
 // should be able to tell them apart.
-export async function classifyAndSuggest(emailId: string): Promise<void> {
+export async function classifyAndSuggest(emailId: string, triggeredByUserId?: string): Promise<void> {
   try {
     const email = await prisma.inboundEmail.findUnique({ where: { id: emailId }, include: { attachments: true } });
     if (!email) return;
@@ -226,14 +234,17 @@ export async function classifyAndSuggest(emailId: string): Promise<void> {
       )
     ]);
 
-    const result = await classifyInboundEmail({
-      sender: email.sender,
-      ccAddresses: email.ccAddresses,
-      subject: email.subject,
-      body: email.body,
-      attachments,
-      candidateProjects
-    });
+    const result = await classifyInboundEmail(
+      {
+        sender: email.sender,
+        ccAddresses: email.ccAddresses,
+        subject: email.subject,
+        body: email.body,
+        attachments,
+        candidateProjects
+      },
+      { organisationId: email.organisationId, userId: triggeredByUserId ?? null, contextRef: emailId }
+    );
 
     // Grok is told to only pick ids from the candidate list, but never trust
     // a model's output blindly — re-validate before persisting a suggestion.

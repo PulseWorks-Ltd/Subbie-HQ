@@ -32,6 +32,8 @@ export async function PATCH(request: Request, context: { params: { projectId: st
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
+  const trigger = { organisationId: project?.organisationId ?? null, userId };
   if (existing.source !== "response_letter_draft") {
     return NextResponse.json({ error: "Outcomes can only be logged against a response letter draft." }, { status: 400 });
   }
@@ -56,10 +58,10 @@ export async function PATCH(request: Request, context: { params: { projectId: st
     outcomeContractDocumentId = document.id;
 
     void (async () => {
-      await processContractDocument(projectId, document.id);
+      await processContractDocument(projectId, document.id, trigger);
       const processed = await prisma.contractDocument.findUnique({ where: { id: document.id } });
       if (processed?.processingStatus === "ready") {
-        await startContractReview(projectId, document.id);
+        await startContractReview(projectId, document.id, trigger);
       }
     })().catch((error) => {
       console.error("Unhandled error processing revised contract outcome:", error);

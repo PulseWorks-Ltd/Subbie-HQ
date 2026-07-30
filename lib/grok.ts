@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { z } from "zod";
 import { INBOUND_EMAIL_TYPE_PRESETS } from "./inbound-email-types";
+import { recordAiUsageSuccess, recordAiUsageFailure, type AiUsageContext } from "./ai-usage";
 
 // Constructed lazily (not at module scope) — the OpenAI SDK validates apiKey
 // presence eagerly in its constructor, which would crash Next.js's build-time
@@ -34,6 +35,35 @@ function getClient() {
 // NOTE: xAI updates model names periodically — verify this is still current
 // (https://docs.x.ai/docs/models) and adjust if the API starts returning a 404.
 const GROK_MODEL = "grok-4-latest";
+
+// The single low-level call site every live function in this file goes
+// through — centralizes usage logging (lib/ai-usage.ts) so cost-calculation
+// logic lives in exactly one place, never duplicated per function. Logs on
+// BOTH success and failure (per the task brief's requirement that a failed
+// call still records feature/org/user/timestamp/failure status), then
+// re-throws the original error unchanged so every caller's existing
+// try/catch behavior is untouched. Logging is awaited (not fire-and-forget)
+// so a row is durably written before this returns — this data feeds a
+// commercially-sensitive cost dashboard, not a best-effort audit trail.
+async function callGrok(
+  params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+  usageContext: AiUsageContext
+): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  try {
+    const response = await getClient().chat.completions.create(params);
+    await recordAiUsageSuccess({
+      context: usageContext,
+      model: params.model,
+      promptTokens: response.usage?.prompt_tokens ?? null,
+      completionTokens: response.usage?.completion_tokens ?? null,
+      totalTokens: response.usage?.total_tokens ?? null
+    });
+    return response;
+  } catch (error) {
+    await recordAiUsageFailure({ context: usageContext, model: params.model, error });
+    throw error;
+  }
+}
 
 const ExtractedSiteInstructionSchema = z.object({
   reference: z.string(),
@@ -88,14 +118,15 @@ export type ExtractedVariationItem = z.infer<typeof ExtractedVariationItemSchema
 
 export async function extractVariationItemFromText(
   documentText: string,
-  itemType: "variation" | "site_instruction"
+  itemType: "variation" | "site_instruction",
+  usageContext: Omit<AiUsageContext, "feature">
 ): Promise<ExtractedVariationItem> {
   const documentKind =
     itemType === "variation"
       ? "a construction Variation notice or priced Variation quote"
       : "a construction Site Instruction / Notice to Subcontractor / Advice to Subcontractor document";
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -115,7 +146,7 @@ export async function extractVariationItemFromText(
         content: documentText
       }
     ]
-  });
+  }, { ...usageContext, feature: "variation_site_instruction_extraction" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -143,7 +174,8 @@ export type ExtractedProgrammeResult = z.infer<typeof ExtractedProgrammeSchema>;
 
 export async function extractProgrammeFromText(
   documentText: string,
-  tradeReference?: string
+  tradeReference: string | undefined,
+  usageContext: Omit<AiUsageContext, "feature">
 ): Promise<ExtractedProgrammeResult> {
   const filterInstruction = tradeReference
     ? "This programme may cover multiple trades/subcontractors, not just one. " +
@@ -157,7 +189,7 @@ export async function extractProgrammeFromText(
       `If the document gives no usable signal to attribute activities to a trade at all (e.g. it is already a single-trade programme with no headings or codes), extract every activity instead and set "filterApplied" to false.`
     : "Extract every distinct activity/milestone in the document, regardless of trade, and set \"filterApplied\" to false.";
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -181,7 +213,7 @@ export async function extractProgrammeFromText(
         content: documentText
       }
     ]
-  });
+  }, { ...usageContext, feature: "programme_extraction" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -206,8 +238,11 @@ export type ExtractedContractClause = z.infer<typeof ExtractedContractClauseSche
 // ~8-page batch by the review route (mirrors the SA-2017 baseline's own
 // page-chunked extraction in scripts/generate-standard-form-baseline.mjs, so
 // both sides of the later comparison are built the same careful way).
-export async function extractContractClausesFromText(documentText: string): Promise<ExtractedContractClause[]> {
-  const response = await getClient().chat.completions.create({
+export async function extractContractClausesFromText(
+  documentText: string,
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ExtractedContractClause[]> {
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -225,7 +260,7 @@ export async function extractContractClausesFromText(documentText: string): Prom
       },
       { role: "user", content: documentText }
     ]
-  });
+  }, { ...usageContext, feature: "contract_review" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -278,12 +313,13 @@ function formatClausesForPrompt(clauses: ClauseLike[]): string {
 export async function compareClausesToStandardBucket(
   bucketLabel: string,
   baselineClauses: ClauseLike[],
-  subcontractClauses: ClauseLike[]
+  subcontractClauses: ClauseLike[],
+  usageContext: Omit<AiUsageContext, "feature">
 ): Promise<BucketDeviation[]> {
   const baselineText = formatClausesForPrompt(baselineClauses);
   const subcontractText = formatClausesForPrompt(subcontractClauses);
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -309,7 +345,7 @@ export async function compareClausesToStandardBucket(
         content: `STANDARD FORM CLAUSES (${bucketLabel}):\n${baselineText}\n\n---\n\nSUBCONTRACT CLAUSES (full document, for matching against this section):\n${subcontractText}`
       }
     ]
-  });
+  }, { ...usageContext, feature: "contract_review" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -343,8 +379,10 @@ export type SynthesisResult = z.infer<typeof SynthesisResultSchema>;
 // (see lib/contract-comparison.ts) — the prompt/wording adapts either way.
 export async function synthesizeContractReview(
   bucketResults: { topicBucket: string; deviations: BucketDeviation[] }[],
-  comparisonLabel = "the SA-2017 standard-form baseline"
+  comparisonLabel: string | undefined,
+  usageContext: Omit<AiUsageContext, "feature">
 ): Promise<SynthesisResult> {
+  comparisonLabel = comparisonLabel ?? "the SA-2017 standard-form baseline";
   const relevant = bucketResults.flatMap(({ topicBucket, deviations }) =>
     deviations
       .filter((deviation) => deviation.classification !== "matches_standard")
@@ -355,7 +393,7 @@ export async function synthesizeContractReview(
     matchCount: deviations.filter((deviation) => deviation.classification === "matches_standard").length
   }));
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -375,7 +413,7 @@ export async function synthesizeContractReview(
         content: JSON.stringify({ deviations: relevant, matchCounts })
       }
     ]
-  });
+  }, { ...usageContext, feature: "contract_review" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -406,13 +444,14 @@ export type ExtractedContractTerms = z.infer<typeof ExtractedContractTermsSchema
 // bucket comparison, and there's no InsuranceRequirement model to store a
 // separate structured extraction in (see subbie_hq_insurance_and_nav memory).
 export async function extractContractTermsFromClauses(
-  clauses: { clauseRef: string; title: string | null; body: string; pageNumber: number | null }[]
+  clauses: { clauseRef: string; title: string | null; body: string; pageNumber: number | null }[],
+  usageContext: Omit<AiUsageContext, "feature">
 ): Promise<ExtractedContractTerms> {
   const documentText = clauses
     .map((c) => `[${c.clauseRef}]${c.title ? ` ${c.title}` : ""}${c.pageNumber ? ` (p.${c.pageNumber})` : ""}\n${c.body}`)
     .join("\n\n");
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -433,7 +472,7 @@ export async function extractContractTermsFromClauses(
       },
       { role: "user", content: documentText }
     ]
-  });
+  }, { ...usageContext, feature: "contract_review" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -469,7 +508,8 @@ const PRIOR_CONTRACT_CONCURRENCY = 4;
 
 export async function compareClausesToPriorContract(
   priorClauses: ClauseLike[],
-  newClauses: ClauseLike[]
+  newClauses: ClauseLike[],
+  usageContext: Omit<AiUsageContext, "feature">
 ): Promise<PriorContractDeviation[]> {
   const newContractText = formatClausesForPrompt(newClauses);
 
@@ -490,7 +530,7 @@ export async function compareClausesToPriorContract(
   async function compareOneChunk(chunk: ClauseLike[]): Promise<PriorContractDeviation[]> {
       const priorContractText = formatClausesForPrompt(chunk);
 
-      const response = await getClient().chat.completions.create({
+      const response = await callGrok({
         model: GROK_MODEL,
         response_format: { type: "json_object" },
         messages: [
@@ -517,7 +557,7 @@ export async function compareClausesToPriorContract(
             content: `PRIOR CONTRACT CLAUSES (this Main Contractor's previous contract with this subcontractor):\n${priorContractText}\n\n---\n\nNEW CONTRACT CLAUSES (full document, for matching against the above):\n${newContractText}`
           }
         ]
-      });
+      }, { ...usageContext, feature: "contract_review" });
 
       const raw = response.choices[0]?.message?.content;
       if (!raw) {
@@ -555,12 +595,13 @@ export async function draftResponseLetter(
     recommendation: string | null;
     comparedAgainstLabel: string;
   }[],
-  context: {
+  letterContext: {
     mainContractorName: string;
     contactName: string;
     contactRole: string | null;
     projectName: string;
-  }
+  },
+  usageContext: Omit<AiUsageContext, "feature">
 ): Promise<DraftedLetter> {
   const deviationsText = deviations
     .map(
@@ -570,7 +611,7 @@ export async function draftResponseLetter(
     )
     .join("\n");
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -588,10 +629,10 @@ export async function draftResponseLetter(
       {
         role: "user",
         content:
-          `Project: ${context.projectName}\nMain Contractor: ${context.mainContractorName}\nAddressed to: ${context.contactName}${context.contactRole ? ` (${context.contactRole})` : ""}\n\nFlagged clauses:\n${deviationsText}`
+          `Project: ${letterContext.projectName}\nMain Contractor: ${letterContext.mainContractorName}\nAddressed to: ${letterContext.contactName}${letterContext.contactRole ? ` (${letterContext.contactRole})` : ""}\n\nFlagged clauses:\n${deviationsText}`
       }
     ]
-  });
+  }, { ...usageContext, feature: "contract_review_response_letter" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -620,8 +661,11 @@ export type ExtractedInsuranceCertificate = z.infer<typeof ExtractedInsuranceCer
 // (see app/api/organisation/insurance-certificates/parse/route.ts). Never
 // guesses: fields with nothing confidently stated come back null/empty
 // rather than a fabricated value.
-export async function extractInsuranceCertificateFromText(documentText: string): Promise<ExtractedInsuranceCertificate> {
-  const response = await getClient().chat.completions.create({
+export async function extractInsuranceCertificateFromText(
+  documentText: string,
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ExtractedInsuranceCertificate> {
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -641,7 +685,7 @@ export async function extractInsuranceCertificateFromText(documentText: string):
       },
       { role: "user", content: documentText }
     ]
-  });
+  }, { ...usageContext, feature: "insurance_extraction" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -667,11 +711,12 @@ export type ExtractedRequiredCover = z.infer<typeof ExtractedRequiredCoverSchema
 // don't state every cover type) — only returns types with a clearly stated
 // numeric minimum, never a fabricated/guessed one.
 export async function extractRequiredInsuranceCoverFromClauses(
-  clauses: { clauseRef: string; title: string | null; body: string }[]
+  clauses: { clauseRef: string; title: string | null; body: string }[],
+  usageContext: Omit<AiUsageContext, "feature">
 ): Promise<ExtractedRequiredCover[]> {
   const documentText = clauses.map((c) => `[${c.clauseRef}]${c.title ? ` ${c.title}` : ""}\n${c.body}`).join("\n\n");
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -687,7 +732,7 @@ export async function extractRequiredInsuranceCoverFromClauses(
       },
       { role: "user", content: documentText }
     ]
-  });
+  }, { ...usageContext, feature: "contract_review" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -707,13 +752,16 @@ export type DraftedUpdateEmail = z.infer<typeof DraftedUpdateEmailSchema>;
 // and edit before sending (see app/api/projects/[projectId]/updates/route.ts
 // — nothing is sent without that human review step). Not a comparison or
 // extraction task, so this is a single call like extractContractTermsFromClauses.
-export async function draftExternalUpdateEmail(params: {
-  roughText: string;
-  projectName: string;
-  authorName: string;
-  photoCount: number;
-}): Promise<DraftedUpdateEmail> {
-  const response = await getClient().chat.completions.create({
+export async function draftExternalUpdateEmail(
+  params: {
+    roughText: string;
+    projectName: string;
+    authorName: string;
+    photoCount: number;
+  },
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<DraftedUpdateEmail> {
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -737,7 +785,7 @@ export async function draftExternalUpdateEmail(params: {
         content: `Project: ${params.projectName}\nAuthor: ${params.authorName}\n\nRough update notes:\n${params.roughText}`
       }
     ]
-  });
+  }, { ...usageContext, feature: "external_update_draft" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -753,17 +801,20 @@ export async function draftExternalUpdateEmail(params: {
 // from a thread after the fact, rather than while composing a brand-new
 // update. See app/api/projects/[projectId]/updates/[updateId]/draft-summary-email
 // — same "draft, then human reviews before sending" rule applies.
-export async function draftUpdateThreadSummaryEmail(params: {
-  projectName: string;
-  authorName: string;
-  entries: { authorName: string; createdAt: Date; body: string }[];
-  photoCount: number;
-}): Promise<DraftedUpdateEmail> {
+export async function draftUpdateThreadSummaryEmail(
+  params: {
+    projectName: string;
+    authorName: string;
+    entries: { authorName: string; createdAt: Date; body: string }[];
+    photoCount: number;
+  },
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<DraftedUpdateEmail> {
   const threadText = params.entries
     .map((entry) => `[${entry.createdAt.toISOString().slice(0, 10)}] ${entry.authorName}: ${entry.body}`)
     .join("\n\n");
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -787,7 +838,7 @@ export async function draftUpdateThreadSummaryEmail(params: {
         content: `Project: ${params.projectName}\nAuthor (sending this email): ${params.authorName}\n\nDiscussion thread, chronological:\n${threadText}`
       }
     ]
-  });
+  }, { ...usageContext, feature: "update_thread_summary" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {
@@ -822,20 +873,23 @@ export type InboundEmailClassification = z.infer<typeof InboundEmailClassificati
 // complexity level, not the map-reduce contract-review pipeline). Never
 // invents a project/Variation id outside the candidate lists given; returns
 // null rather than guessing when unconfident (see Incoming Emails Task 2).
-export async function classifyInboundEmail(params: {
-  sender: string;
-  ccAddresses: string[];
-  subject: string;
-  body: string;
-  attachments: { fileName: string; extractedText: string | null }[];
-  candidateProjects: {
-    id: string;
-    name: string;
-    mainContractorName: string | null;
-    contactEmails: string[];
-    openVariationItems: { id: string; reference: string; title: string }[];
-  }[];
-}): Promise<InboundEmailClassification> {
+export async function classifyInboundEmail(
+  params: {
+    sender: string;
+    ccAddresses: string[];
+    subject: string;
+    body: string;
+    attachments: { fileName: string; extractedText: string | null }[];
+    candidateProjects: {
+      id: string;
+      name: string;
+      mainContractorName: string | null;
+      contactEmails: string[];
+      openVariationItems: { id: string; reference: string; title: string }[];
+    }[];
+  },
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<InboundEmailClassification> {
   const projectsText = params.candidateProjects
     .map((p) => {
       const contacts = p.contactEmails.length ? p.contactEmails.join(", ") : "none on file";
@@ -864,7 +918,7 @@ export async function classifyInboundEmail(params: {
         .join("\n\n")
     : "(no attachments)";
 
-  const response = await getClient().chat.completions.create({
+  const response = await callGrok({
     model: GROK_MODEL,
     response_format: { type: "json_object" },
     messages: [
@@ -889,7 +943,7 @@ export async function classifyInboundEmail(params: {
           `Body:\n${params.body}\n\n---\n\n${attachmentsText}\n\n---\n\nCANDIDATE PROJECTS:\n${projectsText}`
       }
     ]
-  });
+  }, { ...usageContext, feature: "incoming_email_classification" });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {

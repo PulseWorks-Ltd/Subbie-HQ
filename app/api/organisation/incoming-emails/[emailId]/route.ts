@@ -65,7 +65,7 @@ export async function PATCH(request: Request, context: { params: { emailId: stri
     // Awaited here (unlike the webhook's fire-and-forget call) — this is a
     // deliberate user action clicking "Retry," so the response should
     // reflect the actual outcome rather than returning immediately.
-    await classifyAndSuggest(emailId);
+    await classifyAndSuggest(emailId, userId);
     const updated = await prisma.inboundEmail.findUnique({ where: { id: emailId } });
     if (updated?.classificationError) {
       return NextResponse.json({ error: updated.classificationError }, { status: 422 });

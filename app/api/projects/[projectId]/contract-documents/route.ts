@@ -61,16 +61,19 @@ export async function POST(request: Request, context: { params: { projectId: str
     contentType: file.type || "application/pdf"
   });
 
-  const document = await prisma.contractDocument.create({
-    data: {
-      projectId,
-      title,
-      fileName: file.name,
-      fileUrl,
-      storageKey,
-      status: "draft"
-    }
-  });
+  const [document, project] = await Promise.all([
+    prisma.contractDocument.create({
+      data: {
+        projectId,
+        title,
+        fileName: file.name,
+        fileUrl,
+        storageKey,
+        status: "draft"
+      }
+    }),
+    prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } })
+  ]);
 
   // Fire-and-forget — clause extraction (OCR-if-needed + Grok) runs in the
   // background so the upload response stays fast. The "Run Contract Review"
@@ -78,9 +81,11 @@ export async function POST(request: Request, context: { params: { projectId: str
   // worth kicking off for real PDFs; other file types stay "idle" and get
   // handled by the review route's own synchronous fallback if ever needed.
   if (file.type === "application/pdf") {
-    void processContractDocument(projectId, document.id).catch((error) => {
-      console.error("Unhandled error in processContractDocument:", error);
-    });
+    void processContractDocument(projectId, document.id, { organisationId: project?.organisationId ?? null, userId }).catch(
+      (error) => {
+        console.error("Unhandled error in processContractDocument:", error);
+      }
+    );
   }
 
   return NextResponse.json({ document }, { status: 201 });

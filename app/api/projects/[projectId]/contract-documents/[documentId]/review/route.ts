@@ -55,10 +55,14 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const document = await prisma.contractDocument.findFirst({ where: { id: documentId, projectId } });
+  const document = await prisma.contractDocument.findFirst({
+    where: { id: documentId, projectId },
+    include: { project: { select: { organisationId: true } } }
+  });
   if (!document) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const trigger = { organisationId: document.project.organisationId, userId };
 
   // Clause extraction (OCR-if-needed + Grok) now happens in the background,
   // kicked off at upload time — see lib/document-processing.ts. This route
@@ -84,7 +88,7 @@ export async function POST(
     // non-PDF upload, or a document created before this change existed) or
     // "ready" with somehow zero clauses — either way, fall back to running
     // extraction synchronously here, matching the old click-and-wait behavior.
-    await processContractDocument(projectId, documentId);
+    await processContractDocument(projectId, documentId, trigger);
     clauses = await prisma.clause.findMany({ where: { documentId, projectId } });
     if (clauses.length === 0) {
       const failedDocument = await prisma.contractDocument.findUniqueOrThrow({ where: { id: documentId } });
@@ -101,7 +105,7 @@ export async function POST(
   // scratch at full Grok cost). If a review is already running for this
   // document, startContractReview returns that one rather than starting a
   // duplicate.
-  const { reviewId } = await startContractReview(projectId, documentId);
+  const { reviewId } = await startContractReview(projectId, documentId, trigger);
   const review = await getContractReviewWithDetails(reviewId);
   return NextResponse.json({ review }, { status: 202 });
 }

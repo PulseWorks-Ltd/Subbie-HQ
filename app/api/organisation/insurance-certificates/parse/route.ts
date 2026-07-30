@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   try {
     const pages = await extractPdfPagesWithOcrFallback(buffer);
     const text = pages.map((p) => p.text).join("\n\n");
-    extracted = await extractInsuranceCertificateFromText(text);
+    extracted = await extractInsuranceCertificateFromText(text, { organisationId: admin.organisationId, userId });
   } catch (error) {
     const message =
       error instanceof UnreadablePdfError

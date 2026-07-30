@@ -83,7 +83,8 @@ export async function POST(
       contactName: contact.name,
       contactRole: contact.role,
       projectName: document.project.name
-    }
+    },
+    { organisationId: document.project.organisationId, userId }
   );
 
   const letterBody = `${drafted.letterBody}\n\n---\n${RESPONSE_LETTER_DISCLAIMER}`;

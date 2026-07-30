@@ -11,6 +11,14 @@ import {
 import { getStandardForm, getStandardFormBuckets, getStandardFormClausesByBucket } from "./standard-forms/sa-2017";
 import type { Clause } from "@prisma/client";
 
+// Who/what triggered this review — threaded down to every Grok call the
+// pipeline makes (all tagged feature: "contract_review", see lib/grok.ts)
+// so AI usage logs can be attributed. organisationId/userId are both
+// nullable: this can be a legacy project with no organisation, and the
+// pipeline runs fire-and-forget (see startContractReview below), detached
+// from the HTTP request that has the real userId.
+export type ContractReviewTrigger = { organisationId: string | null; userId: string | null };
+
 const PRIOR_CONTRACT_LABEL = "their previous contract with this Main Contractor";
 
 type ClauseInput = { clauseRef: string; title: string | null; body: string };
@@ -48,7 +56,8 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
 // PREVIOUS contract's baseline deviations are keyed by the same fixed
 // SA-2017 baselineClauseRef, so they can be diffed directly.
 async function runBaselineComparison(
-  clauseInputs: ClauseInput[]
+  clauseInputs: ClauseInput[],
+  usageContext: { organisationId: string | null; userId: string | null; contextRef: string }
 ): Promise<{ bucketResults: { topicBucket: string; deviations: BucketDeviation[] }[]; synthesis: SynthesisResult }> {
   const buckets = getStandardFormBuckets();
   const bucketResults = await mapWithConcurrency(buckets, GROK_CONCURRENCY, async (bucket) => {
@@ -57,11 +66,11 @@ async function runBaselineComparison(
         title: c.title,
         body: c.body
       }));
-      const deviations = await compareClausesToStandardBucket(bucket, baselineClauses, clauseInputs);
+      const deviations = await compareClausesToStandardBucket(bucket, baselineClauses, clauseInputs, usageContext);
       return { topicBucket: bucket, deviations };
     }
   );
-  const synthesis = await synthesizeContractReview(bucketResults);
+  const synthesis = await synthesizeContractReview(bucketResults, undefined, usageContext);
   return { bucketResults, synthesis };
 }
 
@@ -116,7 +125,11 @@ async function findBaselineReviewForDocument(documentId: string) {
 // the UI can poll it, fires the real work off unawaited, and returns. If a
 // review is already running for this document, returns that one instead of
 // starting a duplicate (also protects against double-clicking the button).
-export async function startContractReview(projectId: string, documentId: string): Promise<{ reviewId: string }> {
+export async function startContractReview(
+  projectId: string,
+  documentId: string,
+  trigger: ContractReviewTrigger
+): Promise<{ reviewId: string }> {
   const existingRunning = await prisma.contractReview.findFirst({
     where: { documentId, projectId, isPrimary: true, status: "running" }
   });
@@ -144,7 +157,7 @@ export async function startContractReview(projectId: string, documentId: string)
     }
   });
 
-  void runContractReviewWork(projectId, documentId, review.id, priorReview).catch((error) => {
+  void runContractReviewWork(projectId, documentId, review.id, priorReview, trigger).catch((error) => {
     console.error(`Unhandled error starting background contract review ${review.id}:`, error);
   });
 
@@ -162,8 +175,10 @@ async function runContractReviewWork(
   projectId: string,
   documentId: string,
   primaryReviewId: string,
-  priorReview: PriorReview
+  priorReview: PriorReview,
+  trigger: ContractReviewTrigger
 ): Promise<void> {
+  const usageContext = { organisationId: trigger.organisationId, userId: trigger.userId, contextRef: primaryReviewId };
   try {
     const clauses = await prisma.clause.findMany({ where: { documentId, projectId } });
     const clauseInputs = toClauseInputs(clauses);
@@ -174,9 +189,12 @@ async function runContractReviewWork(
     // only on the already-extracted clauses. This always runs, regardless
     // of comparison type (see runBaselineComparison).
     const [baseline, extractedTerms, requiredCovers] = await Promise.all([
-      runBaselineComparison(clauseInputs),
-      extractContractTermsFromClauses(clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber }))),
-      extractRequiredInsuranceCoverFromClauses(clauseInputs)
+      runBaselineComparison(clauseInputs, usageContext),
+      extractContractTermsFromClauses(
+        clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber })),
+        usageContext
+      ),
+      extractRequiredInsuranceCoverFromClauses(clauseInputs, usageContext)
     ]);
     const baselineCounts = countDeviations(baseline.synthesis);
 
@@ -251,10 +269,15 @@ async function runContractReviewWork(
     }
 
     const priorClauses = await prisma.clause.findMany({ where: { documentId: priorReview.documentId } });
-    const priorContractDeviations = await compareClausesToPriorContract(toClauseInputs(priorClauses), clauseInputs);
+    const priorContractDeviations = await compareClausesToPriorContract(
+      toClauseInputs(priorClauses),
+      clauseInputs,
+      usageContext
+    );
     const priorContractSynthesis = await synthesizeContractReview(
       [{ topicBucket: "general", deviations: priorContractDeviations }],
-      PRIOR_CONTRACT_LABEL
+      PRIOR_CONTRACT_LABEL,
+      usageContext
     );
     const priorContractCounts = countDeviations(priorContractSynthesis);
 

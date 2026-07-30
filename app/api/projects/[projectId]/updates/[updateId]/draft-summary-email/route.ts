@@ -36,7 +36,7 @@ export async function POST(request: Request, context: { params: { projectId: str
         }
       }
     }),
-    prisma.project.findUnique({ where: { id: projectId }, select: { name: true } }),
+    prisma.project.findUnique({ where: { id: projectId }, select: { name: true, organisationId: true } }),
     prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, email: true } })
   ]);
 
@@ -55,12 +55,15 @@ export async function POST(request: Request, context: { params: { projectId: str
   const photoCount = update.attachments.length + update.replies.reduce((sum, reply) => sum + reply.attachments.length, 0);
 
   try {
-    const drafted = await draftUpdateThreadSummaryEmail({
-      projectName: project?.name ?? "the project",
-      authorName: (user ? formatUserName(user) : null) ?? user?.email ?? "The team",
-      entries,
-      photoCount
-    });
+    const drafted = await draftUpdateThreadSummaryEmail(
+      {
+        projectName: project?.name ?? "the project",
+        authorName: (user ? formatUserName(user) : null) ?? user?.email ?? "The team",
+        entries,
+        photoCount
+      },
+      { organisationId: project?.organisationId ?? null, userId }
+    );
     return NextResponse.json({ drafted });
   } catch (error) {
     console.error(`Drafting thread summary email for update ${updateId} failed:`, error);

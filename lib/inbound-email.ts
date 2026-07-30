@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
-import { classifyInboundEmail } from "./grok";
+import { classifyInboundEmail, extractVariationItemFromText } from "./grok";
 import { getSignedDownloadUrl } from "./s3";
-import { extractPdfPagesWithOcrFallback, UnreadablePdfError } from "./pdf-text-extraction";
+import { extractPdfPagesWithOcrFallback } from "./pdf-text-extraction";
 
 // Keeps a single pathological attachment (a huge multi-hundred-page PDF)
 // from blowing out the classification prompt — inbound-email attachments
@@ -46,14 +46,29 @@ export function parseAddressList(raw: string | null | undefined): string[] {
 // same create-row-then-transaction pattern as sendExternalUpdateAndLog
 // (lib/external-update.ts): the source row and the new Correspondence row
 // are updated/created together so they can never end up out of sync.
+//
+// createVariationItem is mutually exclusive with variationItemId — either
+// link to an already-existing item, or (once the reviewer has confirmed the
+// AI-extracted details, see extractVariationItemDetailsFromEmail) create a
+// brand-new one from this email. When creating, the email's first attachment
+// (if any) becomes the item's source file, same as a manual document upload
+// — the existing S3 object is reused by storageKey, not copied.
 export async function fileInboundEmail(params: {
   emailId: string;
   projectId: string;
   category: string;
   variationItemId?: string;
+  createVariationItem?: {
+    type: "variation" | "site_instruction";
+    reference: string;
+    title: string;
+    description?: string;
+    notifiedAt?: string;
+    dueAt?: string;
+  };
   reviewerUserId: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const email = await prisma.inboundEmail.findUnique({ where: { id: params.emailId } });
+  const email = await prisma.inboundEmail.findUnique({ where: { id: params.emailId }, include: { attachments: true } });
   if (!email) {
     return { ok: false, error: "Email not found." };
   }
@@ -61,8 +76,28 @@ export async function fileInboundEmail(params: {
     return { ok: false, error: "This email has already been reviewed." };
   }
 
-  await prisma.$transaction([
-    prisma.inboundEmail.update({
+  await prisma.$transaction(async (tx) => {
+    let variationItemId = params.variationItemId;
+
+    if (params.createVariationItem) {
+      const sourceAttachment = email.attachments[0];
+      const created = await tx.variationItem.create({
+        data: {
+          projectId: params.projectId,
+          type: params.createVariationItem.type,
+          reference: params.createVariationItem.reference,
+          title: params.createVariationItem.title,
+          description: params.createVariationItem.description,
+          notifiedAt: params.createVariationItem.notifiedAt ? new Date(params.createVariationItem.notifiedAt) : undefined,
+          dueAt: params.createVariationItem.dueAt ? new Date(params.createVariationItem.dueAt) : undefined,
+          fileName: sourceAttachment?.fileName,
+          storageKey: sourceAttachment?.storageKey
+        }
+      });
+      variationItemId = created.id;
+    }
+
+    await tx.inboundEmail.update({
       where: { id: params.emailId },
       data: {
         projectId: params.projectId,
@@ -70,19 +105,19 @@ export async function fileInboundEmail(params: {
         reviewedByUserId: params.reviewerUserId,
         reviewedAt: new Date()
       }
-    }),
-    prisma.correspondence.create({
+    });
+    await tx.correspondence.create({
       data: {
         projectId: params.projectId,
-        variationItemId: params.variationItemId,
+        variationItemId,
         title: email.subject,
         source: "inbound_email",
         bodyText: email.body,
         category: params.category,
         inboundEmailId: email.id
       }
-    })
-  ]);
+    });
+  });
 
   return { ok: true };
 }
@@ -140,6 +175,32 @@ async function extractAttachmentText(attachment: { storageKey: string; contentTy
     console.error(`Could not extract text from attachment ${attachment.storageKey}:`, error);
     return null;
   }
+}
+
+// Combines an email's body with any successfully-extracted PDF attachment
+// text into one block, for anything that needs to reason over "everything
+// this email says" (classification, and now structured Variation/Site
+// Instruction detail extraction).
+async function getCombinedEmailText(email: { body: string; attachments: { storageKey: string; contentType: string }[] }) {
+  const attachmentTexts = await Promise.all(email.attachments.map(extractAttachmentText));
+  const extractedParts = attachmentTexts.filter((text): text is string => Boolean(text));
+  return extractedParts.length ? `${email.body}\n\n--- Attachment content ---\n${extractedParts.join("\n\n")}` : email.body;
+}
+
+// Preview-only (nothing persisted) — reuses the SAME extractVariationItemFromText
+// used for manually-uploaded documents (see variation-items/parse/route.ts),
+// just fed this email's combined body+attachment text instead of a freshly
+// uploaded PDF's. Called once a reviewer picks "create a new item" for a
+// Variation/Site Instruction-classified email; they review/edit the result
+// before it's ever saved (see fileInboundEmail's createVariationItem).
+export async function extractVariationItemDetailsFromEmail(emailId: string, itemType: "variation" | "site_instruction") {
+  const email = await prisma.inboundEmail.findUnique({ where: { id: emailId }, include: { attachments: true } });
+  if (!email) {
+    throw new Error("Email not found.");
+  }
+
+  const combinedText = await getCombinedEmailText(email);
+  return extractVariationItemFromText(combinedText, itemType);
 }
 
 // Runs Grok classification for a just-received InboundEmail and writes the

@@ -8,7 +8,7 @@
 // file stream starts). WebM/Opus (Chrome/Android MediaRecorder's default
 // output) and MP4/AAC (Safari/iOS's default) are both natively supported
 // container formats, so the client-side recording code needs no changes.
-import { recordAiUsageSuccess, recordAiUsageFailure } from "./ai-usage";
+import { recordAiUsageSuccess, recordAiUsageFailure, assertWithinSpendCap } from "./ai-usage";
 
 const STT_ENDPOINT = "https://api.x.ai/v1/stt";
 const STT_MODEL_LABEL = "grok-stt";
@@ -32,6 +32,24 @@ export async function transcribeAudio(
 ): Promise<string | null> {
   const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) return null;
+
+  // Unlike every other failure mode below (which resolves null so the
+  // caller falls back to letting the user type instead), a spend-cap block
+  // is deliberately re-thrown rather than swallowed — the generic "could
+  // not transcribe" fallback message would otherwise mislabel an org-wide
+  // usage block as a transient audio/network issue. The route (see
+  // app/api/projects/[projectId]/updates/transcribe/route.ts) catches
+  // AiSpendCapExceededError specifically to surface the real reason.
+  try {
+    await assertWithinSpendCap(usageContext.organisationId);
+  } catch (capError) {
+    await recordAiUsageFailure({
+      context: { feature: "voice_transcription", ...usageContext },
+      model: STT_MODEL_LABEL,
+      error: capError
+    });
+    throw capError;
+  }
 
   try {
     const formData = new FormData();

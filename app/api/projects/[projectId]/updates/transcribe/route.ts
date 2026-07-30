@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { transcribeAudio } from "@/lib/transcription";
 import { prisma } from "@/lib/prisma";
+import { AiSpendCapExceededError } from "@/lib/ai-usage";
 
 // Pure utility endpoint — transcribes a recorded voice note into text for
 // the update composer to pre-fill (see components/updates/update-composer.tsx).
@@ -30,10 +31,19 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const buffer = new Uint8Array(await audio.arrayBuffer());
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
-  const text = await transcribeAudio(buffer, audio.name || "recording.webm", {
-    organisationId: project?.organisationId ?? null,
-    userId
-  });
+
+  let text: string | null;
+  try {
+    text = await transcribeAudio(buffer, audio.name || "recording.webm", {
+      organisationId: project?.organisationId ?? null,
+      userId
+    });
+  } catch (error) {
+    if (error instanceof AiSpendCapExceededError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
+    }
+    throw error;
+  }
 
   if (text === null) {
     return NextResponse.json(

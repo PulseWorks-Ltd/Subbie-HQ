@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
 import { extractVariationItemFromText } from "@/lib/grok";
+import { AiSpendCapExceededError } from "@/lib/ai-usage";
 import { extractPdfPagesWithOcrFallback, UnreadablePdfError } from "@/lib/pdf-text-extraction";
 import { prisma } from "@/lib/prisma";
 
@@ -59,6 +60,9 @@ export async function POST(request: Request, context: { params: { projectId: str
     const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
     extracted = await extractVariationItemFromText(text, type, { organisationId: project?.organisationId ?? null, userId });
   } catch (error) {
+    if (error instanceof AiSpendCapExceededError) {
+      return NextResponse.json({ error: error.message, fileName: file.name, storageKey }, { status: 422 });
+    }
     const message =
       error instanceof UnreadablePdfError
         ? "This PDF's text couldn't be read automatically, even with OCR — this usually happens with documents produced by certain \"print to PDF\" tools. Please try re-exporting it, or fill the details in manually."

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { z } from "zod";
 import { INBOUND_EMAIL_TYPE_PRESETS } from "./inbound-email-types";
-import { recordAiUsageSuccess, recordAiUsageFailure, type AiUsageContext } from "./ai-usage";
+import { recordAiUsageSuccess, recordAiUsageFailure, assertWithinSpendCap, type AiUsageContext } from "./ai-usage";
 
 // Constructed lazily (not at module scope) — the OpenAI SDK validates apiKey
 // presence eagerly in its constructor, which would crash Next.js's build-time
@@ -49,6 +49,13 @@ async function callGrok(
   params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
   usageContext: AiUsageContext
 ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  try {
+    await assertWithinSpendCap(usageContext.organisationId);
+  } catch (capError) {
+    await recordAiUsageFailure({ context: usageContext, model: params.model, error: capError });
+    throw capError;
+  }
+
   try {
     const response = await getClient().chat.completions.create(params);
     await recordAiUsageSuccess({

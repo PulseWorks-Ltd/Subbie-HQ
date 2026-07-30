@@ -5,7 +5,14 @@ import { useEffect, useState } from "react";
 type UsagePeriod = "this_month" | "last_30_days" | "all_time";
 
 type FeatureSummary = { feature: string; calls: number; costUsd: number; avgCostUsd: number; failures: number };
-type OrgSummary = { organisationId: string | null; organisationName: string; calls: number; costUsd: number };
+type OrgSummary = {
+  organisationId: string | null;
+  organisationName: string;
+  calls: number;
+  costUsd: number;
+  capUsd: number | null;
+  monthToDateSpendUsd: number;
+};
 type TrendPoint = { date: string; costUsd: number };
 type Summary = { totalCostUsd: number; totalCalls: number; byFeature: FeatureSummary[]; byOrganisation: OrgSummary[]; trend: TrendPoint[] };
 
@@ -68,6 +75,11 @@ export function AiUsageDashboard({
   const [summary, setSummary] = useState<Summary>(initialSummary);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
+  const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
+  const [editCapValue, setEditCapValue] = useState("");
+  const [editNoCap, setEditNoCap] = useState(false);
+  const [savingCap, setSavingCap] = useState(false);
+
   const [logs, setLogs] = useState<LogsResult>(initialLogs);
   const [logsLoading, setLogsLoading] = useState(false);
   const [featureFilter, setFeatureFilter] = useState("");
@@ -119,6 +131,35 @@ export function AiUsageDashboard({
 
   const maxTrendCost = Math.max(...summary.trend.map((t) => t.costUsd), 0.01);
   const totalPages = Math.max(Math.ceil(logs.total / logs.pageSize), 1);
+
+  function startEditingCap(row: OrgSummary) {
+    setEditingOrgId(row.organisationId);
+    setEditCapValue(row.capUsd !== null ? String(row.capUsd) : "");
+    setEditNoCap(row.capUsd === null);
+  }
+
+  async function saveCap(organisationId: string) {
+    setSavingCap(true);
+    try {
+      const res = await fetch(`/api/platform-admin/ai-usage/organisations/${organisationId}/cap`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ capUsd: editNoCap ? null : Number(editCapValue) })
+      });
+      if (res.ok) {
+        const { organisation } = await res.json();
+        setSummary((prev) => ({
+          ...prev,
+          byOrganisation: prev.byOrganisation.map((row) =>
+            row.organisationId === organisationId ? { ...row, capUsd: organisation.aiMonthlySpendCapUsd } : row
+          )
+        }));
+        setEditingOrgId(null);
+      }
+    } finally {
+      setSavingCap(false);
+    }
+  }
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-8">
@@ -211,26 +252,95 @@ export function AiUsageDashboard({
 
       <section className={`bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5 flex flex-col gap-3 ${summaryLoading ? "opacity-50" : ""}`}>
         <h2 className="text-sm font-bold">By organisation</h2>
+        <p className="text-xs text-[#4c739a] dark:text-slate-400 -mt-2">
+          &quot;Spend / cap&quot; is always the current calendar month — a pilot-phase safety cap, not billing. Amber = 80%+ of cap, red = at or over cap (AI calls blocked).
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs font-bold uppercase text-[#4c739a] dark:text-slate-400 border-b border-[#e7edf3] dark:border-slate-800">
                 <th className="py-2 pr-4">Organisation</th>
                 <th className="py-2 pr-4">Calls</th>
-                <th className="py-2 pr-4">Cost</th>
+                <th className="py-2 pr-4">Cost ({PERIOD_LABELS[period]})</th>
+                <th className="py-2 pr-4">Spend / cap (this month)</th>
+                <th className="py-2 pr-4"></th>
               </tr>
             </thead>
             <tbody>
-              {summary.byOrganisation.map((row) => (
-                <tr key={row.organisationId ?? "none"} className="border-b border-[#e7edf3] dark:border-slate-800 last:border-0">
-                  <td className="py-2 pr-4 font-medium">{row.organisationName}</td>
-                  <td className="py-2 pr-4">{row.calls}</td>
-                  <td className="py-2 pr-4">{formatUsd(row.costUsd)}</td>
-                </tr>
-              ))}
+              {summary.byOrganisation.map((row) => {
+                const ratio = row.capUsd !== null && row.capUsd > 0 ? row.monthToDateSpendUsd / row.capUsd : null;
+                const atOrOverCap = row.capUsd !== null && row.monthToDateSpendUsd >= row.capUsd;
+                const nearCap = !atOrOverCap && ratio !== null && ratio >= 0.8;
+                const isEditing = editingOrgId === row.organisationId;
+                return (
+                  <tr key={row.organisationId ?? "none"} className="border-b border-[#e7edf3] dark:border-slate-800 last:border-0">
+                    <td className="py-2 pr-4 font-medium">{row.organisationName}</td>
+                    <td className="py-2 pr-4">{row.calls}</td>
+                    <td className="py-2 pr-4">{formatUsd(row.costUsd)}</td>
+                    <td className="py-2 pr-4">
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            disabled={editNoCap}
+                            value={editCapValue}
+                            onChange={(e) => setEditCapValue(e.target.value)}
+                            className="h-8 w-24 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm disabled:opacity-40"
+                          />
+                          <label className="flex items-center gap-1 text-xs">
+                            <input type="checkbox" checked={editNoCap} onChange={(e) => setEditNoCap(e.target.checked)} />
+                            No cap
+                          </label>
+                        </div>
+                      ) : (
+                        <span
+                          className={
+                            atOrOverCap
+                              ? "text-red-600 dark:text-red-400 font-bold"
+                              : nearCap
+                                ? "text-amber-600 dark:text-amber-400 font-bold"
+                                : ""
+                          }
+                        >
+                          {formatUsd(row.monthToDateSpendUsd)} / {row.capUsd !== null ? formatUsd(row.capUsd) : "no cap"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-4">
+                      {!row.organisationId ? null : isEditing ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveCap(row.organisationId as string)}
+                            disabled={savingCap}
+                            className="h-7 px-2 rounded-lg bg-primary text-white text-xs font-bold disabled:opacity-60"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingOrgId(null)}
+                            disabled={savingCap}
+                            className="h-7 px-2 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditingCap(row)}
+                          className="h-7 px-2 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold hover:border-primary hover:text-primary"
+                        >
+                          Edit cap
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {summary.byOrganisation.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-4 text-center text-[#4c739a] dark:text-slate-400">
+                  <td colSpan={5} className="py-4 text-center text-[#4c739a] dark:text-slate-400">
                     No AI usage logged in this period.
                   </td>
                 </tr>

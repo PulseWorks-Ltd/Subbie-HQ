@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { getSignedDownloadUrl } from "./s3";
 import { extractPdfPagesWithOcrFallback, UnreadablePdfError, type PdfPage } from "./pdf-text-extraction";
 import { extractContractClausesFromText, extractProgrammeFromText } from "./grok";
+import { AiSpendCapExceededError } from "./ai-usage";
 
 const PAGE_BATCH_SIZE = 8;
 
@@ -71,9 +72,11 @@ export async function processContractDocument(
   } catch (error) {
     console.error(`Contract document processing failed for ${documentId}:`, error);
     const message =
-      error instanceof UnreadablePdfError
-        ? unreadableMessage()
-        : "Could not read this document automatically. You can still add clauses manually.";
+      error instanceof AiSpendCapExceededError
+        ? error.message
+        : error instanceof UnreadablePdfError
+          ? unreadableMessage()
+          : "Could not read this document automatically. You can still add clauses manually.";
     await prisma.contractDocument.update({
       where: { id: documentId },
       data: { processingStatus: "failed", processingError: message }
@@ -143,9 +146,11 @@ export async function processProgrammeDocument(
   } catch (error) {
     console.error(`Programme document processing failed for ${documentId}:`, error);
     const message =
-      error instanceof UnreadablePdfError
-        ? unreadableMessage()
-        : "Could not read this document automatically. You can still add milestones manually.";
+      error instanceof AiSpendCapExceededError
+        ? error.message
+        : error instanceof UnreadablePdfError
+          ? unreadableMessage()
+          : "Could not read this document automatically. You can still add milestones manually.";
     await prisma.contractDocument.update({
       where: { id: documentId },
       data: { processingStatus: "failed", processingError: message }

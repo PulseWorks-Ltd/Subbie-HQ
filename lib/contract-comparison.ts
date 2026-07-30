@@ -9,6 +9,7 @@ import {
   type SynthesisResult
 } from "./grok";
 import { getStandardForm, getStandardFormBuckets, getStandardFormClausesByBucket } from "./standard-forms/sa-2017";
+import { AiSpendCapExceededError } from "./ai-usage";
 import type { Clause } from "@prisma/client";
 
 // Who/what triggered this review — threaded down to every Grok call the
@@ -365,8 +366,14 @@ async function runContractReviewWork(
     console.error(`Contract review ${primaryReviewId} failed:`, error);
     // Stored as errorMessage so the same clear message shows whether the
     // user is actively polling or reloads the page later and
-    // DeviationReportView re-renders the failed review.
-    const userMessage = "Could not complete an automated review of this document. You can still review it manually.";
+    // DeviationReportView re-renders the failed review. Spend-cap blocks
+    // are special-cased to surface their real, user-safe message instead of
+    // this generic fallback — every other failure keeps the generic message
+    // since a raw exception message isn't necessarily fit to show a user.
+    const userMessage =
+      error instanceof AiSpendCapExceededError
+        ? error.message
+        : "Could not complete an automated review of this document. You can still review it manually.";
     await prisma.contractReview
       .update({ where: { id: primaryReviewId }, data: { status: "failed", errorMessage: userMessage } })
       .catch((updateError) => {

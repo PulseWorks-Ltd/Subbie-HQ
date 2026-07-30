@@ -41,6 +41,71 @@ export type AiUsageContext = {
   contextRef?: string | null;
 };
 
+// Thrown by assertWithinSpendCap below and caught by every AI-calling route
+// specifically (via `instanceof`) so its message — safe to show a user
+// as-is — replaces whatever generic fallback message that route would
+// otherwise return, rather than getting swallowed by it.
+export class AiSpendCapExceededError extends Error {
+  constructor(
+    public readonly organisationId: string,
+    public readonly capUsd: number,
+    public readonly spentUsd: number
+  ) {
+    super("Your organisation has reached its AI usage limit for this month. Contact support to increase your limit.");
+    this.name = "AiSpendCapExceededError";
+  }
+}
+
+// Exported so lib/ai-usage-queries.ts's dashboard queries use the exact
+// same "current calendar month" boundary as the cap check itself — a
+// mismatch here would make the dashboard's spend-vs-cap display lie about
+// what actually gets blocked.
+export function currentMonthStart(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+// Pilot-phase safety net, not real billing — sums this org's logged AI cost
+// for the current calendar month (failed calls carry no costUsd, so they
+// never count against it) and throws if it's already at or past the cap.
+// Called once, at the very top of lib/grok.ts's callGrok AND
+// lib/transcription.ts's transcribeAudio — the two physically separate
+// places an AI call actually fires — but the query/threshold logic itself
+// lives here, in exactly one place. No organisationId (a legacy project
+// with no org) or a null cap on the org (the platform owner's override,
+// see /platform-admin/ai-usage) both mean "no cap enforced."
+export async function assertWithinSpendCap(organisationId: string | null | undefined): Promise<void> {
+  if (!organisationId) return;
+
+  const org = await prisma.organisation.findUnique({
+    where: { id: organisationId },
+    select: { aiMonthlySpendCapUsd: true }
+  });
+  if (!org || org.aiMonthlySpendCapUsd === null) return;
+
+  const capUsd = Number(org.aiMonthlySpendCapUsd);
+  const result = await prisma.aiUsageLog.aggregate({
+    where: { organisationId, createdAt: { gte: currentMonthStart() } },
+    _sum: { costUsd: true }
+  });
+  const spentUsd = Number(result._sum.costUsd ?? 0);
+
+  if (spentUsd >= capUsd) {
+    throw new AiSpendCapExceededError(organisationId, capUsd, spentUsd);
+  }
+}
+
+// Powers the /platform-admin/ai-usage "By organisation" spend-vs-cap
+// display — same month-to-date sum assertWithinSpendCap computes, exposed
+// for reading rather than enforcing.
+export async function getOrgMonthToDateSpend(organisationId: string): Promise<number> {
+  const result = await prisma.aiUsageLog.aggregate({
+    where: { organisationId, createdAt: { gte: currentMonthStart() } },
+    _sum: { costUsd: true }
+  });
+  return Number(result._sum.costUsd ?? 0);
+}
+
 async function computeCostUsd(model: string, promptTokens: number, completionTokens: number): Promise<number | null> {
   const pricing = await prisma.aiModelPricing.findUnique({ where: { model } });
   if (!pricing) return null;

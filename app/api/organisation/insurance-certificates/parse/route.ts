@@ -4,6 +4,7 @@ import { requireOrganisationAdmin } from "@/lib/organisation";
 import { uploadToS3 } from "@/lib/s3";
 import { extractPdfPagesWithOcrFallback, UnreadablePdfError } from "@/lib/pdf-text-extraction";
 import { extractInsuranceCertificateFromText } from "@/lib/grok";
+import { AiSpendCapExceededError } from "@/lib/ai-usage";
 
 // Uploads the certificate and extracts fields as an unsaved preview — the
 // user reviews/corrects the pre-filled form before anything is actually
@@ -41,6 +42,9 @@ export async function POST(request: Request) {
     const text = pages.map((p) => p.text).join("\n\n");
     extracted = await extractInsuranceCertificateFromText(text, { organisationId: admin.organisationId, userId });
   } catch (error) {
+    if (error instanceof AiSpendCapExceededError) {
+      return NextResponse.json({ error: error.message, fileName: file.name, storageKey }, { status: 422 });
+    }
     const message =
       error instanceof UnreadablePdfError
         ? "This PDF's text couldn't be read automatically, even with OCR. Please fill the details in manually."

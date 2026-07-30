@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { draftUpdateThreadSummaryEmail } from "@/lib/grok";
+import { AiSpendCapExceededError } from "@/lib/ai-usage";
 import { formatUserName } from "@/lib/user-display";
 
 // Preview step for "Generate outbound email" on an existing thread — drafts
@@ -66,6 +67,9 @@ export async function POST(request: Request, context: { params: { projectId: str
     );
     return NextResponse.json({ drafted });
   } catch (error) {
+    if (error instanceof AiSpendCapExceededError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
+    }
     console.error(`Drafting thread summary email for update ${updateId} failed:`, error);
     return NextResponse.json(
       { error: "Could not draft an email from this thread. You can still write it manually." },

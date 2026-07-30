@@ -186,6 +186,14 @@ model Organisation {
   // have one set and shouldn't be forced to pick one.
   trade                   String?
   variationCompletionMode VariationCompletionMode @default(requires_confirmation)
+  // Pilot-phase safety cap, not real billing — the sum of this org's
+  // AiUsageLog.costUsd within the current calendar month is checked against
+  // this before every AI call (see lib/ai-usage.ts's assertWithinSpendCap).
+  // Nullable = no cap enforced for this org (the platform owner's escape
+  // hatch, e.g. for an org they've manually negotiated with, or to unblock
+  // one mid-month from /platform-admin/ai-usage) — distinct from a $0 cap,
+  // which would block everything.
+  aiMonthlySpendCapUsd    Decimal?                @default(100) @db.Decimal(10, 2)
   createdAt               DateTime                @default(now())
   members                 OrganisationMember[]
   invites                 OrganisationInvite[]

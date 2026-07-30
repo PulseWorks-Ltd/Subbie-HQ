@@ -5,6 +5,7 @@ import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/
 import { uploadToS3 } from "@/lib/s3";
 import { draftResponseLetter } from "@/lib/grok";
 import { RESPONSE_LETTER_DISCLAIMER } from "@/lib/legal-disclaimer";
+import { AiSpendCapExceededError } from "@/lib/ai-usage";
 
 const requestSchema = z.object({
   contractReviewId: z.string().min(1),
@@ -69,23 +70,34 @@ export async function POST(
     return NextResponse.json({ error: "No matching flagged clauses found." }, { status: 400 });
   }
 
-  const drafted = await draftResponseLetter(
-    deviations.map((d) => ({
-      baselineClauseRef: d.baselineClauseRef,
-      baselineClauseTitle: d.baselineClauseTitle,
-      subcontractClauseRef: d.subcontractClauseRef,
-      rationale: d.rationale,
-      recommendation: d.recommendation,
-      comparedAgainstLabel: comparedAgainstLabel(d.contractReview.comparedAgainstType)
-    })),
-    {
-      mainContractorName: document.project.mainContractor.name,
-      contactName: contact.name,
-      contactRole: contact.role,
-      projectName: document.project.name
-    },
-    { organisationId: document.project.organisationId, userId }
-  );
+  // Only special-cased for the spend-cap block — every other failure here
+  // keeps its previous behavior (an uncaught exception, default 500), this
+  // is not a general error-handling rewrite of this route.
+  let drafted;
+  try {
+    drafted = await draftResponseLetter(
+      deviations.map((d) => ({
+        baselineClauseRef: d.baselineClauseRef,
+        baselineClauseTitle: d.baselineClauseTitle,
+        subcontractClauseRef: d.subcontractClauseRef,
+        rationale: d.rationale,
+        recommendation: d.recommendation,
+        comparedAgainstLabel: comparedAgainstLabel(d.contractReview.comparedAgainstType)
+      })),
+      {
+        mainContractorName: document.project.mainContractor.name,
+        contactName: contact.name,
+        contactRole: contact.role,
+        projectName: document.project.name
+      },
+      { organisationId: document.project.organisationId, userId }
+    );
+  } catch (error) {
+    if (error instanceof AiSpendCapExceededError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
+    }
+    throw error;
+  }
 
   const letterBody = `${drafted.letterBody}\n\n---\n${RESPONSE_LETTER_DISCLAIMER}`;
   const fileName = `response-letter-draft-${Date.now()}.txt`;

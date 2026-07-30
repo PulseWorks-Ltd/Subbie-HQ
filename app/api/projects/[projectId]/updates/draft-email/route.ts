@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { draftExternalUpdateEmail } from "@/lib/grok";
+import { AiSpendCapExceededError } from "@/lib/ai-usage";
 import { formatUserName } from "@/lib/user-display";
 
 const requestSchema = z.object({
@@ -52,6 +53,9 @@ export async function POST(request: Request, context: { params: { projectId: str
     );
     return NextResponse.json({ drafted });
   } catch (error) {
+    if (error instanceof AiSpendCapExceededError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
+    }
     console.error("Drafting external update email failed:", error);
     return NextResponse.json({ error: "Could not draft an email from this update. You can still write it manually." }, { status: 422 });
   }

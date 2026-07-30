@@ -5,6 +5,7 @@ import { requireUserId } from "@/lib/auth";
 import { getOrganisationMembership } from "@/lib/organisation";
 import { hasModuleAccess } from "@/lib/permissions";
 import { extractVariationItemDetailsFromEmail } from "@/lib/inbound-email";
+import { AiSpendCapExceededError } from "@/lib/ai-usage";
 
 const requestSchema = z.object({ type: z.enum(["variation", "site_instruction"]) });
 
@@ -36,6 +37,9 @@ export async function POST(request: Request, context: { params: { emailId: strin
     const extracted = await extractVariationItemDetailsFromEmail(emailId, payload.type, userId);
     return NextResponse.json({ extracted });
   } catch (error) {
+    if (error instanceof AiSpendCapExceededError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
+    }
     console.error(`Failed to extract variation item details from inbound email ${emailId}:`, error);
     return NextResponse.json(
       { error: "Could not extract details automatically. You can still fill them in manually." },

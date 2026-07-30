@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { formatUserName } from "./user-display";
+import { currentMonthStart } from "./ai-usage";
 
 export type UsagePeriod = "this_month" | "last_30_days" | "all_time";
 
@@ -45,9 +46,28 @@ export async function getUsageSummary(period: UsagePeriod) {
 
   const orgIds = Array.from(new Set(logs.map((l) => l.organisationId).filter((id): id is string => Boolean(id))));
   const organisations = orgIds.length
-    ? await prisma.organisation.findMany({ where: { id: { in: orgIds } }, select: { id: true, name: true } })
+    ? await prisma.organisation.findMany({
+        where: { id: { in: orgIds } },
+        select: { id: true, name: true, aiMonthlySpendCapUsd: true }
+      })
     : [];
   const orgNameById = new Map(organisations.map((o) => [o.id, o.name]));
+  const orgCapById = new Map(organisations.map((o) => [o.id, o.aiMonthlySpendCapUsd !== null ? Number(o.aiMonthlySpendCapUsd) : null]));
+
+  // Month-to-date spend for the cap display is always the actual current
+  // calendar month, regardless of which `period` the rest of this dashboard
+  // view is scoped to — the cap itself (lib/ai-usage.ts's
+  // assertWithinSpendCap) only ever evaluates against the current month, so
+  // showing anything else here would misrepresent what's actually blocking
+  // AI calls right now.
+  const monthToDateRows = orgIds.length
+    ? await prisma.aiUsageLog.groupBy({
+        by: ["organisationId"],
+        where: { organisationId: { in: orgIds }, createdAt: { gte: currentMonthStart() } },
+        _sum: { costUsd: true }
+      })
+    : [];
+  const monthToDateByOrgId = new Map(monthToDateRows.map((r) => [r.organisationId as string, Number(r._sum.costUsd ?? 0)]));
 
   const byOrgMap = new Map<string, { calls: number; costUsd: number }>();
   for (const log of logs) {
@@ -62,7 +82,9 @@ export async function getUsageSummary(period: UsagePeriod) {
       organisationId: key === "__none__" ? null : key,
       organisationName: key === "__none__" ? "No organisation" : (orgNameById.get(key) ?? "Unknown organisation"),
       calls: v.calls,
-      costUsd: v.costUsd
+      costUsd: v.costUsd,
+      capUsd: key === "__none__" ? null : (orgCapById.get(key) ?? null),
+      monthToDateSpendUsd: key === "__none__" ? 0 : (monthToDateByOrgId.get(key) ?? 0)
     }))
     .sort((a, b) => b.costUsd - a.costUsd);
 

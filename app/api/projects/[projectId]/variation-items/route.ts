@@ -11,7 +11,11 @@ const createVariationItemSchema = z.object({
   notifiedAt: z.string().date().optional(),
   dueAt: z.string().date().optional(),
   fileName: z.string().optional(),
-  storageKey: z.string().optional()
+  storageKey: z.string().optional(),
+  // Only meaningful for type: "variation" — see the schema comment on
+  // VariationItem.variationCreatedAt for why a standalone Variation gets
+  // one immediately, at creation.
+  variationValue: z.number().min(0).optional()
 });
 
 function moduleForType(type: "variation" | "site_instruction") {
@@ -77,7 +81,12 @@ export async function POST(request: Request, context: { params: { projectId: str
       notifiedAt: payload.notifiedAt ? new Date(payload.notifiedAt) : undefined,
       dueAt: payload.dueAt ? new Date(payload.dueAt) : undefined,
       fileName: payload.fileName,
-      storageKey: payload.storageKey
+      storageKey: payload.storageKey,
+      // A standalone Variation inherently carries a Variation identity from
+      // the moment it exists — a Site Instruction only gets one later, via
+      // the separate "Create Variation" PATCH action (see [itemId]/route.ts).
+      variationCreatedAt: payload.type === "variation" ? new Date() : undefined,
+      variationValue: payload.type === "variation" ? payload.variationValue : undefined
     }
   });
 

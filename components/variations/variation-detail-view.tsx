@@ -12,6 +12,7 @@ import { VariationDayWorksSection } from "@/components/variations/variation-day-
 import { VariationPhotosSection } from "@/components/variations/variation-photos-section";
 import { VariationCorrespondenceSection } from "@/components/variations/variation-correspondence-section";
 import { VariationLinkedUpdatesSection } from "@/components/variations/variation-linked-updates-section";
+import { CreateVariationDialog } from "@/components/variations/create-variation-dialog";
 
 type Author = { id: string; name: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -35,7 +36,8 @@ export function VariationDetailView({
   photos,
   correspondence,
   updates,
-  contacts
+  contacts,
+  taggableItems
 }: {
   projectId: string;
   item: VariationItem;
@@ -44,11 +46,14 @@ export function VariationDetailView({
   correspondence: Correspondence[];
   updates: UpdateWithReplies[];
   contacts: ContactOption[];
+  taggableItems: VariationItem[];
 }) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isCreateVariationOpen, setIsCreateVariationOpen] = useState(false);
   const isSiteInstruction = item.type === "site_instruction";
+  const hasVariation = item.variationCreatedAt != null;
 
   async function handleConfirmSuggested() {
     setIsConfirming(true);
@@ -73,15 +78,16 @@ export function VariationDetailView({
         <div className="flex items-start justify-between gap-3 mt-2">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
-                  isSiteInstruction
-                    ? "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
-                    : "bg-primary/10 text-primary"
-                }`}
-              >
-                {isSiteInstruction ? "Site Instruction" : "Variation"}
-              </span>
+              {isSiteInstruction && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                  Site Instruction
+                </span>
+              )}
+              {hasVariation && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
+                  Variation
+                </span>
+              )}
               <StatusBadge status={item.status} />
             </div>
             <h1 className="text-2xl font-bold">
@@ -91,12 +97,22 @@ export function VariationDetailView({
               <p className="text-sm text-[#4c739a] dark:text-slate-400 mt-2 max-w-2xl">{item.description}</p>
             )}
           </div>
-          <button
-            onClick={() => setIsEditOpen(true)}
-            className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800 shrink-0"
-          >
-            Edit
-          </button>
+          <div className="flex gap-2 shrink-0">
+            {isSiteInstruction && !hasVariation && (
+              <button
+                onClick={() => setIsCreateVariationOpen(true)}
+                className="h-9 px-3 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90"
+              >
+                Create Variation
+              </button>
+            )}
+            <button
+              onClick={() => setIsEditOpen(true)}
+              className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+            >
+              Edit
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-[#4c739a] dark:text-slate-400">
@@ -109,6 +125,11 @@ export function VariationDetailView({
           )}
           {item.percentComplete != null && (
             <span className="font-bold text-[#0d141b] dark:text-slate-50">{Math.round(item.percentComplete)}% complete</span>
+          )}
+          {hasVariation && item.variationValue != null && (
+            <span className="font-bold text-[#0d141b] dark:text-slate-50">
+              ${Number(item.variationValue).toLocaleString("en-NZ", { minimumFractionDigits: 2 })}
+            </span>
           )}
           {item.storageKey && (
             <a
@@ -139,13 +160,25 @@ export function VariationDetailView({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {!isSiteInstruction && <VariationQuoteSection projectId={projectId} item={item} />}
+        {hasVariation && <VariationQuoteSection projectId={projectId} item={item} />}
         <VariationDayWorksSection projectId={projectId} itemId={item.id} dayWorksSheets={dayWorksSheets} />
         <VariationPhotosSection projectId={projectId} itemId={item.id} photos={photos} />
         <VariationCorrespondenceSection projectId={projectId} itemId={item.id} correspondence={correspondence} />
       </div>
 
-      <VariationLinkedUpdatesSection projectId={projectId} updates={updates} contacts={contacts} />
+      <VariationLinkedUpdatesSection projectId={projectId} updates={updates} contacts={contacts} taggableItems={taggableItems} />
+
+      {isCreateVariationOpen && (
+        <CreateVariationDialog
+          projectId={projectId}
+          itemId={item.id}
+          onClose={() => setIsCreateVariationOpen(false)}
+          onCreated={() => {
+            setIsCreateVariationOpen(false);
+            router.refresh();
+          }}
+        />
+      )}
 
       <VariationItemFormDialog
         projectId={projectId}

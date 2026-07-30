@@ -11,11 +11,13 @@ type FilterKey = "all" | "variation" | "site_instruction";
 export function VariationsView({
   projectId,
   items,
+  openSiteInstructions,
   canCreateVariation,
   canCreateSiteInstruction
 }: {
   projectId: string;
   items: VariationItem[];
+  openSiteInstructions: VariationItem[];
   canCreateVariation: boolean;
   canCreateSiteInstruction: boolean;
 }) {
@@ -26,7 +28,15 @@ export function VariationsView({
     canCreateVariation ? "variation" : "site_instruction"
   );
 
-  const filteredItems = items.filter((item) => filter === "all" || item.type === filter);
+  // "Site Instructions" stays origin-based (an SI that's also become a
+  // Variation still belongs there — it's still an SI) while "Variations"
+  // now means "carries a Variation identity", not just "originated as one" —
+  // an SI-turned-Variation shows up in both, since it's the same record.
+  const filteredItems = items.filter((item) => {
+    if (filter === "all") return true;
+    if (filter === "site_instruction") return item.type === "site_instruction";
+    return item.variationCreatedAt != null;
+  });
 
   function openCreateDialog(type: "variation" | "site_instruction") {
     setCreateType(type);
@@ -100,6 +110,7 @@ export function VariationsView({
       <VariationItemFormDialog
         projectId={projectId}
         defaultType={createType}
+        openSiteInstructions={openSiteInstructions}
         open={isDialogOpen}
         onClose={() => {
           setIsDialogOpen(false);

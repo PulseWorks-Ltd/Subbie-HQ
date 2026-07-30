@@ -1,4 +1,4 @@
-import type { Update, UpdateAttachment } from "@prisma/client";
+import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { UpdateThread } from "@/components/updates/update-thread";
 
 type Author = { id: string; name: string | null; email: string };
@@ -14,11 +14,13 @@ type UpdateWithReplies = Update & {
 export function VariationLinkedUpdatesSection({
   projectId,
   updates,
-  contacts
+  contacts,
+  taggableItems
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   contacts: ContactOption[];
+  taggableItems: VariationItem[];
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -28,7 +30,13 @@ export function VariationLinkedUpdatesSection({
       ) : (
         <div className="flex flex-col gap-3">
           {updates.map((update) => (
-            <UpdateThread key={update.id} projectId={projectId} update={update} contacts={contacts} />
+            <UpdateThread
+              key={update.id}
+              projectId={projectId}
+              update={update}
+              contacts={contacts}
+              taggableItems={taggableItems}
+            />
           ))}
         </div>
       )}

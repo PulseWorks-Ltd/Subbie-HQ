@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Update, UpdateAttachment } from "@prisma/client";
+import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 import { GenerateOutboundEmailPanel } from "@/components/updates/generate-outbound-email-panel";
 
@@ -33,11 +33,13 @@ function authorLabel(author: Author) {
 export function UpdateThread({
   projectId,
   update,
-  contacts
+  contacts,
+  taggableItems
 }: {
   projectId: string;
   update: UpdateWithReplies;
   contacts: ContactOption[];
+  taggableItems: VariationItem[];
 }) {
   const router = useRouter();
   const [isReplying, setIsReplying] = useState(false);
@@ -46,6 +48,21 @@ export function UpdateThread({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [sentMessage, setSentMessage] = useState<string | null>(null);
+  const [isEditingTag, setIsEditingTag] = useState(false);
+  const [tagSelection, setTagSelection] = useState(update.variationItem?.id ?? "");
+  const [isSavingTag, setIsSavingTag] = useState(false);
+
+  async function handleSaveTag() {
+    setIsSavingTag(true);
+    await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variationItemId: tagSelection || null })
+    });
+    setIsSavingTag(false);
+    setIsEditingTag(false);
+    router.refresh();
+  }
 
   // Every photo across the whole thread (the top-level update plus every
   // reply), so the outbound-email panel can offer them all for selection —
@@ -87,20 +104,61 @@ export function UpdateThread({
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5">
       <div className="flex items-baseline justify-between gap-3 mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-bold">{authorLabel(update.author)}</p>
-          {update.variationItem && (
-            <Link
-              href={`/projects/${projectId}/variations/${update.variationItem.id}`}
-              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary hover:bg-primary/20"
-            >
-              {update.variationItem.reference}
-            </Link>
-          )}
-          {update.percentComplete != null && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-              {Math.round(update.percentComplete)}% tagged
-            </span>
+          {isEditingTag ? (
+            <>
+              <select
+                value={tagSelection}
+                onChange={(event) => setTagSelection(event.target.value)}
+                className="h-7 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <option value="">Not tied to a Variation/SI</option>
+                {taggableItems.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.reference} · {option.title}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleSaveTag}
+                disabled={isSavingTag}
+                className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
+              >
+                {isSavingTag ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => {
+                  setTagSelection(update.variationItem?.id ?? "");
+                  setIsEditingTag(false);
+                }}
+                className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              {update.variationItem && (
+                <Link
+                  href={`/projects/${projectId}/variations/${update.variationItem.id}`}
+                  className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary hover:bg-primary/20"
+                >
+                  {update.variationItem.reference}
+                </Link>
+              )}
+              {update.percentComplete != null && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                  {Math.round(update.percentComplete)}% tagged
+                </span>
+              )}
+              <button
+                onClick={() => setIsEditingTag(true)}
+                className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
+              >
+                {update.variationItem ? "Change tag" : "+ Tag"}
+              </button>
+            </>
           )}
         </div>
         <p className="text-xs text-[#4c739a] dark:text-slate-400 shrink-0">{formatTimestamp(update.createdAt)}</p>

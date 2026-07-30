@@ -12,6 +12,7 @@ function formatDate(date: Date | null) {
 
 export function VariationItemCard({ projectId, item }: { projectId: string; item: VariationItem }) {
   const isSiteInstruction = item.type === "site_instruction";
+  const hasVariation = item.variationCreatedAt != null;
 
   return (
     <Link
@@ -23,15 +24,16 @@ export function VariationItemCard({ projectId, item }: { projectId: string; item
           {item.reference} <span className="font-normal text-[#4c739a] dark:text-slate-400">· {item.title}</span>
         </h3>
         <div className="flex gap-2 shrink-0">
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
-              isSiteInstruction
-                ? "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
-                : "bg-primary/10 text-primary"
-            }`}
-          >
-            {isSiteInstruction ? "Site Instruction" : "Variation"}
-          </span>
+          {isSiteInstruction && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+              Site Instruction
+            </span>
+          )}
+          {hasVariation && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
+              Variation
+            </span>
+          )}
           <StatusBadge status={item.status} />
         </div>
       </div>
@@ -43,6 +45,11 @@ export function VariationItemCard({ projectId, item }: { projectId: string; item
       )}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#4c739a] dark:text-slate-400">
+        {hasVariation && item.variationValue != null && (
+          <span className="font-bold text-[#0d141b] dark:text-slate-50">
+            ${Number(item.variationValue).toLocaleString("en-NZ", { minimumFractionDigits: 2 })}
+          </span>
+        )}
         {item.percentComplete != null && <span>{Math.round(item.percentComplete)}% complete</span>}
         {item.suggestedPercentComplete != null && (
           <span className="text-amber-600 dark:text-amber-400 font-medium">

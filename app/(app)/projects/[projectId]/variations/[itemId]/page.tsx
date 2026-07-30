@@ -27,7 +27,18 @@ export default async function VariationItemPage({
 
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { mainContractorId: true } });
 
-  const [dayWorksSheets, photos, correspondence, updates, contacts] = await Promise.all([
+  const [canSeeVariations, canSeeSiteInstructions] = userId
+    ? await Promise.all([
+        requireModuleAccess(projectId, userId, "variations"),
+        requireModuleAccess(projectId, userId, "site_instructions")
+      ])
+    : [false, false];
+  const taggableTypes: ("variation" | "site_instruction")[] = [
+    ...(canSeeVariations ? (["variation"] as const) : []),
+    ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
+  ];
+
+  const [dayWorksSheets, photos, correspondence, updates, contacts, taggableItems] = await Promise.all([
     prisma.dayWorksSheet.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.variationPhoto.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.correspondence.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
@@ -53,6 +64,12 @@ export default async function VariationItemPage({
           select: { id: true, name: true, email: true, role: true },
           orderBy: { name: "asc" }
         })
+      : Promise.resolve([]),
+    taggableTypes.length > 0
+      ? prisma.variationItem.findMany({
+          where: { projectId, type: { in: taggableTypes }, status: { not: "complete" } },
+          orderBy: { createdAt: "desc" }
+        })
       : Promise.resolve([])
   ]);
 
@@ -65,6 +82,7 @@ export default async function VariationItemPage({
       correspondence={correspondence}
       updates={updates}
       contacts={contacts}
+      taggableItems={taggableItems}
     />
   );
 }

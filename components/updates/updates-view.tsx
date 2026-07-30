@@ -47,7 +47,13 @@ export function UpdatesView({
         ) : (
           <div className="flex flex-col gap-4">
             {updates.map((update) => (
-              <UpdateThread key={update.id} projectId={projectId} update={update} contacts={contacts} />
+              <UpdateThread
+                key={update.id}
+                projectId={projectId}
+                update={update}
+                contacts={contacts}
+                taggableItems={taggableItems}
+              />
             ))}
           </div>
         )}

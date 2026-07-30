@@ -14,7 +14,13 @@ const updateVariationItemSchema = z.object({
   dueAt: z.string().datetime().optional(),
   // Admin/PM-only: applies the pending suggested % (from an Update tag under
   // "requires confirmation" mode) as the real percentComplete.
-  confirmSuggested: z.boolean().optional()
+  confirmSuggested: z.boolean().optional(),
+  // Adds a Variation identity to a Site Instruction-origin item — see the
+  // schema comment on VariationItem.variationCreatedAt. Requires "variations"
+  // module access specifically, checked below, on top of whatever module the
+  // item's own type already requires.
+  createVariation: z.boolean().optional(),
+  variationValue: z.number().min(0).nullable().optional()
 });
 
 async function moduleForItem(projectId: string, itemId: string) {
@@ -57,6 +63,25 @@ export async function PATCH(request: Request, context: { params: { projectId: st
     return NextResponse.json({ variationItem });
   }
 
+  let variationCreatedAt: Date | undefined;
+  if (payload.createVariation) {
+    // Adding a Variation identity is meaningfully a "variations" action —
+    // require that module specifically, on top of whatever module the
+    // item's own origin type already required above (e.g. a
+    // site_instructions-only user can't do this).
+    const canCreateVariation = await requireModuleAccess(projectId, userId, "variations");
+    if (!canCreateVariation) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const current = await prisma.variationItem.findFirst({
+      where: { id: itemId, projectId },
+      select: { variationCreatedAt: true }
+    });
+    // Idempotent — calling this again on an item that already has a
+    // Variation identity just leaves the original timestamp alone.
+    variationCreatedAt = current?.variationCreatedAt ?? new Date();
+  }
+
   const variationItem = await prisma.variationItem.update({
     where: { id: itemId, projectId },
     data: {
@@ -66,7 +91,9 @@ export async function PATCH(request: Request, context: { params: { projectId: st
       status: payload.status,
       percentComplete: payload.percentComplete === undefined ? undefined : payload.percentComplete,
       notifiedAt: payload.notifiedAt ? new Date(payload.notifiedAt) : undefined,
-      dueAt: payload.dueAt ? new Date(payload.dueAt) : undefined
+      dueAt: payload.dueAt ? new Date(payload.dueAt) : undefined,
+      variationCreatedAt,
+      variationValue: payload.variationValue === undefined ? undefined : payload.variationValue
     }
   });
 

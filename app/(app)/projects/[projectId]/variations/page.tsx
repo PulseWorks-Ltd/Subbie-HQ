@@ -21,15 +21,27 @@ export default async function VariationsPage({ params }: { params: Promise<{ pro
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const variationItems = await prisma.variationItem.findMany({
-    where: { projectId, type: { in: visibleTypes } },
-    orderBy: { createdAt: "desc" }
-  });
+  const [variationItems, openSiteInstructions] = await Promise.all([
+    prisma.variationItem.findMany({
+      where: { projectId, type: { in: visibleTypes } },
+      orderBy: { createdAt: "desc" }
+    }),
+    // For the "link to an existing Site Instruction" option when creating a
+    // Variation — only ones that don't already carry a Variation identity,
+    // and haven't been marked complete.
+    canSeeVariations && canSeeSiteInstructions
+      ? prisma.variationItem.findMany({
+          where: { projectId, type: "site_instruction", variationCreatedAt: null, status: { not: "complete" } },
+          orderBy: { createdAt: "desc" }
+        })
+      : Promise.resolve([])
+  ]);
 
   return (
     <VariationsView
       projectId={projectId}
       items={variationItems}
+      openSiteInstructions={openSiteInstructions}
       canCreateVariation={canSeeVariations}
       canCreateSiteInstruction={canSeeSiteInstructions}
     />

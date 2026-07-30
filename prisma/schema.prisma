@@ -857,6 +857,21 @@ model VariationItem {
   lastReminderStage        ReminderStage?
   createdAt                DateTime            @default(now())
 
+  // A Site Instruction and a Variation are no longer mutually exclusive on
+  // one row — `type` still tracks the item's ORIGIN (how it was first
+  // created) and never changes, while variationCreatedAt marks whether this
+  // record ALSO now carries a Variation identity. Set immediately at
+  // creation for type: "variation" rows (they inherently have one), or
+  // later via "Create Variation" for a type: "site_instruction" row. Treat
+  // `variationCreatedAt != null` as the "hasVariation" check throughout —
+  // deliberately a timestamp rather than a plain boolean, since a boolean
+  // can't also answer "since when".
+  variationCreatedAt DateTime?
+  // Manually-entered $ value for the Variation identity — meaningful only
+  // once variationCreatedAt is set. No auto-calculation from Day Works
+  // Sheet hours (deliberately out of scope, kept manual for now).
+  variationValue     Decimal?
+
   project                   Project          @relation(fields: [projectId], references: [id])
   updates                   Update[]
   dayWorksSheets            DayWorksSheet[]

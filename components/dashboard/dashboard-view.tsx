@@ -82,9 +82,7 @@ export function DashboardView({
                 sectionKey={section.key}
                 label={section.label}
                 icon={section.icon}
-                items={section.items}
-                itemKey={(item) => `${item.type}-${item.id}`}
-                renderItem={(item) => <DashboardItemRow item={item} />}
+                itemCount={section.items.length}
                 defaultExpanded={section.overdueCount > 0}
                 badges={
                   <>
@@ -100,7 +98,11 @@ export function DashboardView({
                     )}
                   </>
                 }
-              />
+              >
+                {section.items.map((item) => (
+                  <DashboardItemRow key={`${item.type}-${item.id}`} item={item} />
+                ))}
+              </DashboardSection>
             ))}
           </div>
         )}

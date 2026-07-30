@@ -30,9 +30,7 @@ export function UpdatesDashboardSection({ initialItems }: { initialItems: Unread
       sectionKey="updates"
       label="Updates"
       icon="forum"
-      items={items}
-      itemKey={(item) => item.id}
-      renderItem={(item) => <UpdateDashboardRow item={item} onMarkRead={removeItem} />}
+      itemCount={items.length}
       defaultExpanded={items.length > 0}
       badges={
         items.length > 0 ? (
@@ -61,6 +59,10 @@ export function UpdatesDashboardSection({ initialItems }: { initialItems: Unread
           <p className="text-[#4c739a] dark:text-slate-400 text-xs mt-1">No unread Updates.</p>
         </div>
       }
-    />
+    >
+      {items.map((item) => (
+        <UpdateDashboardRow key={item.id} item={item} onMarkRead={removeItem} />
+      ))}
+    </DashboardSection>
   );
 }

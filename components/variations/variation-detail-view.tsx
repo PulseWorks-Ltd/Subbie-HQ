@@ -14,7 +14,7 @@ import { VariationCorrespondenceSection } from "@/components/variations/variatio
 import { VariationLinkedUpdatesSection } from "@/components/variations/variation-linked-updates-section";
 import { CreateVariationDialog } from "@/components/variations/create-variation-dialog";
 
-type Author = { id: string; name: string | null; email: string };
+type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type UpdateWithReplies = Update & {

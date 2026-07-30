@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MODULES, MODULE_LABELS, PRESETS, type ModuleKey, type ModulePermissions, type PresetKey } from "@/lib/permissions";
+import { formatUserName } from "@/lib/user-display";
 
 type ExistingMember = {
   id: string;
   title: string | null;
   isAdmin: boolean;
   modules: unknown;
-  user: { name: string | null; email: string };
+  user: { firstName: string | null; lastName: string | null; email: string };
 };
 
 export function MemberPermissionsDialog({
@@ -88,7 +89,7 @@ export function MemberPermissionsDialog({
         <h2 className="text-lg font-bold mb-1">{isEditing ? "Edit permissions" : "Invite a team member"}</h2>
         <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5">
           {isEditing
-            ? `${member!.user.name ?? member!.user.email} — ${member!.user.email}`
+            ? `${formatUserName(member!.user) ?? member!.user.email} — ${member!.user.email}`
             : "They'll receive an email to set up their account."}
         </p>
 

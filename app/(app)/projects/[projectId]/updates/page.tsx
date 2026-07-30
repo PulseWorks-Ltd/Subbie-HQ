@@ -36,12 +36,12 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
     prisma.update.findMany({
       where: { projectId, parentId: null },
       include: {
-        author: { select: { id: true, name: true, email: true } },
+        author: { select: { id: true, firstName: true, lastName: true, email: true } },
         variationItem: { select: { id: true, reference: true, title: true } },
         attachments: true,
         replies: {
           include: {
-            author: { select: { id: true, name: true, email: true } },
+            author: { select: { id: true, firstName: true, lastName: true, email: true } },
             attachments: true
           },
           orderBy: { createdAt: "asc" }

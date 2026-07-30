@@ -7,7 +7,10 @@ import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [organisationName, setOrganisationName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +24,14 @@ export default function SignupPage() {
     const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify({
+        organisationName,
+        firstName,
+        lastName,
+        jobTitle: jobTitle || undefined,
+        email,
+        password
+      })
     });
 
     if (!response.ok) {
@@ -45,7 +55,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 mb-6 dark:hidden" />
@@ -58,12 +68,46 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Name
+            Organisation name
             <input
               type="text"
               required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
+              value={organisationName}
+              onChange={(event) => setOrganisationName(event.target.value)}
+              className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </label>
+
+          <div className="flex gap-3">
+            <label className="flex flex-col gap-1 text-sm font-medium flex-1">
+              First name
+              <input
+                type="text"
+                required
+                value={firstName}
+                onChange={(event) => setFirstName(event.target.value)}
+                className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium flex-1">
+              Surname
+              <input
+                type="text"
+                required
+                value={lastName}
+                onChange={(event) => setLastName(event.target.value)}
+                className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Job title <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+            <input
+              type="text"
+              value={jobTitle}
+              onChange={(event) => setJobTitle(event.target.value)}
+              placeholder="e.g. Director, Site Manager, Quantity Surveyor"
               className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </label>

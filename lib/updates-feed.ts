@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { getOrganisationMembership, getVisibleProjectsWhere } from "./organisation";
 import { hasModuleAccess } from "./permissions";
+import { formatUserName } from "./user-display";
 
 const PREVIEW_LENGTH = 120;
 
@@ -47,7 +48,7 @@ export async function getUnreadUpdates(userId: string): Promise<UnreadUpdateItem
       reads: { none: { userId } }
     },
     include: {
-      author: { select: { name: true, email: true } },
+      author: { select: { firstName: true, lastName: true, email: true } },
       variationItem: { select: { id: true, reference: true } }
     },
     orderBy: { createdAt: "desc" }
@@ -57,7 +58,7 @@ export async function getUnreadUpdates(userId: string): Promise<UnreadUpdateItem
     id: update.id,
     projectId: update.projectId,
     projectName: projectNameById.get(update.projectId) ?? "",
-    authorName: update.author.name ?? update.author.email,
+    authorName: formatUserName(update.author) ?? update.author.email,
     bodyPreview: truncate(update.body, PREVIEW_LENGTH),
     createdAt: update.createdAt,
     variationItem: update.variationItem,

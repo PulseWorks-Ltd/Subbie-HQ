@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Update, UpdateAttachment } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
+import { formatUserName } from "@/lib/user-display";
 
-type Author = { id: string; name: string | null; email: string };
+type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
 type UpdateWithReplies = Update & {
   author: Author;
@@ -24,7 +25,7 @@ function formatTimestamp(date: Date) {
 }
 
 function authorLabel(author: Author) {
-  return author.name ?? author.email;
+  return formatUserName(author) ?? author.email;
 }
 
 export function MobileThread({ projectId, update }: { projectId: string; update: UpdateWithReplies }) {

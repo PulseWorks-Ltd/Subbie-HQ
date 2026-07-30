@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { formatUserName } from "@/lib/user-display";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -26,7 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const passwordMatches = await bcrypt.compare(password, user.passwordHash);
         if (!passwordMatches) return null;
 
-        return { id: user.id, email: user.email, name: user.name };
+        return { id: user.id, email: user.email, name: formatUserName(user) };
       }
     })
   ],

@@ -6,7 +6,7 @@ import { MobileThread } from "@/components/mobile/mobile-thread";
 import { UpdateComposer } from "@/components/updates/update-composer";
 import { getCountdownInfo } from "@/lib/date-countdown";
 
-type Author = { id: string; name: string | null; email: string };
+type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
 type UpdateWithReplies = Update & {
   author: Author;

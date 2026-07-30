@@ -6,8 +6,9 @@ import Link from "next/link";
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 import { GenerateOutboundEmailPanel } from "@/components/updates/generate-outbound-email-panel";
+import { formatUserName } from "@/lib/user-display";
 
-type Author = { id: string; name: string | null; email: string };
+type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type UpdateWithReplies = Update & {
@@ -27,7 +28,7 @@ function formatTimestamp(date: Date) {
 }
 
 function authorLabel(author: Author) {
-  return author.name ?? author.email;
+  return formatUserName(author) ?? author.email;
 }
 
 export function UpdateThread({

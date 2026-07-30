@@ -1,7 +1,7 @@
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { UpdateThread } from "@/components/updates/update-thread";
 
-type Author = { id: string; name: string | null; email: string };
+type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type UpdateWithReplies = Update & {

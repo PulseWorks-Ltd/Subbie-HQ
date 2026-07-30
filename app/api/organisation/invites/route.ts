@@ -5,6 +5,7 @@ import { requireUserId } from "@/lib/auth";
 import { requireOrganisationAdmin } from "@/lib/organisation";
 import { MODULES } from "@/lib/permissions";
 import { sendOrganisationInviteEmail } from "@/lib/email";
+import { formatUserName } from "@/lib/user-display";
 
 const createInviteSchema = z.object({
   email: z.string().email(),
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
   await sendOrganisationInviteEmail({
     to: email,
     organisationName: admin.organisation.name,
-    inviterName: admin.user.name ?? admin.user.email,
+    inviterName: formatUserName(admin.user) ?? admin.user.email,
     title: payload.title || null,
     inviteUrl: `${baseUrl}/invite/${invite.token}`
   });

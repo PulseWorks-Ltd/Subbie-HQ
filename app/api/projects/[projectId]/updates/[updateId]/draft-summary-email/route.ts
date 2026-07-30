@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { draftUpdateThreadSummaryEmail } from "@/lib/grok";
+import { formatUserName } from "@/lib/user-display";
 
 // Preview step for "Generate outbound email" on an existing thread — drafts
 // a subject/body summarising the ENTIRE thread (the top-level update plus
@@ -27,16 +28,16 @@ export async function POST(request: Request, context: { params: { projectId: str
     prisma.update.findFirst({
       where: { id: updateId, projectId, parentId: null },
       include: {
-        author: { select: { name: true, email: true } },
+        author: { select: { firstName: true, lastName: true, email: true } },
         attachments: true,
         replies: {
-          include: { author: { select: { name: true, email: true } }, attachments: true },
+          include: { author: { select: { firstName: true, lastName: true, email: true } }, attachments: true },
           orderBy: { createdAt: "asc" }
         }
       }
     }),
     prisma.project.findUnique({ where: { id: projectId }, select: { name: true } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
+    prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, email: true } })
   ]);
 
   if (!update) {
@@ -44,9 +45,9 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
 
   const entries = [
-    { authorName: update.author.name ?? update.author.email, createdAt: update.createdAt, body: update.body },
+    { authorName: formatUserName(update.author) ?? update.author.email, createdAt: update.createdAt, body: update.body },
     ...update.replies.map((reply) => ({
-      authorName: reply.author.name ?? reply.author.email,
+      authorName: formatUserName(reply.author) ?? reply.author.email,
       createdAt: reply.createdAt,
       body: reply.body
     }))
@@ -56,7 +57,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   try {
     const drafted = await draftUpdateThreadSummaryEmail({
       projectName: project?.name ?? "the project",
-      authorName: user?.name ?? user?.email ?? "The team",
+      authorName: (user ? formatUserName(user) : null) ?? user?.email ?? "The team",
       entries,
       photoCount
     });

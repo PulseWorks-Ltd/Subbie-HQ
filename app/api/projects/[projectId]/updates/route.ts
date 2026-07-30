@@ -6,6 +6,7 @@ import { sendPushToUser } from "@/lib/push";
 import { sendReplyNotificationEmail } from "@/lib/email";
 import { uploadToS3 } from "@/lib/s3";
 import { sendExternalUpdateAndLog } from "@/lib/external-update";
+import { formatUserName } from "@/lib/user-display";
 
 const MAX_ATTACHMENTS = 4;
 
@@ -46,13 +47,13 @@ export async function GET(request: Request, context: { params: { projectId: stri
   const updates = await prisma.update.findMany({
     where: { projectId, parentId: null },
     include: {
-      author: { select: { id: true, name: true, email: true } },
+      author: { select: { id: true, firstName: true, lastName: true, email: true } },
       variationItem: { select: { id: true, reference: true, title: true } },
       attachments: true,
       recipients: true,
       replies: {
         include: {
-          author: { select: { id: true, name: true, email: true } },
+          author: { select: { id: true, firstName: true, lastName: true, email: true } },
           attachments: true
         },
         orderBy: { createdAt: "asc" }
@@ -176,7 +177,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       recipients: isExternal ? { create: resolvedRecipients.map((r) => ({ mainContractorContactId: r.contactId, email: r.email })) } : undefined
     },
     include: {
-      author: { select: { id: true, name: true, email: true } },
+      author: { select: { id: true, firstName: true, lastName: true, email: true } },
       variationItem: { select: { id: true, reference: true, title: true } },
       recipients: true
     }
@@ -231,7 +232,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   const notifiedUserIds = new Set<string>([userId]);
 
   if (parent && parent.authorId !== userId) {
-    const authorLabel = update.author.name ?? update.author.email;
+    const authorLabel = formatUserName(update.author) ?? update.author.email;
     const mobileUrl = `/m/${projectId}?update=${parent.id}`;
 
     await sendPushToUser(parent.authorId, {
@@ -258,7 +259,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   // not just a reply's direct parent author (who's already been notified
   // more specifically above, so isn't double-notified here). Deep-links to
   // this specific update, not just the project's update list.
-  const authorLabel = update.author.name ?? update.author.email;
+  const authorLabel = formatUserName(update.author) ?? update.author.email;
   const memberIds = await getProjectMemberUserIdsWithModuleAccess(projectId, "updates");
   const targetUpdateId = payload.parentId ?? update.id;
   const deepLinkUrl = `/m/${projectId}?update=${targetUpdateId}`;

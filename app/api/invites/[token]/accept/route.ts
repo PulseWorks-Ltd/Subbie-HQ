@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
+import { splitFullName } from "@/lib/user-display";
 
 const acceptInviteSchema = z.object({
   name: z.string().min(1).optional(),
@@ -37,8 +38,13 @@ export async function POST(request: Request, context: { params: { token: string 
       return NextResponse.json({ error: "Name and password are required." }, { status: 400 });
     }
     const passwordHash = await bcrypt.hash(payload.password, 10);
+    // This flow still collects a single free-text "Your name" field (see
+    // components/invite/accept-invite-form.tsx) — deliberately unchanged
+    // per Task 1.3, just adapted to write into firstName/lastName using the
+    // same best-effort split as the migration's backfill.
+    const { firstName, lastName } = splitFullName(payload.name);
     const user = await prisma.user.create({
-      data: { email: invite.email, name: payload.name, passwordHash }
+      data: { email: invite.email, firstName, lastName, passwordHash }
     });
     userId = user.id;
   }

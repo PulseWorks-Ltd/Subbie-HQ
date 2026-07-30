@@ -158,7 +158,11 @@ model User {
   id                      String               @id @default(cuid())
   email                   String               @unique
   passwordHash            String
-  name                    String?
+  firstName               String?
+  lastName                String?
+  // Free text — e.g. "Director", "Site Manager", "Quantity Surveyor", not a
+  // fixed enum. Optional, same as MainContractorContact.role elsewhere.
+  jobTitle                String?
   createdAt               DateTime             @default(now())
   memberships             ProjectMember[]
   organisationMemberships OrganisationMember[]

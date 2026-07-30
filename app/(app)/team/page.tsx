@@ -18,7 +18,7 @@ export default async function TeamPage() {
   const [members, invites] = await Promise.all([
     prisma.organisationMember.findMany({
       where: { organisationId: admin.organisationId },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
       orderBy: { createdAt: "asc" }
     }),
     prisma.organisationInvite.findMany({

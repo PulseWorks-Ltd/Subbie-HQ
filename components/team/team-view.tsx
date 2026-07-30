@@ -4,9 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OrganisationInvite, OrganisationMember, VariationCompletionMode } from "@prisma/client";
 import { MODULE_LABELS, type ModuleKey, type ModulePermissions } from "@/lib/permissions";
+import { formatUserName } from "@/lib/user-display";
 import { MemberPermissionsDialog } from "@/components/team/member-permissions-dialog";
 
-type MemberWithUser = OrganisationMember & { user: { id: string; name: string | null; email: string } };
+type MemberWithUser = OrganisationMember & {
+  user: { id: string; firstName: string | null; lastName: string | null; email: string };
+};
 
 function moduleSummary(modules: unknown) {
   const permissions = modules as ModulePermissions | null;
@@ -61,7 +64,7 @@ export function TeamView({
   }
 
   async function handleRemoveMember(member: MemberWithUser) {
-    if (!confirm(`Remove ${member.user.name ?? member.user.email} from ${organisationName}?`)) return;
+    if (!confirm(`Remove ${formatUserName(member.user) ?? member.user.email} from ${organisationName}?`)) return;
     const response = await fetch(`/api/organisation/members/${member.id}`, { method: "DELETE" });
     if (!response.ok) {
       const body = await response.json().catch(() => null);
@@ -142,7 +145,7 @@ export function TeamView({
               >
                 <div className="min-w-0">
                   <p className="font-bold text-sm">
-                    {member.user.name ?? member.user.email}
+                    {formatUserName(member.user) ?? member.user.email}
                     {member.user.id === currentUserId && (
                       <span className="ml-2 text-xs font-normal text-[#4c739a] dark:text-slate-400">(you)</span>
                     )}

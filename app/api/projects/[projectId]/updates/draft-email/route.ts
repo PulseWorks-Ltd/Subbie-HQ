@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { draftExternalUpdateEmail } from "@/lib/grok";
+import { formatUserName } from "@/lib/user-display";
 
 const requestSchema = z.object({
   body: z.string().min(1),
@@ -33,7 +34,7 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const [project, user] = await Promise.all([
     prisma.project.findUnique({ where: { id: projectId }, select: { name: true } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
+    prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, email: true } })
   ]);
   if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -43,7 +44,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     const drafted = await draftExternalUpdateEmail({
       roughText: payload.body,
       projectName: project.name,
-      authorName: user?.name ?? user?.email ?? "The team",
+      authorName: (user ? formatUserName(user) : null) ?? user?.email ?? "The team",
       photoCount: payload.photoCount
     });
     return NextResponse.json({ drafted });

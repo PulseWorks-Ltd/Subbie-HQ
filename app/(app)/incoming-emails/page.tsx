@@ -32,9 +32,12 @@ export default async function IncomingEmailsPage() {
       select: {
         id: true,
         name: true,
+        // Not status-filtered: the review dialog uses this list both to link
+        // correspondence to an item and to detect "this Site
+        // Instruction/Variation already exists" before creating a new one —
+        // a completed item still counts as an existing one for that check.
         variationItems: {
-          where: { status: { in: ["draft", "open"] } },
-          select: { id: true, reference: true, title: true }
+          select: { id: true, reference: true, title: true, type: true, status: true }
         }
       },
       orderBy: { name: "asc" }

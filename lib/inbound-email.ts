@@ -263,6 +263,38 @@ export async function classifyAndSuggest(emailId: string): Promise<void> {
   }
 }
 
+// Safety net for classifyAndSuggest's fire-and-forget invocation from the
+// webhook (see app/api/webhooks/inbound-email/route.ts): that call is
+// deliberately not awaited so SendGrid gets a fast response, but that means
+// nothing guarantees it actually finishes — e.g. if a Railway deploy recycles
+// the container mid-flight, the in-flight promise is simply killed with no
+// exception ever reaching classifyAndSuggest's own try/catch, so no error is
+// ever recorded either. Any row still showing no summary AND no error a
+// couple of minutes after being received is indistinguishable from "never
+// ran" and safe to retry — a genuinely-completed run always sets one or the
+// other. The 2-minute grace period avoids racing the webhook's own in-flight
+// attempt for a brand new email. Driven by a short-interval Railway Cron Job
+// (see app/api/cron/classify-inbound-emails/route.ts), same
+// cron-hitting-HTTP-endpoint pattern as lib/reminders.ts.
+export async function sweepUnclassifiedInboundEmails(): Promise<{ found: number; ids: string[] }> {
+  const cutoff = new Date(Date.now() - 2 * 60 * 1000);
+  const stuck = await prisma.inboundEmail.findMany({
+    where: {
+      status: "pending_review",
+      aiSummary: null,
+      classificationError: null,
+      receivedAt: { lt: cutoff }
+    },
+    select: { id: true }
+  });
+
+  for (const { id } of stuck) {
+    await classifyAndSuggest(id);
+  }
+
+  return { found: stuck.length, ids: stuck.map((email) => email.id) };
+}
+
 // Dismissed emails are kept, not deleted — a lightweight record in case an
 // email needs revisiting later (e.g. "actually that WAS relevant").
 export async function dismissInboundEmail(

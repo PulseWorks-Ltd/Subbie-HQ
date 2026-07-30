@@ -25,7 +25,13 @@ export type IncomingEmailRow = {
 export type ProjectOption = {
   id: string;
   name: string;
-  variationItems: { id: string; reference: string; title: string }[];
+  variationItems: {
+    id: string;
+    reference: string;
+    title: string;
+    type: "variation" | "site_instruction";
+    status: "draft" | "open" | "submitted_for_claim" | "complete";
+  }[];
 };
 
 export function IncomingEmailsView({

@@ -81,6 +81,33 @@ export function IncomingEmailCard({
             {isRetrying ? "Retrying..." : "Retry"}
           </button>
         </div>
+      ) : !email.aiSummary && !email.suggestedProject && !email.suggestedType ? (
+        // No summary at all (as opposed to a summary that just found nothing
+        // confident) means classification never actually ran for this row.
+        // The webhook fires it fire-and-forget (see
+        // app/api/webhooks/inbound-email/route.ts) so SendGrid gets a fast
+        // response — most commonly this means that in-flight attempt got
+        // killed before finishing (e.g. a deploy recycling the container),
+        // which leaves no trace since the exception never reaches
+        // classifyAndSuggest's own try/catch. A short-interval cron sweep
+        // (lib/inbound-email.ts's sweepUnclassifiedInboundEmails) retries
+        // these automatically after a couple of minutes, but this button
+        // lets a reviewer trigger it immediately instead of waiting.
+        // Distinct from the classificationError case above (that's "it ran
+        // and crashed"; this is "it never ran"), but both need the same way
+        // to trigger it.
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-[#e7edf3] dark:border-slate-700 p-3 flex items-center justify-between gap-3">
+          <p className="text-xs text-[#4c739a] dark:text-slate-400">
+            AI classification hasn't run for this email yet.
+          </p>
+          <button
+            onClick={handleRetryClassification}
+            disabled={isRetrying}
+            className="h-8 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold disabled:opacity-60 shrink-0"
+          >
+            {isRetrying ? "Running..." : "Run classification"}
+          </button>
+        </div>
       ) : (
         <>
           {email.aiSummary && <p className="text-sm text-[#0d141b] dark:text-slate-200">{email.aiSummary}</p>}

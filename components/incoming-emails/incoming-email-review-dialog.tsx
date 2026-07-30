@@ -14,6 +14,13 @@ function matchItemType(category: string): "variation" | "site_instruction" | nul
   return null;
 }
 
+// "SI-83", "SI83", "si 83" should all collide — references get typed and
+// re-typed slightly differently across an email thread and manual entry, so
+// comparing raw strings would let obvious duplicates through.
+function normalizeReference(reference: string): string {
+  return reference.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 export function IncomingEmailReviewDialog({
   email,
   projects,
@@ -43,14 +50,22 @@ export function IncomingEmailReviewDialog({
     dueAt: string;
   } | null>(null);
   const [extractError, setExtractError] = useState<string | null>(null);
+  // Set when extraction finds a reference that already exists on this
+  // project (any status — a completed Site Instruction still counts as
+  // "already exists") — blocks creating a duplicate and auto-links to the
+  // existing item instead, so the email still ends up connected to a real
+  // Site Instruction/Variation rather than a dead end.
+  const [duplicateNotice, setDuplicateNotice] = useState<string | null>(null);
 
   const selectedProject = useMemo(() => projects.find((project) => project.id === projectId), [projects, projectId]);
   const matchedItemType = useMemo(() => matchItemType(category), [category]);
+  const itemTypeLabel = matchedItemType === "site_instruction" ? "Site Instruction" : "Variation";
 
   async function handleExtractDetails() {
-    if (!matchedItemType) return;
+    if (!matchedItemType || !selectedProject) return;
     setIsExtracting(true);
     setExtractError(null);
+    setDuplicateNotice(null);
     try {
       const response = await fetch(`/api/organisation/incoming-emails/${email.id}/extract-variation-item`, {
         method: "POST",
@@ -62,9 +77,26 @@ export function IncomingEmailReviewDialog({
         setExtractError(data.error || "Could not extract details.");
         return;
       }
+
+      const extractedReference: string = data.extracted.reference ?? "";
+      const existingMatch = extractedReference
+        ? selectedProject.variationItems.find(
+            (item) => item.type === matchedItemType && normalizeReference(item.reference) === normalizeReference(extractedReference)
+          )
+        : undefined;
+
+      if (existingMatch) {
+        setNewItem(null);
+        setVariationItemId(existingMatch.id);
+        setDuplicateNotice(
+          `This matches an existing ${itemTypeLabel} — ${existingMatch.reference} · ${existingMatch.title}. Filing will link to it instead of creating a duplicate.`
+        );
+        return;
+      }
+
       setVariationItemId("");
       setNewItem({
-        reference: data.extracted.reference ?? "",
+        reference: extractedReference,
         title: data.extracted.title ?? "",
         description: data.extracted.summary ?? "",
         notifiedAt: data.extracted.notifiedAt ?? "",
@@ -75,8 +107,13 @@ export function IncomingEmailReviewDialog({
     }
   }
 
-  async function handleFile(event: React.FormEvent) {
-    event.preventDefault();
+  // Not wired to <form onSubmit> — with two action buttons visible at once
+  // (plain file vs. extract & create), an implicit Enter-triggered submit
+  // would always fire whichever button happens to be type="submit" first in
+  // the DOM, regardless of which one is visually primary. Both actions are
+  // explicit button clicks instead, so there's no ambiguity about which one
+  // Enter would silently trigger.
+  async function handleFile() {
     if (!projectId || !category.trim()) return;
     if (newItem && (!newItem.reference.trim() || !newItem.title.trim())) return;
     setIsSubmitting(true);
@@ -113,6 +150,16 @@ export function IncomingEmailReviewDialog({
     onFiled();
   }
 
+  // Nothing left to extract once a link is already resolved (manually picked
+  // or auto-matched as a duplicate), once a new item is being reviewed, or
+  // when the category isn't a Variation/Site Instruction at all — in every
+  // one of those states there's a single unambiguous confirm action. Only
+  // the initial, ambiguous state (matched type, nothing chosen yet) needs the
+  // three-way choice between filing plain, linking, or creating.
+  const showExtractChoice = Boolean(matchedItemType && !newItem && !variationItemId);
+
+  const canSubmitPlain = !isSubmitting && Boolean(projectId) && Boolean(category.trim());
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 w-full max-w-lg max-h-[85vh] overflow-y-auto">
@@ -126,7 +173,7 @@ export function IncomingEmailReviewDialog({
             {email.body}
           </div>
 
-          <form onSubmit={handleFile} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1 text-sm font-medium">
               Project
               <select
@@ -134,6 +181,7 @@ export function IncomingEmailReviewDialog({
                 onChange={(event) => {
                   setProjectId(event.target.value);
                   setVariationItemId("");
+                  setDuplicateNotice(null);
                 }}
                 required
                 className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -164,43 +212,37 @@ export function IncomingEmailReviewDialog({
               </datalist>
             </label>
 
-            {selectedProject && matchedItemType && !newItem && (
-              <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 flex flex-col gap-2">
-                {selectedProject.variationItems.length > 0 && (
-                  <label className="flex flex-col gap-1 text-sm font-medium">
-                    Link to an existing Variation/Site Instruction (optional)
-                    <select
-                      value={variationItemId}
-                      onChange={(event) => setVariationItemId(event.target.value)}
-                      className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    >
-                      <option value="">Not linked</option>
-                      {selectedProject.variationItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.reference} · {item.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                <button
-                  type="button"
-                  onClick={handleExtractDetails}
-                  disabled={isExtracting}
-                  className="self-start text-xs font-bold text-primary hover:underline disabled:opacity-60"
+            {selectedProject && matchedItemType && !newItem && selectedProject.variationItems.length > 0 && (
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Link to an existing Variation/Site Instruction
+                <select
+                  value={variationItemId}
+                  onChange={(event) => {
+                    setVariationItemId(event.target.value);
+                    setDuplicateNotice(null);
+                  }}
+                  className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                 >
-                  {isExtracting ? "Extracting details..." : "Or: this is new — extract details & create it"}
-                </button>
-                {extractError && <p className="text-xs text-red-600 dark:text-red-400">{extractError}</p>}
-              </div>
+                  <option value="">Not linked</option>
+                  {selectedProject.variationItems
+                    .filter((item) => item.type === matchedItemType)
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.reference} · {item.title}
+                        {item.status === "complete" ? " (complete)" : ""}
+                      </option>
+                    ))}
+                </select>
+              </label>
             )}
+
+            {duplicateNotice && <p className="text-xs text-amber-700 dark:text-amber-400">{duplicateNotice}</p>}
+            {extractError && <p className="text-xs text-red-600 dark:text-red-400">{extractError}</p>}
 
             {newItem && (
               <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold">
-                    New {matchedItemType === "site_instruction" ? "Site Instruction" : "Variation"} — review before saving
-                  </p>
+                  <p className="text-sm font-bold">New {itemTypeLabel} — review before saving</p>
                   <button
                     type="button"
                     onClick={() => setNewItem(null)}
@@ -269,20 +311,44 @@ export function IncomingEmailReviewDialog({
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  !projectId ||
-                  !category.trim() ||
-                  Boolean(newItem && (!newItem.reference.trim() || !newItem.title.trim()))
-                }
-                className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
-              >
-                {isSubmitting ? "Filing..." : newItem ? "Create & file to Correspondence" : "File to Correspondence"}
-              </button>
+
+              {showExtractChoice && (
+                <button
+                  type="button"
+                  onClick={handleFile}
+                  disabled={!canSubmitPlain}
+                  className="h-10 px-4 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-medium disabled:opacity-60"
+                >
+                  {isSubmitting ? "Filing..." : "File to Correspondence"}
+                </button>
+              )}
+
+              {showExtractChoice ? (
+                <button
+                  type="button"
+                  onClick={handleExtractDetails}
+                  disabled={isExtracting || !selectedProject}
+                  className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {isExtracting ? "Extracting..." : `Extract & Create ${itemTypeLabel}`}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleFile}
+                  disabled={
+                    isSubmitting ||
+                    !projectId ||
+                    !category.trim() ||
+                    Boolean(newItem && (!newItem.reference.trim() || !newItem.title.trim()))
+                  }
+                  className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {isSubmitting ? "Filing..." : newItem ? "Create & file to Correspondence" : "File to Correspondence"}
+                </button>
+              )}
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>

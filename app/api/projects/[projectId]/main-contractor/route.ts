@@ -40,7 +40,11 @@ export async function GET(request: Request, context: { params: { projectId: stri
   }
 
   const mainContractors = project.organisationId
-    ? await prisma.mainContractor.findMany({ where: { organisationId: project.organisationId }, orderBy: { name: "asc" } })
+    ? await prisma.mainContractor.findMany({
+        where: { organisationId: project.organisationId },
+        include: { contacts: { orderBy: { createdAt: "asc" } } },
+        orderBy: { name: "asc" }
+      })
     : [];
 
   return NextResponse.json({

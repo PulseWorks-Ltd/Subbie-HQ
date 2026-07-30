@@ -16,17 +16,42 @@ export function MainContractorSection({ projectId }: { projectId: string }) {
   const [mainContractors, setMainContractors] = useState<MainContractorOption[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     fetch(`/api/projects/${projectId}/main-contractor`)
-      .then((response) => response.json())
+      .then(async (response) => {
+        if (!response.ok) {
+          // The route always returns JSON on every path it controls, but a
+          // request that never reaches it (network failure, or an unhandled
+          // exception falling through to Next.js's own HTML error response)
+          // would otherwise make response.json() throw a SyntaxError with
+          // nothing to catch it — that unhandled rejection is what was
+          // taking down the whole Settings page instead of just this card.
+          throw new Error(`Failed to load Main Contractor settings (status ${response.status}).`);
+        }
+        return response.json();
+      })
       .then((body) => {
+        if (cancelled) return;
         setJobNumber(body.jobNumber ?? "");
         setMainContractorId(body.mainContractorId ?? "");
         setActiveContactIds(body.activeContactIds ?? []);
         setMainContractors(body.mainContractors ?? []);
         setIsLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Failed to load Main Contractor settings:", err);
+        setLoadError("Could not load Main Contractor settings. Try refreshing the page.");
+        setIsLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   const selectedMainContractor = mainContractors.find((mc) => mc.id === mainContractorId);
@@ -57,6 +82,15 @@ export function MainContractorSection({ projectId }: { projectId: string }) {
       return;
     }
     router.refresh();
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5">
+        <h3 className="text-sm font-bold mb-1">Main Contractor</h3>
+        <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+      </div>
+    );
   }
 
   if (isLoading) {
@@ -110,7 +144,7 @@ export function MainContractorSection({ projectId }: { projectId: string }) {
         </select>
       </label>
 
-      {selectedMainContractor && selectedMainContractor.contacts.length > 0 && (
+      {selectedMainContractor && (selectedMainContractor.contacts?.length ?? 0) > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-sm font-medium">
             Active contacts for this project <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>

@@ -26,6 +26,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1095.0",
     "@prisma/client": "^5.20.0",
     "@sendgrid/mail": "^8.1.6",
+    "@sentry/nextjs": "^10.69.0",
     "bcryptjs": "^3.0.3",
     "next": "^14.2.35",
     "next-auth": "^5.0.0-beta.32",

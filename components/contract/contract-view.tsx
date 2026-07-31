@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Clause, ContractDocument } from "@prisma/client";
 import type { ReviewWithChain } from "@/components/contract/contract-review-section";
 import type { CoverComparisonRow } from "@/lib/insurance-cover-comparison";
@@ -20,7 +21,31 @@ export function ContractView({
   })[];
   coverComparison: CoverComparisonRow[];
 }) {
+  const router = useRouter();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+
+  // Background clause extraction and contract review both run detached from
+  // any request (see lib/document-processing.ts / lib/contract-comparison.ts)
+  // — this page is a Server Component fetched once on load, so nothing was
+  // ever re-fetching while the user just sat here watching. Polling used to
+  // live inside ContractReviewSection instead, but that component only
+  // mounts (and only runs its own poll) while its document's panel is
+  // expanded — a freshly-uploaded document's panel starts collapsed, so
+  // nothing polled until the user expanded it or navigated away and back.
+  // Polling here instead, at the always-mounted top level, matches the fix
+  // already applied to the Incoming Emails tab and works regardless of
+  // which panels are expanded/collapsed.
+  const isAnyDocumentPending = documents.some(
+    (document) =>
+      document.clauses.length === 0 && (document.processingStatus === "idle" || document.processingStatus === "processing")
+  );
+  const isAnyReviewRunning = documents.some((document) => document.reviews[0]?.status === "running");
+
+  useEffect(() => {
+    if (!isAnyDocumentPending && !isAnyReviewRunning) return;
+    const interval = setInterval(() => router.refresh(), 4000);
+    return () => clearInterval(interval);
+  }, [isAnyDocumentPending, isAnyReviewRunning, router]);
 
   return (
     <div className="flex flex-col gap-6">

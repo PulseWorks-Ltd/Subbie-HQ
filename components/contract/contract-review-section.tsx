@@ -39,27 +39,18 @@ export function ContractReviewSection({
   }, [initialReview]);
 
   // Background clause extraction (kicked off at upload time) is still in
-  // progress — poll until it finishes so the button unlocks on its own.
+  // progress — the button stays locked and a status message shows until it
+  // finishes. Actual polling now lives one level up, in ContractView, which
+  // is always mounted regardless of whether this document's panel is
+  // expanded — this component only mounts while expanded, so polling here
+  // used to go silent the moment the panel was collapsed.
   const isBackgroundProcessing = !hasClauses && processingStatus === "processing";
 
-  useEffect(() => {
-    if (!isBackgroundProcessing) return;
-    const interval = setInterval(() => router.refresh(), 4000);
-    return () => clearInterval(interval);
-  }, [isBackgroundProcessing, router]);
-
   // The review itself now runs in the background (see
-  // lib/contract-comparison.ts) rather than blocking the request — poll
-  // while it's "running" so this updates on its own, including after a
-  // fresh page load if a review was already in progress when the user
-  // navigated away and came back.
+  // lib/contract-comparison.ts) rather than blocking the request — same
+  // "polling lives in ContractView" reasoning as isBackgroundProcessing
+  // above applies here too.
   const isReviewRunning = review?.status === "running";
-
-  useEffect(() => {
-    if (!isReviewRunning) return;
-    const interval = setInterval(() => router.refresh(), 5000);
-    return () => clearInterval(interval);
-  }, [isReviewRunning, router]);
 
   async function runReview() {
     setIsStarting(true);

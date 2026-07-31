@@ -56,8 +56,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // /login, API routes 401) treat it as logged out, instead of
         // downstream code hitting a raw FK-constraint crash the first time
         // it tries to write something referencing that userId.
-        const user = await prisma.user.findUnique({ where: { id: token.userId as string }, select: { id: true } });
-        if (user) {
+        const user = await prisma.user.findUnique({
+          where: { id: token.userId as string },
+          select: { id: true, passwordChangedAt: true }
+        });
+        // "Invalidate existing sessions after a password reset" without any
+        // server-side session store: a JWT session strategy stamps a
+        // standard `iat` (issued-at) claim on every token, so any session
+        // issued before the reset (lib/password-reset.ts sets
+        // passwordChangedAt) simply never gets session.user.id set below —
+        // same effect on every existing `session?.user?.id` check as the
+        // deleted-user case above, achieved by the same per-request DB read
+        // this callback already does, not a new mechanism.
+        const tokenIssuedAtMs = typeof token.iat === "number" ? token.iat * 1000 : null;
+        const invalidatedByPasswordReset =
+          user?.passwordChangedAt != null && tokenIssuedAtMs !== null && tokenIssuedAtMs < user.passwordChangedAt.getTime();
+        if (user && !invalidatedByPasswordReset) {
           session.user.id = token.userId as string;
         }
       }

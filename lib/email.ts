@@ -128,6 +128,32 @@ export async function sendWelcomeEmail(params: { to: string; name: string }) {
   });
 }
 
+// Fire-and-forget, same as sendWelcomeEmail/sendReminderEmail — silently
+// no-ops if SendGrid isn't configured. Deliberately never awaited by its
+// caller (see lib/password-reset.ts's requestPasswordReset) so its network
+// latency can never create a timing difference between "email matched a
+// real account" and "email didn't match anything," which would otherwise
+// leak account existence even though the HTTP response text is identical.
+export async function sendPasswordResetEmail(params: { to: string; name: string; resetUrl: string }) {
+  const config = getConfiguredSendGrid();
+  if (!config) return;
+
+  const baseUrl = process.env.AUTH_URL ?? "";
+
+  await sgMail.send({
+    to: params.to,
+    from: { email: config.fromEmail, name: "Subbie HQ" },
+    subject: "Reset your Subbie HQ password",
+    html: `
+      <p><img src="${baseUrl}/icons/icon-512.png" alt="Subbie HQ" width="48" height="48" /></p>
+      <p>Hi ${params.name},</p>
+      <p>We received a request to reset your Subbie HQ password. This link expires in 1 hour.</p>
+      <p><a href="${params.resetUrl}">Reset your password</a></p>
+      <p>If you didn't request this, you can safely ignore this email — your password won't be changed.</p>
+    `
+  });
+}
+
 export async function sendOrganisationInviteEmail(params: {
   to: string;
   organisationName: string;

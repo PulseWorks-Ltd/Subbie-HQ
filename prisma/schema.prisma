@@ -168,6 +168,12 @@ model User {
   // manually-granted capability for the platform owner, not an org-level
   // role. Only ever flipped via a direct database write.
   isPlatformAdmin         Boolean              @default(false)
+  // Set whenever the password changes via the forgot-password reset flow
+  // (see lib/password-reset.ts) — compared against a JWT session's `iat` in
+  // auth.ts's session callback so any session issued before a reset is
+  // treated as logged out on its next request. Not set by the My Settings
+  // password-change flow (app/api/account/route.ts) today, only by reset.
+  passwordChangedAt       DateTime?
   createdAt               DateTime             @default(now())
   memberships             ProjectMember[]
   organisationMemberships OrganisationMember[]
@@ -175,6 +181,27 @@ model User {
   updates                 Update[]
   pushSubscriptions       PushSubscription[]
   updateReads             UpdateRead[]
+  passwordResetTokens     PasswordResetToken[]
+}
+
+// One row per requested reset — tokenHash (not the raw token) is what's
+// stored, same principle as User.passwordHash; only the raw token ever
+// leaves the server, in the emailed link. Hashed with plain SHA-256
+// (lib/password-reset.ts), not bcrypt — the token is already
+// high-entropy random data (unlike a human-chosen password), so a fast,
+// deterministic hash that supports a direct unique-index lookup by hash is
+// the right tool here, not bcrypt's slow, salted, non-lookupable hash.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
 }
 
 model Organisation {

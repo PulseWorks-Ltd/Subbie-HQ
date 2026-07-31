@@ -9,6 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
+  const resetSuccess = searchParams.get("reset") === "success";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +49,12 @@ export default function LoginPage() {
           Welcome back.
         </p>
 
+        {resetSuccess && (
+          <p className="text-sm text-green-700 dark:text-green-400 mb-4">
+            Your password has been reset. Sign in with your new password.
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm font-medium">
             Email
@@ -61,7 +68,12 @@ export default function LoginPage() {
           </label>
 
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Password
+            <div className="flex items-center justify-between">
+              Password
+              <Link href="/forgot-password" className="text-xs font-medium text-primary">
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               required

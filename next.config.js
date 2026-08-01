@@ -7,6 +7,18 @@ const nextConfig = {
       allowedOrigins: ["localhost:3000"]
     },
     serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist", "tesseract.js"]
+  },
+  // This project has no ESLint config (no .eslintrc, no eslint dependency)
+  // — without this, `next build`'s lint step launches an interactive
+  // "how would you like to configure ESLint?" setup wizard, which hangs
+  // indefinitely waiting for stdin in any non-interactive build (found
+  // when a build silently stalled after "Linting and checking validity of
+  // types..." with no error). There's no lint config to skip, so this
+  // changes nothing about what actually runs — it just makes `next build`
+  // deterministic instead of dependent on how a given shell's stdin
+  // happens to behave.
+  eslint: {
+    ignoreDuringBuilds: true
   }
 };
 

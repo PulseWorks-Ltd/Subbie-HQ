@@ -2,36 +2,34 @@
 
 import { useState } from "react";
 import type { ContractDeviation } from "@prisma/client";
-import { RiskBadge } from "@/components/badges/risk-badge";
+import { SeverityBadge } from "@/components/badges/severity-badge";
+import { DashboardSection } from "@/components/dashboard/dashboard-section";
+import { findingCategoryLabel, findingCategoryIcon } from "@/lib/finding-categories";
 import { LegalDisclaimerFooter } from "@/components/contract/legal-disclaimer-footer";
 import { ResponseLetterDrafting } from "@/components/contract/response-letter-drafting";
 import type { ReviewWithChain } from "@/components/contract/contract-review-section";
 
+// Contract Review redesign Phase 1 terminology (Task 1.3) — labels only,
+// the underlying DeviationClassification enum values are unchanged.
+// Applied uniformly to both baseline and prior-contract comparisons (the
+// task frames these as a single renamed vocabulary, not two).
 const CLASSIFICATION_LABELS: Record<string, string> = {
-  major_deviation: "Major deviation",
+  major_deviation: "New Obligation",
   missing_from_subcontract: "Standard protection removed",
-  additional_in_subcontract: "Added clause",
+  additional_in_subcontract: "Additional Requirement",
   minor_deviation: "Minor deviation",
   matches_standard: "Matches standard"
 };
 
-const PRIOR_CONTRACT_CLASSIFICATION_LABELS: Record<string, string> = {
-  major_deviation: "Materially changed",
-  missing_from_subcontract: "Removed since last contract",
-  additional_in_subcontract: "New clause added",
-  minor_deviation: "Minor wording change",
-  matches_standard: "Unchanged"
-};
+const SEVERITY_ORDER: Record<string, number> = { critical: 0, important: 1, informational: 2 };
 
 function DeviationCard({
   deviation,
-  labels,
   selectable,
   selected,
   onToggle
 }: {
   deviation: ContractDeviation;
-  labels: Record<string, string>;
   selectable: boolean;
   selected: boolean;
   onToggle: (id: string) => void;
@@ -51,7 +49,7 @@ function DeviationCard({
           )}
           <div>
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-              {labels[deviation.classification] ?? deviation.classification}
+              {CLASSIFICATION_LABELS[deviation.classification] ?? deviation.classification}
             </span>
             <p className="text-sm font-bold mt-1.5">
               {deviation.baselineClauseRef ? `${deviation.baselineClauseRef}` : "No equivalent"}
@@ -65,7 +63,7 @@ function DeviationCard({
             )}
           </div>
         </div>
-        <RiskBadge level={deviation.impact} />
+        {deviation.severity && <SeverityBadge severity={deviation.severity} />}
       </div>
 
       {deviation.subcontractExcerpt && (
@@ -76,72 +74,146 @@ function DeviationCard({
 
       <p className="text-sm leading-relaxed mb-1">{deviation.rationale}</p>
       {deviation.recommendation && (
-        <p className="text-sm leading-relaxed text-primary">{deviation.recommendation}</p>
+        <div className="mt-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-primary/70">What you should do</p>
+          <p className="text-sm leading-relaxed text-primary">{deviation.recommendation}</p>
+        </div>
       )}
     </div>
   );
 }
 
-function groupByBucket(deviations: ContractDeviation[]) {
-  const grouped = new Map<string, ContractDeviation[]>();
-  for (const deviation of deviations) {
-    const list = grouped.get(deviation.topicBucket) ?? [];
-    list.push(deviation);
-    grouped.set(deviation.topicBucket, list);
-  }
-  return grouped;
+function sortBySeverityThenPriority(deviations: ContractDeviation[]): ContractDeviation[] {
+  return [...deviations].sort((a, b) => {
+    const severityDiff = (SEVERITY_ORDER[a.severity ?? "informational"] ?? 3) - (SEVERITY_ORDER[b.severity ?? "informational"] ?? 3);
+    if (severityDiff !== 0) return severityDiff;
+    return b.priorityScore - a.priorityScore;
+  });
 }
 
-function GroupedDeviationList({
-  title,
-  deviations,
-  noun,
-  suffix,
-  toneClassName,
-  selectedIds,
-  onToggle
-}: {
-  title: string;
-  deviations: ContractDeviation[];
-  noun: string;
-  suffix?: string;
-  toneClassName: string;
-  selectedIds: string[];
-  onToggle: (id: string) => void;
-}) {
-  if (deviations.length === 0) return null;
-  const grouped = groupByBucket(deviations);
+// Groups findings under their category (Task 3.1), sorted CRITICAL first
+// within each group (Task 3.2), with categories themselves ordered by
+// where the real risk concentrates — most Critical findings first, ties
+// broken by Important count — so a user scanning top-to-bottom sees the
+// highest-stakes category first.
+function groupByCategory(deviations: ContractDeviation[]): { category: string; deviations: ContractDeviation[] }[] {
+  const grouped = new Map<string, ContractDeviation[]>();
+  for (const deviation of deviations) {
+    const key = deviation.category ?? "other";
+    const list = grouped.get(key) ?? [];
+    list.push(deviation);
+    grouped.set(key, list);
+  }
+
+  const groups = Array.from(grouped.entries()).map(([category, categoryDeviations]) => ({
+    category,
+    deviations: sortBySeverityThenPriority(categoryDeviations)
+  }));
+
+  function severityCount(group: { deviations: ContractDeviation[] }, severity: string) {
+    return group.deviations.filter((d) => d.severity === severity).length;
+  }
+
+  return groups.sort(
+    (a, b) => severityCount(b, "critical") - severityCount(a, "critical") || severityCount(b, "important") - severityCount(a, "important")
+  );
+}
+
+type PositiveFinding = { title: string; context: string };
+
+// review.positiveFindings is a Prisma Json? column (see prisma/schema.prisma)
+// — validated defensively at read time rather than trusted blindly, since
+// its shape is only enforced by lib/grok.ts's zod schema at write time, not
+// by the database column itself.
+function parsePositiveFindings(value: unknown): PositiveFinding[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is PositiveFinding => {
+    if (typeof item !== "object" || item === null) return false;
+    const record = item as Record<string, unknown>;
+    return typeof record.title === "string" && typeof record.context === "string";
+  });
+}
+
+function ExecutiveSummary({ review }: { review: ReviewWithChain }) {
+  const severityCounts = { critical: 0, important: 0, informational: 0 };
+  for (const d of review.deviations) {
+    if (d.severity) severityCounts[d.severity as keyof typeof severityCounts]++;
+  }
+
+  const categoryGroups = groupByCategory(review.deviations);
+  const topCriticalCategory = categoryGroups.find((g) => g.deviations.some((d) => d.severity === "critical"));
+  const positiveFindings = parsePositiveFindings(review.positiveFindings);
 
   return (
-    <div>
-      <h4 className="text-sm font-bold mb-3">{title}</h4>
-      <div className="flex flex-col gap-2">
-        {Array.from(grouped.entries()).map(([bucket, bucketDeviations]) => (
-          <details key={bucket} className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3">
-            <summary className={`text-sm font-medium cursor-pointer ${toneClassName}`}>
-              {bucket.replace(/_/g, " ")} — {bucketDeviations.length} {noun}
-              {bucketDeviations.length === 1 ? "" : "s"}
-              {suffix ? ` ${suffix}` : ""}
-            </summary>
-            <div className="flex flex-col gap-2 mt-3">
-              {bucketDeviations.map((deviation) => (
-                <label key={deviation.id} className="flex items-start gap-2 text-sm text-[#4c739a] dark:text-slate-400 leading-relaxed cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(deviation.id)}
-                    onChange={() => onToggle(deviation.id)}
-                    className="mt-0.5 size-4 rounded border-[#e7edf3] dark:border-slate-700 shrink-0"
-                  />
-                  <span>
-                    {deviation.baselineClauseRef ? `${deviation.baselineClauseRef}: ` : ""}
-                    {deviation.rationale}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </details>
-        ))}
+    <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-4">
+      <h4 className="text-sm font-bold mb-2">What This Contract Expects From You</h4>
+      {review.executiveSummary && (
+        <p className="text-sm leading-relaxed text-[#4c739a] dark:text-slate-400 mb-3">{review.executiveSummary}</p>
+      )}
+
+      {review.keyObservations.length > 0 && (
+        <ul className="list-disc list-inside text-sm text-[#4c739a] dark:text-slate-400 mb-3 space-y-0.5">
+          {review.keyObservations.map((observation, index) => (
+            <li key={index}>{observation}</li>
+          ))}
+        </ul>
+      )}
+
+      <div className="flex flex-wrap gap-3 mb-3">
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold">
+          <SeverityBadge severity="critical" />
+          {severityCounts.critical} Critical
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold">
+          <SeverityBadge severity="important" />
+          {severityCounts.important} Important
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-xs font-bold">
+          <SeverityBadge severity="informational" />
+          {severityCounts.informational} Informational
+        </span>
       </div>
+
+      {categoryGroups.length > 0 && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#4c739a] dark:text-slate-400 mb-3">
+          {categoryGroups
+            .filter((g) => g.deviations.some((d) => d.severity === "critical" || d.severity === "important"))
+            .map((g) => {
+              const critical = g.deviations.filter((d) => d.severity === "critical").length;
+              const important = g.deviations.filter((d) => d.severity === "important").length;
+              return (
+                <span key={g.category}>
+                  <span className="font-medium">{findingCategoryLabel(g.category)}:</span>{" "}
+                  {critical > 0 && `${critical} critical`}
+                  {critical > 0 && important > 0 && ", "}
+                  {important > 0 && `${important} important`}
+                </span>
+              );
+            })}
+        </div>
+      )}
+
+      {topCriticalCategory && (
+        <p className="text-sm font-medium text-red-700 dark:text-red-400">
+          Start with {findingCategoryLabel(topCriticalCategory.category)} — it has the most critical items.
+        </p>
+      )}
+
+      {positiveFindings.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-[#e7edf3] dark:border-slate-800">
+          <h5 className="text-xs font-bold uppercase tracking-wide text-green-700 dark:text-green-400 mb-2">
+            Things Working In Your Favour
+          </h5>
+          <div className="flex flex-col gap-2">
+            {positiveFindings.map((finding, index) => (
+              <div key={index} className="text-sm">
+                <span className="font-bold">{finding.title}.</span>{" "}
+                <span className="text-[#4c739a] dark:text-slate-400">{finding.context}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -171,8 +243,25 @@ export function DeviationReportView({
     );
   }
 
+  // Findings from before the Contract Review redesign (Phase 1) predate the
+  // category/severity fields and have both null on every row — rather than
+  // attempting to mix old and new display formats (explicitly ruled out,
+  // see Task 1.4), point the user at the "Re-run Review" action already
+  // rendered just above this component (see contract-review-section.tsx).
+  const isPreRedesignReview = review.deviations.length > 0 && review.deviations.every((d) => d.severity === null);
+  if (isPreRedesignReview) {
+    return (
+      <div className="rounded-lg border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 p-5 text-center">
+        <p className="text-sm font-bold mb-1">This review predates the new severity &amp; category breakdown</p>
+        <p className="text-sm text-[#4c739a] dark:text-slate-400">
+          Findings were generated before this update. Use &ldquo;Re-run Review&rdquo; above to get the new Critical /
+          Important / Informational breakdown grouped by category.
+        </p>
+      </div>
+    );
+  }
+
   const isPriorContractComparison = review.comparedAgainstType === "prior_contract";
-  const labels = isPriorContractComparison ? PRIOR_CONTRACT_CLASSIFICATION_LABELS : CLASSIFICATION_LABELS;
 
   const comparisonTargetLabel = isPriorContractComparison
     ? `their previous contract on this project (${review.comparedAgainstReview?.document.fileName ?? review.comparedAgainstReview?.document.title ?? "an earlier document"}${
@@ -182,38 +271,14 @@ export function DeviationReportView({
       })`
     : review.standardFormVersion;
 
-  // Actively-different clauses (present in the subcontract, wording/substance
-  // differs) get full individual detail — there are typically few of these,
-  // and each one is worth reading closely. Absent-clause findings can be very
-  // numerous on a short/partial document, so they're grouped by topic instead
-  // — a wall of hundreds of "this clause is missing" cards would defeat the
-  // "don't overwhelm the user" requirement just as badly as not flagging
-  // anything at all.
-  const activeDeviations = review.deviations
-    .filter((d) => d.classification === "major_deviation" || d.classification === "additional_in_subcontract")
-    .sort((a, b) => b.priorityScore - a.priorityScore);
-  const missingDeviations = review.deviations.filter((d) => d.classification === "missing_from_subcontract");
-  const minorDeviations = review.deviations.filter((d) => d.classification === "minor_deviation");
-  const matchCount = review.deviations.filter((d) => d.classification === "matches_standard").length;
-
-  const selectableDeviations = [...activeDeviations, ...missingDeviations, ...minorDeviations, ...review.driftDeviations];
+  const categoryGroups = groupByCategory(review.deviations);
+  const selectableDeviations = [...review.deviations, ...review.driftDeviations];
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-4">
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <h4 className="text-sm font-bold">Review summary</h4>
-          {review.overallRiskLevel && <RiskBadge level={review.overallRiskLevel} />}
-        </div>
-        {review.executiveSummary && (
-          <p className="text-sm leading-relaxed text-[#4c739a] dark:text-slate-400">{review.executiveSummary}</p>
-        )}
-        <p className="text-xs text-[#4c739a] dark:text-slate-400 mt-2">
-          {review.majorDeviationCount} major issue{review.majorDeviationCount === 1 ? "" : "s"} ·{" "}
-          {review.minorDeviationCount} minor/technical deviation{review.minorDeviationCount === 1 ? "" : "s"} ·{" "}
-          {matchCount} clause{matchCount === 1 ? "" : "s"} matched · compared against {comparisonTargetLabel}
-        </p>
-      </div>
+      <ExecutiveSummary review={review} />
+
+      <p className="text-xs text-[#4c739a] dark:text-slate-400 -mt-3">Compared against {comparisonTargetLabel}.</p>
 
       {review.newBaselineDriftCount > 0 && (
         <div className="rounded-lg border-2 border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/30 p-4">
@@ -231,7 +296,6 @@ export function DeviationReportView({
               <DeviationCard
                 key={deviation.id}
                 deviation={deviation}
-                labels={CLASSIFICATION_LABELS}
                 selectable
                 selected={selectedIds.includes(deviation.id)}
                 onToggle={toggle}
@@ -241,42 +305,38 @@ export function DeviationReportView({
         </div>
       )}
 
-      {activeDeviations.length > 0 && (
-        <div>
-          <h4 className="text-sm font-bold mb-3">Major Deviations</h4>
-          <div className="flex flex-col gap-3">
-            {activeDeviations.map((deviation) => (
-              <DeviationCard
-                key={deviation.id}
-                deviation={deviation}
-                labels={labels}
-                selectable
-                selected={selectedIds.includes(deviation.id)}
-                onToggle={toggle}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <GroupedDeviationList
-        title={isPriorContractComparison ? "Removed Since Last Contract" : "Standard Protections Not Present"}
-        deviations={missingDeviations}
-        noun="clause"
-        suffix={isPriorContractComparison ? "removed" : "removed or weakened"}
-        toneClassName="text-red-700 dark:text-red-400"
-        selectedIds={selectedIds}
-        onToggle={toggle}
-      />
-
-      <GroupedDeviationList
-        title="Minor & Technical Deviations"
-        deviations={minorDeviations}
-        noun="minor deviation"
-        toneClassName=""
-        selectedIds={selectedIds}
-        onToggle={toggle}
-      />
+      <div className="flex flex-col gap-3">
+        {categoryGroups.map(({ category, deviations }) => {
+          const criticalCount = deviations.filter((d) => d.severity === "critical").length;
+          return (
+            <DashboardSection
+              key={category}
+              sectionKey={`contract-review-category-${category}`}
+              label={`${findingCategoryLabel(category)} (${deviations.length})`}
+              icon={findingCategoryIcon(category)}
+              itemCount={deviations.length}
+              defaultExpanded={criticalCount > 0}
+              badges={
+                criticalCount > 0 ? (
+                  <span className="text-[10px] font-bold text-red-600 dark:text-red-400">{criticalCount} critical</span>
+                ) : undefined
+              }
+            >
+              <div className="flex flex-col gap-3">
+                {deviations.map((deviation) => (
+                  <DeviationCard
+                    key={deviation.id}
+                    deviation={deviation}
+                    selectable
+                    selected={selectedIds.includes(deviation.id)}
+                    onToggle={toggle}
+                  />
+                ))}
+              </div>
+            </DashboardSection>
+          );
+        })}
+      </div>
 
       <ResponseLetterDrafting
         projectId={projectId}

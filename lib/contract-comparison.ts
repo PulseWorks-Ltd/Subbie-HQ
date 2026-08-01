@@ -209,6 +209,8 @@ async function runContractReviewWork(
         status: "complete",
         executiveSummary: baseline.synthesis.executiveSummary,
         overallRiskLevel: baseline.synthesis.overallRiskLevel,
+        keyObservations: baseline.synthesis.keyObservations,
+        positiveFindings: baseline.synthesis.positiveFindings as unknown as object,
         majorDeviationCount: baselineCounts.majorDeviationCount,
         minorDeviationCount: baselineCounts.minorDeviationCount,
         completedAt: new Date(),
@@ -230,6 +232,8 @@ async function runContractReviewWork(
         isPrimary: false,
         executiveSummary: baseline.synthesis.executiveSummary,
         overallRiskLevel: baseline.synthesis.overallRiskLevel,
+        keyObservations: baseline.synthesis.keyObservations,
+        positiveFindings: baseline.synthesis.positiveFindings as unknown as object,
         majorDeviationCount: baselineCounts.majorDeviationCount,
         minorDeviationCount: baselineCounts.minorDeviationCount,
         completedAt: new Date(),
@@ -289,6 +293,8 @@ async function runContractReviewWork(
         newBaselineDriftCount: newDriftDeviationIds.length,
         executiveSummary: priorContractSynthesis.executiveSummary,
         overallRiskLevel: priorContractSynthesis.overallRiskLevel,
+        keyObservations: priorContractSynthesis.keyObservations,
+        positiveFindings: priorContractSynthesis.positiveFindings as unknown as object,
         majorDeviationCount: priorContractCounts.majorDeviationCount,
         minorDeviationCount: priorContractCounts.minorDeviationCount,
         completedAt: new Date(),
@@ -416,6 +422,16 @@ export async function getNewBaselineDriftDeviations(documentId: string, compared
   return shadow?.deviations ?? [];
 }
 
+// impact is still populated (derived from severity) purely for schema
+// continuity with historical rows — the results page no longer displays it,
+// severity/category are what drive the redesigned UI (see
+// components/contract/deviation-report-view.tsx).
+const SEVERITY_TO_LEGACY_IMPACT = {
+  critical: "high",
+  important: "medium",
+  informational: "low"
+} as const;
+
 function toDeviationCreateInput(d: SynthesisResult["deviations"][number]) {
   return {
     topicBucket: d.topicBucket,
@@ -424,7 +440,9 @@ function toDeviationCreateInput(d: SynthesisResult["deviations"][number]) {
     subcontractClauseRef: d.subcontractClauseRef,
     subcontractExcerpt: d.subcontractExcerpt,
     classification: d.classification,
-    impact: d.impact,
+    impact: SEVERITY_TO_LEGACY_IMPACT[d.severity],
+    category: d.category,
+    severity: d.severity,
     priorityScore: d.priorityScore,
     rationale: d.rationale,
     recommendation: d.recommendation

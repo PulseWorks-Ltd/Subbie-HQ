@@ -362,13 +362,65 @@ export async function compareClausesToStandardBucket(
   return BucketComparisonResultSchema.parse(JSON.parse(raw)).deviations;
 }
 
+// Fixed, closed set — must match prisma/schema.prisma's FindingCategory
+// enum exactly. The prompt instructs the model never to invent a category
+// outside this list, but real-world output isn't 100% reliable (confirmed:
+// a defects/rectification clause once came back as the model's own invented
+// "defects" string instead of "final_account") — .catch("other") means an
+// invalid value degrades to the rare-fallback category instead of a
+// ZodError crashing the entire review. Same "tolerate real model output
+// rather than reject it" principle already applied elsewhere in this file
+// (see BucketDeviationSchema's .nullish() comment).
+const FindingCategorySchema = z
+  .enum([
+    "payment_cash_flow",
+    "variations",
+    "notices_time_bars",
+    "programme_delay",
+    "liability_indemnity",
+    "insurance",
+    "administration_documentation",
+    "health_safety",
+    "intellectual_property",
+    "final_account",
+    "termination",
+    "other"
+  ])
+  .catch("other");
+
+// Must match prisma/schema.prisma's FindingSeverity enum exactly.
+const FindingSeveritySchema = z.enum(["critical", "important", "informational"]);
+
+// category/severity are new (Contract Review redesign Phase 1) — added only
+// here, at the synthesis/reduce step, not in BucketDeviationSchema (the map
+// phase). The reduce call already sees every deviation across the WHOLE
+// contract at once, which is what makes consistent categorization possible
+// (e.g. every insurance-related finding from different SA-2017 buckets
+// lands in the same category) — doing this per-bucket in the map phase
+// would risk each bucket call categorizing inconsistently with the others.
 const SynthesisDeviationSchema = BucketDeviationSchema.extend({
   topicBucket: z.string(),
-  priorityScore: z.number().int().min(0).max(100)
+  priorityScore: z.number().int().min(0).max(100),
+  category: FindingCategorySchema,
+  severity: FindingSeveritySchema
 });
+// Phase 1.5 additions — no length bounds enforced at the schema level
+// (deliberately, matching this file's established .nullish()-over-strict
+// lesson: a model that returns 2 or 7 items instead of the prompted
+// "roughly 3-6" shouldn't crash the whole review). Prompt-level guidance
+// only, not a hard contract.
+const PositiveFindingSchema = z.object({ title: z.string(), context: z.string() });
+
 const SynthesisResultSchema = z.object({
   executiveSummary: z.string(),
   overallRiskLevel: z.enum(["low", "medium", "high"]),
+  // Short, specific, contract-derived facts grounding the executive
+  // summary (e.g. "6 payment preconditions") — see the prompt below.
+  keyObservations: z.array(z.string()),
+  // Genuine retained/favourable provisions, drawn only from matchedClauses
+  // (see synthesizeContractReview) — legitimately empty when nothing
+  // material is retained; never padded to hit a quota.
+  positiveFindings: z.array(PositiveFindingSchema),
   deviations: z.array(SynthesisDeviationSchema)
 });
 
@@ -377,9 +429,13 @@ export type SynthesisResult = z.infer<typeof SynthesisResultSchema>;
 
 // Step 2 (reduce phase) — one call. Takes every non-matching deviation
 // already found and classified by the map phase (small, structured records,
-// not raw legal text) and produces the prioritized, summarized report the
-// founder asked for: an executive summary, an overall risk level, and a
-// priorityScore per deviation so major/risk-shifting items surface first.
+// not raw legal text) and produces the prioritized, summarized report: an
+// executive summary, an overall risk level, and per-deviation priorityScore,
+// category, and severity (Contract Review redesign Phase 1), plus
+// keyObservations and positiveFindings (Phase 1.5) — see
+// components/contract/deviation-report-view.tsx for how these drive the
+// grouped/severity-sorted results page. No new AI call, either phase —
+// this is the same single reduce call enriched with a richer output schema.
 // comparisonLabel describes what the subcontract was compared against —
 // "the SA-2017 standard-form baseline" for baseline reviews, or "their
 // previous contract with this Main Contractor" for prior_contract reviews
@@ -395,10 +451,23 @@ export async function synthesizeContractReview(
       .filter((deviation) => deviation.classification !== "matches_standard")
       .map((deviation) => ({ ...deviation, topicBucket }))
   );
-  const matchCounts = bucketResults.map(({ topicBucket, deviations }) => ({
-    topicBucket,
-    matchCount: deviations.filter((deviation) => deviation.classification === "matches_standard").length
-  }));
+  // Phase 1.5 — previously only counted (matchCounts) and discarded; the
+  // map phase already produces real content for these (baselineClauseRef/
+  // Title, subcontractClauseRef, a brief rationale confirming the match —
+  // see compareClausesToStandardBucket's prompt), so this is the existing
+  // clause-matching data reused as-is, not a new comparison pass. This is
+  // the ONLY source positiveFindings may draw from (see prompt below).
+  const matchedClauses = bucketResults.flatMap(({ topicBucket, deviations }) =>
+    deviations
+      .filter((deviation) => deviation.classification === "matches_standard")
+      .map((deviation) => ({
+        topicBucket,
+        baselineClauseRef: deviation.baselineClauseRef,
+        baselineClauseTitle: deviation.baselineClauseTitle,
+        subcontractClauseRef: deviation.subcontractClauseRef,
+        rationale: deviation.rationale
+      }))
+  );
 
   const response = await callGrok({
     model: GROK_MODEL,
@@ -407,17 +476,28 @@ export async function synthesizeContractReview(
       {
         role: "system",
         content:
-          `You are prioritizing and summarizing a list of already-classified deviations found between a subcontract agreement and ${comparisonLabel}, for a subcontractor to review quickly without missing anything important. ` +
+          `You are prioritizing, categorizing, and summarizing a list of already-classified deviations found between a subcontract agreement and ${comparisonLabel}, for a subcontractor to review quickly without missing anything important. ` +
           "Respond with only a JSON object matching this exact shape: " +
-          '{"executiveSummary": string, "overallRiskLevel": "low" | "medium" | "high", "deviations": [{"topicBucket": string, "baselineClauseRef": string | null, "baselineClauseTitle": string | null, "subcontractClauseRef": string | null, "subcontractExcerpt": string | null, "classification": string, "impact": "low" | "medium" | "high", "priorityScore": number, "rationale": string, "recommendation": string | null}]}. ' +
-          `executiveSummary: 2-4 sentences, plain English, giving the overall picture (how many major issues, the general character of the changes, whether this looks like a lightly-modified or heavily-modified version of ${comparisonLabel}). ` +
+          '{"executiveSummary": string, "overallRiskLevel": "low" | "medium" | "high", "keyObservations": string[], "positiveFindings": [{"title": string, "context": string}], "deviations": [{"topicBucket": string, "baselineClauseRef": string | null, "baselineClauseTitle": string | null, "subcontractClauseRef": string | null, "subcontractExcerpt": string | null, "classification": string, "impact": "low" | "medium" | "high", "priorityScore": number, "category": string, "severity": "critical" | "important" | "informational", "rationale": string, "recommendation": string | null}]}. ' +
+          `executiveSummary: 2-4 sentences, plain English, giving the overall picture (the general character of the changes, whether this looks like a lightly-modified or heavily-modified version of ${comparisonLabel}, and where the real risk concentrates) — most subcontractors can't meaningfully renegotiate these contracts, so focus on what this contract actually requires of them rather than leading with "you should negotiate this." ` +
           `overallRiskLevel: your overall assessment of how much this subcontract shifts risk onto the subcontractor compared to ${comparisonLabel}. ` +
+          "keyObservations: a short bullet list (roughly 3-6 items) of SPECIFIC, CONCRETE facts you observed while reviewing the deviations below — e.g. \"6 payment preconditions\", \"4 shortened notice periods\", \"3 expanded liability clauses\". These are short phrases, not full sentences, and each one must be a genuine count or pattern you can point back to in the deviations you were given — never state a number you haven't actually verified against the input, and never just restate a category name generically (\"payment issues\" is not an observation; \"6 payment preconditions\" is). Do not use a fixed list of observation types — describe whatever specific, real patterns THIS contract actually shows; a different contract will have different notable patterns. " +
+          "positiveFindings: 3-5 genuine positive findings — provisions that remain standard, unchanged, or favourable to the subcontractor compared to " +
+          `${comparisonLabel}. Draw these ONLY from the matchedClauses list below (never invent one, never draw from the deviations list — those are by definition not matches). Each has a "title" (a short label naming the retained provision, e.g. "Standard SA-2017 variation process retained") and a "context" (one plain-English sentence explaining what this means for the subcontractor). Prioritise matches on commercially significant topics (payment, variations, liability, insurance, time bars, termination) over purely administrative or definitional matches, unless nothing more significant is available. ` +
+          "CRITICAL: do not force this to hit a quota. If matchedClauses contains few or no clauses that are genuinely material or favourable to highlight, return fewer than 3, or an empty array — a heavily-modified contract with little retained in the subcontractor's favour should genuinely show few or zero positive findings. Never pad this list with weak, generic, trivial, or misleading reassurance just to have something to show. " +
           "For each input deviation, include it in the output with the same fields plus a priorityScore (0-100, higher = more important for the subcontractor to read first) — major_deviation, missing_from_subcontract, and additional_in_subcontract entries should generally score higher than minor_deviation entries, but weigh actual practical impact (e.g. a 'minor'-labelled clause about a large retention change should still score highly). " +
-          "Do not invent new deviations or drop any of the input deviations — reorder and score them, do not filter them out."
+          'category: classify each deviation into EXACTLY ONE of these fixed categories — respond with ONLY one of these exact strings, never a different word or a category of your own invention: "payment_cash_flow" (payment claims, payment schedules, retention, set-off), "variations" (variation instructions, pricing, notice requirements for variations), "notices_time_bars" (notice periods and conditions precedent for claims generally, time bar clauses), "programme_delay" (extensions of time, delay damages, programme obligations), "liability_indemnity" (liability caps, indemnities, consequential loss, warranties), "insurance" (required insurance types and cover levels), "administration_documentation" (record-keeping, reporting, shop drawings, QA/QC documentation), "health_safety" (site safety, H&S management plans, PPE, incident reporting), "intellectual_property" (design IP, ownership of drawings/documents), "final_account" (final payment claim, defects, defects liability period, rectification of defective work, release of retention), "termination" (termination rights and consequences, suspension). Use "other" only if a deviation genuinely does not fit any of these well — this should be rare. ' +
+          "severity: assess the deviation's genuine commercial impact on the subcontractor, not just whether it differs from the comparison — most deviations are NOT critical, so use the full range rather than defaulting to critical. " +
+          "BEFORE assigning severity, first determine the DIRECTION of the deviation: does this clause ask MORE of the subcontractor than the comparison (a bigger obligation, a stricter requirement, a smaller protection), or LESS (a smaller obligation, a more lenient requirement, the same or better protection)? A clause differing from the comparison is not automatically higher severity — only a deviation that increases what the subcontractor must do, pay, risk, or forgo can be \"critical\". " +
+          "Worked example — get this right: SA-2017 requires public liability insurance of not less than $5,000,000; this subcontract requires only $1,000,000. The number is smaller, but the DEMAND ON THE SUBCONTRACTOR is smaller too — they need to buy less insurance, which is cheaper and easier to satisfy. This is a reduced requirement and must be \"informational\" or at most \"important\", never \"critical\". Do NOT reason that a lower required minimum is 'critical' because a large claim might exceed it — that is reasoning about a hypothetical downstream insurance-adequacy scenario, not about what this contract actually demands of the subcontractor, and is the wrong analysis. The same logic applies to any reduced requirement: a shorter notice period the subcontractor must give, a lower retention percentage withheld from them, or a longer time bar period favoring them are all reduced burdens, not increased risk. " +
+          '"critical" = directly affects payment, variations, extensions of time, termination, liability, indemnities, time bars, waivers, insurance coverage gaps, IP ownership, retention, or the final account, AND genuinely INCREASES the subcontractor\'s risk, cost, or burden compared to the comparison. ' +
+          '"important" = operational obligations — safety, cleaning, power, water, site coordination, hoisting, shop drawings, QA processes, programme administration — or a commercial-category deviation (as listed for "critical" above) that only moderately increases risk. ' +
+          '"informational" = minor wording changes, definitions, cross-references, formatting, procedural differences that don\'t meaningfully change commercial risk either way, OR any deviation (in any category) that reduces or leaves unchanged the subcontractor\'s risk, cost, or burden. ' +
+          "Do not invent new deviations or drop any of the input deviations — reorder, categorize, and score them, do not filter them out."
       },
       {
         role: "user",
-        content: JSON.stringify({ deviations: relevant, matchCounts })
+        content: JSON.stringify({ deviations: relevant, matchedClauses })
       }
     ]
   }, { ...usageContext, feature: "contract_review" });

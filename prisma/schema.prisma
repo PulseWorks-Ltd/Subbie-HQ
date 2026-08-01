@@ -145,6 +145,36 @@ enum DeviationClassification {
   additional_in_subcontract
 }
 
+// Fixed, closed set of business-outcome categories a finding can be
+// classified into (Contract Review redesign Phase 1) — deliberately a
+// Prisma enum, not a free-text preset list like lib/trades.ts, since the AI
+// must never invent a category outside this set. "other" is the explicit
+// fallback for a genuine non-fit, expected to be rare.
+enum FindingCategory {
+  payment_cash_flow
+  variations
+  notices_time_bars
+  programme_delay
+  liability_indemnity
+  insurance
+  administration_documentation
+  health_safety
+  intellectual_property
+  final_account
+  termination
+  other
+}
+
+// Replaces the old low/medium/high "impact" framing (see
+// ContractDeviation.impact, kept only for backward compatibility) with a
+// genuine spread rather than everything defaulting to the top tier — see
+// the severity-assignment guidance in lib/grok.ts's synthesizeContractReview.
+enum FindingSeverity {
+  critical
+  important
+  informational
+}
+
 // baseline = compared against the SA-2017 standard form (always true for a
 // Main Contractor's first-ever reviewed contract). prior_contract = compared
 // against that same Main Contractor's most-recently-reviewed contract on any
@@ -366,6 +396,19 @@ model ContractReview {
   status              ContractReviewStatus @default(running)
   executiveSummary    String?
   overallRiskLevel    RiskLevel?
+  // Phase 1.5 — short, specific, contract-derived facts grounding the
+  // executive summary (e.g. "6 payment preconditions"), and genuine
+  // retained/favourable provisions vs the comparison baseline. Both come
+  // from the same synthesis call as executiveSummary/severity/category
+  // (no new AI call). positiveFindings is a plain JSON array of
+  // {title, context} objects — not a child model, since this is small,
+  // display-only content with no need to be relationally queried (see
+  // lib/grok.ts's PositiveFindingSchema). Both legitimately empty on
+  // reviews from before this shipped, and the UI hides those sections
+  // entirely rather than showing an empty state (see
+  // components/contract/deviation-report-view.tsx).
+  keyObservations     String[]             @default([])
+  positiveFindings    Json?
   majorDeviationCount Int                  @default(0)
   minorDeviationCount Int                  @default(0)
   errorMessage        String?
@@ -413,7 +456,17 @@ model ContractDeviation {
   subcontractClauseRef String?
   subcontractExcerpt   String?
   classification       DeviationClassification
+  // Legacy risk framing — kept (not dropped) purely for schema stability on
+  // historical rows; still populated on new reviews (derived from
+  // severity) but no longer what the UI displays. See severity below.
   impact               RiskLevel
+  // Both nullable: rows from before the Contract Review redesign (Phase 1)
+  // predate these fields and will have both null — the results page
+  // detects this (see components/contract/deviation-report-view.tsx) and
+  // prompts a re-run rather than mixing old/new display formats. Every
+  // finding produced going forward always has both set.
+  category             FindingCategory?
+  severity             FindingSeverity?
   priorityScore        Int
   rationale            String
   recommendation       String?

@@ -55,7 +55,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       members={members}
       invites={invites}
       variationCompletionMode={membership?.organisation.variationCompletionMode ?? "requires_confirmation"}
-      organisation={isAdmin ? { id: membership!.organisationId, name: membership!.organisation.name, trade: membership!.organisation.trade } : null}
+      organisation={
+        isAdmin
+          ? {
+              id: membership!.organisationId,
+              name: membership!.organisation.name,
+              trade: membership!.organisation.trade,
+              accessStatus: membership!.organisation.accessStatus,
+              planTier: membership!.organisation.planTier,
+              trialEndsAt: membership!.organisation.trialEndsAt,
+              hasStripeCustomer: membership!.organisation.stripeCustomerId !== null
+            }
+          : null
+      }
     />
   );
 }

@@ -184,6 +184,26 @@ enum ContractReviewComparisonType {
   prior_contract
 }
 
+// pilot = free access via the shared PILOT_ACCESS_CODE (see app/activate);
+// trialing/active = a real Stripe subscription, in its 14-day trial or
+// past it; past_due = a Stripe renewal failed; canceled = subscription
+// ended; none = brand-new organisation, no access granted yet. Only
+// pilot/trialing/active count as "has access" — see Organisation.accessStatus.
+enum AccessStatus {
+  pilot
+  trialing
+  active
+  past_due
+  canceled
+  none
+}
+
+enum PlanTier {
+  starter
+  professional
+  enterprise
+}
+
 model User {
   id                      String               @id @default(cuid())
   email                   String               @unique
@@ -251,6 +271,22 @@ model Organisation {
   // one mid-month from /platform-admin/ai-usage) — distinct from a $0 cap,
   // which would block everything.
   aiMonthlySpendCapUsd    Decimal?                @default(100) @db.Decimal(10, 2)
+  // Billing/access gate (see lib/stripe.ts, app/activate) — an organisation
+  // has valid app access iff accessStatus is pilot, trialing, or active;
+  // anything else (past_due, canceled, none) redirects to /activate. Set
+  // by lib/organisation.ts's requireOrganisationAdmin flow (pilot code) or
+  // by the Stripe webhook (app/api/webhooks/stripe/route.ts) — never
+  // trust a client redirect alone for subscription state, the webhook is
+  // authoritative. Defaults to "none" for brand-new organisations going
+  // forward; the migration that introduced this field grandfathered every
+  // pre-existing organisation into "pilot" so nobody already using the app
+  // was locked out (see prisma/migrations/*_organisation_access_billing).
+  accessStatus            AccessStatus            @default(none)
+  pilotAccessGrantedAt    DateTime?
+  stripeCustomerId        String?                 @unique
+  stripeSubscriptionId    String?                 @unique
+  planTier                PlanTier?
+  trialEndsAt             DateTime?
   createdAt               DateTime                @default(now())
   members                 OrganisationMember[]
   invites                 OrganisationInvite[]

@@ -35,7 +35,15 @@ export function AccountSettingsView({
   members: MemberWithUser[];
   invites: OrganisationInvite[];
   variationCompletionMode: VariationCompletionMode;
-  organisation: { id: string; name: string; trade: string | null } | null;
+  organisation: {
+    id: string;
+    name: string;
+    trade: string | null;
+    accessStatus: string;
+    planTier: string | null;
+    trialEndsAt: Date | null;
+    hasStripeCustomer: boolean;
+  } | null;
 }) {
   const [tab, setTab] = useState<AccountSettingsTab>(initialTab);
 

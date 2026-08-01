@@ -56,21 +56,195 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
 // clauses detectable later: both this contract's and its Main Contractor's
 // PREVIOUS contract's baseline deviations are keyed by the same fixed
 // SA-2017 baselineClauseRef, so they can be diffed directly.
+function normalizeForDedup(text: string): string {
+  return text.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Collapses exact-duplicate map-phase findings WITHIN one bucket's output,
+// before synthesis ever sees them. Root cause (confirmed against real
+// output, not assumed): SA-2017's baseline dataset has many granular
+// sub-clauses under one heading (e.g. Public Liability Insurance has
+// 8.4.1-8.4.5) with NO body text of their own (see
+// lib/standard-forms/sa-2017.json) — compareClausesToStandardBucket's
+// prompt requires "one entry per standard-form clause", so comparing a
+// single subcontract clause against several textless sub-clauses under
+// the same heading produces the exact same verbatim rationale repeated
+// once per sub-clause number, differing only in baselineClauseRef. This
+// synthetic repetition was what dragged severity assessment off course in
+// the reduce/synthesis step (many near-identical "critical-looking"
+// siblings around one clean, unrelated finding) — removing it here fixes
+// the input rather than asking synthesis to keep resisting it.
+// Deliberately conservative (Task 2.2): only classification + title +
+// rationale ALL matching after whitespace/case normalization counts as a
+// duplicate. Any genuine distinguishing detail in even one entry (e.g.
+// the one sub-clause whose rationale actually engages with the specific
+// dollar figure) keeps it out of the group entirely — under-merging is
+// preferred over losing a distinct real finding.
+function dedupeBucketDeviations(deviations: BucketDeviation[]): BucketDeviation[] {
+  const groups = new Map<string, BucketDeviation[]>();
+  for (const deviation of deviations) {
+    const key = [
+      deviation.classification,
+      normalizeForDedup(deviation.baselineClauseTitle ?? ""),
+      normalizeForDedup(deviation.rationale)
+    ].join("|");
+    const group = groups.get(key);
+    if (group) {
+      group.push(deviation);
+    } else {
+      groups.set(key, [deviation]);
+    }
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    if (group.length === 1) return group[0];
+    // Traceability (Task 2.1): every merged clause reference is kept,
+    // joined onto the single surviving entry, rather than silently
+    // dropping all but one.
+    const clauseRefs = Array.from(
+      new Set(group.map((d) => d.baselineClauseRef).filter((ref): ref is string => Boolean(ref)))
+    );
+    return {
+      ...group[0],
+      baselineClauseRef: clauseRefs.length > 0 ? clauseRefs.join(", ") : group[0].baselineClauseRef
+    };
+  });
+}
+
+type QuantityKind = "dollar" | "percent" | "days" | "months" | "weeks" | "years";
+
+// Second dedup mechanism, distinct from dedupeBucketDeviations above.
+// Confirmed against real output (not assumed): every bucket call receives
+// the FULL subcontract clause list, and SA-2017's "Specific Conditions
+// Schedule" bucket independently references the same real-world
+// requirements (e.g. insurance minimums) that "indemnity_insurance" also
+// covers — so the SAME underlying fact (e.g. "$1,000,000 instead of
+// $5,000,000") gets rediscovered and reworded independently by TWO
+// DIFFERENT bucket calls. Because the wording differs between buckets,
+// dedupeBucketDeviations' exact-text match (scoped to one bucket) never
+// sees these as duplicates. What both versions reliably share is the
+// actual NUMBERS being compared — this extracts them and matches on that
+// instead of on wording, which is what makes cross-bucket matching
+// possible without a fuzzy-text/AI step. Requires >=2 numbers of the SAME
+// kind (so "$1,000,000 instead of $5,000,000" qualifies but a rationale
+// mentioning only one number, or numbers of different kinds, does not) —
+// deliberately conservative: a finding with fewer or ambiguous numeric
+// anchors is left alone rather than guessed into a group.
+function extractQuantitySignature(rationale: string): { kind: QuantityKind; values: number[] } | null {
+  const dollarMatches = [...rationale.matchAll(/\$\s?([\d,]+(?:\.\d+)?)\s*(million|m)?\b/gi)];
+  if (dollarMatches.length >= 2) {
+    const values = Array.from(
+      new Set(
+        dollarMatches.map(([, num, unit]) => {
+          const value = parseFloat(num.replace(/,/g, ""));
+          return unit ? value * 1_000_000 : value;
+        })
+      )
+    ).sort((a, b) => a - b);
+    if (values.length >= 2) return { kind: "dollar", values };
+  }
+
+  const percentMatches = [...rationale.matchAll(/(\d+(?:\.\d+)?)\s*%/g)];
+  if (percentMatches.length >= 2) {
+    const values = Array.from(new Set(percentMatches.map(([, num]) => parseFloat(num)))).sort((a, b) => a - b);
+    if (values.length >= 2) return { kind: "percent", values };
+  }
+
+  const unitPatterns: [QuantityKind, string][] = [
+    ["days", "days?"],
+    ["weeks", "weeks?"],
+    ["months", "months?"],
+    ["years", "years?"]
+  ];
+  for (const [kind, unitPattern] of unitPatterns) {
+    // [\s-]* (not just \s*) between the number and the unit — English
+    // commonly hyphenates this as a compound adjective ("6-month DLP",
+    // "10-day notice period"), confirmed missing real output entirely
+    // under a whitespace-only pattern, which silently let two otherwise-
+    // identical findings ("6-month...12-month" vs "6 months...12 months")
+    // skip cross-bucket matching rather than incorrectly merge anything.
+    const matches = [...rationale.matchAll(new RegExp(`(\\d+(?:\\.\\d+)?)[\\s-]*(?:working[\\s-]+)?${unitPattern}`, "gi"))];
+    if (matches.length >= 2) {
+      const values = Array.from(new Set(matches.map(([, num]) => parseFloat(num)))).sort((a, b) => a - b);
+      if (values.length >= 2) return { kind, values };
+    }
+  }
+
+  return null;
+}
+
+function dedupeAcrossBuckets(
+  bucketResults: { topicBucket: string; deviations: BucketDeviation[] }[]
+): { topicBucket: string; deviations: BucketDeviation[] }[] {
+  type Entry = { topicBucket: string; deviation: BucketDeviation };
+  const quantityGroups = new Map<string, Entry[]>();
+  const passthrough: Entry[] = [];
+
+  for (const bucket of bucketResults) {
+    for (const deviation of bucket.deviations) {
+      const signature = extractQuantitySignature(deviation.rationale);
+      if (!signature) {
+        passthrough.push({ topicBucket: bucket.topicBucket, deviation });
+        continue;
+      }
+      const key = [deviation.classification, signature.kind, signature.values.join(",")].join("|");
+      const group = quantityGroups.get(key);
+      if (group) group.push({ topicBucket: bucket.topicBucket, deviation });
+      else quantityGroups.set(key, [{ topicBucket: bucket.topicBucket, deviation }]);
+    }
+  }
+
+  const merged: Entry[] = [...passthrough];
+  for (const group of quantityGroups.values()) {
+    if (group.length === 1) {
+      merged.push(group[0]);
+      continue;
+    }
+    // Most complete/accurate version (Task 2.1) — the longest rationale is
+    // used as a simple, deterministic proxy for "most detailed".
+    const survivor = group.reduce((best, current) =>
+      current.deviation.rationale.length > best.deviation.rationale.length ? current : best
+    );
+    const clauseRefs = Array.from(
+      new Set(group.map((entry) => entry.deviation.baselineClauseRef).filter((ref): ref is string => Boolean(ref)))
+    );
+    merged.push({
+      topicBucket: survivor.topicBucket,
+      deviation: {
+        ...survivor.deviation,
+        baselineClauseRef: clauseRefs.length > 0 ? clauseRefs.join(", ") : survivor.deviation.baselineClauseRef
+      }
+    });
+  }
+
+  const regrouped = new Map<string, BucketDeviation[]>();
+  for (const entry of merged) {
+    const list = regrouped.get(entry.topicBucket) ?? [];
+    list.push(entry.deviation);
+    regrouped.set(entry.topicBucket, list);
+  }
+  return bucketResults.map((bucket) => ({
+    topicBucket: bucket.topicBucket,
+    deviations: regrouped.get(bucket.topicBucket) ?? []
+  }));
+}
+
 async function runBaselineComparison(
   clauseInputs: ClauseInput[],
   usageContext: { organisationId: string | null; userId: string | null; contextRef: string }
 ): Promise<{ bucketResults: { topicBucket: string; deviations: BucketDeviation[] }[]; synthesis: SynthesisResult }> {
   const buckets = getStandardFormBuckets();
-  const bucketResults = await mapWithConcurrency(buckets, GROK_CONCURRENCY, async (bucket) => {
+  const rawBucketResults = await mapWithConcurrency(buckets, GROK_CONCURRENCY, async (bucket) => {
       const baselineClauses = getStandardFormClausesByBucket(bucket).map((c) => ({
         clauseRef: c.clauseRef,
         title: c.title,
         body: c.body
       }));
       const deviations = await compareClausesToStandardBucket(bucket, baselineClauses, clauseInputs, usageContext);
-      return { topicBucket: bucket, deviations };
+      return { topicBucket: bucket, deviations: dedupeBucketDeviations(deviations) };
     }
   );
+  const bucketResults = dedupeAcrossBuckets(rawBucketResults);
   const synthesis = await synthesizeContractReview(bucketResults, undefined, usageContext);
   return { bucketResults, synthesis };
 }
@@ -281,8 +455,13 @@ async function runContractReviewWork(
       clauseInputs,
       usageContext
     );
+    // Same dedup pass as the baseline comparison — reused rather than
+    // special-cased, since a real prior contract's clauses have genuine
+    // body text and are far less likely to produce exact-duplicate
+    // findings, but the same conservative collapse is harmless if it
+    // never actually matches anything here.
     const priorContractSynthesis = await synthesizeContractReview(
-      [{ topicBucket: "general", deviations: priorContractDeviations }],
+      [{ topicBucket: "general", deviations: dedupeBucketDeviations(priorContractDeviations) }],
       PRIOR_CONTRACT_LABEL,
       usageContext
     );

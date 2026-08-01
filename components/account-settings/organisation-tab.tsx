@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { TRADE_PRESETS } from "@/lib/trades";
 import { PLAN_DISPLAY, type PlanTier } from "@/lib/stripe";
 
@@ -71,9 +72,19 @@ function BillingSection({
           </button>
         </div>
       ) : (
-        <p className="text-xs text-[#4c739a] dark:text-slate-400">
-          No Stripe subscription on file — this organisation has pilot access.
-        </p>
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-[#4c739a] dark:text-slate-400">
+            No Stripe subscription on file — this organisation has pilot access.
+          </p>
+          <div>
+            <Link
+              href="/pricing"
+              className="inline-flex h-10 items-center px-4 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+            >
+              Upgrade to a paid plan
+            </Link>
+          </div>
+        </div>
       )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}

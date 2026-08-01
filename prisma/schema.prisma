@@ -162,6 +162,12 @@ enum FindingCategory {
   intellectual_property
   final_account
   termination
+  // Added after a real staging review showed genuine site-operational
+  // obligations (scaffolding, cleaning, hoisting, power/water supply,
+  // welfare facilities, sub-letting consent, site access, lighting,
+  // marking-out) had nowhere to go and were falling into "other" ~1/3 of
+  // the time instead of it being a rare fallback.
+  site_facilities_operations
   other
 }
 
@@ -445,6 +451,17 @@ model ContractReview {
   // components/contract/deviation-report-view.tsx).
   keyObservations     String[]             @default([])
   positiveFindings    Json?
+  // Phase 1.75 — category-level synthesis sitting between the executive
+  // summary and clause-level findings (see components/contract/deviation-
+  // report-view.tsx): for each FindingCategory with at least one finding,
+  // a { whatThisMeans, keyRisks, protectYourself } object, keyed by the
+  // category string. Plain JSON, not a child model — same reasoning as
+  // positiveFindings above (small, display-only, no relational querying
+  // need, bounded to the fixed 12-category set). Nullable/legitimately
+  // absent on reviews from before this shipped; the UI falls back to the
+  // pre-Phase-1.75 flat findings list for those (no broken/empty summary
+  // block) rather than requiring a re-run.
+  categorySummaries   Json?
   majorDeviationCount Int                  @default(0)
   minorDeviationCount Int                  @default(0)
   errorMessage        String?

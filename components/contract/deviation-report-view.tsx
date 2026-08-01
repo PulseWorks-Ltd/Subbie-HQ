@@ -13,11 +13,19 @@ import type { ReviewWithChain } from "@/components/contract/contract-review-sect
 // the underlying DeviationClassification enum values are unchanged.
 // Applied uniformly to both baseline and prior-contract comparisons (the
 // task frames these as a single renamed vocabulary, not two).
+// minor_deviation deliberately shares major_deviation's "New Obligation"
+// label rather than getting its own "minor" wording (bug fix, Contract
+// Review Phase 1 completion, Task 2.1) — this badge now only describes
+// WHAT KIND of finding it is (a changed/new obligation vs a removed
+// protection vs an added requirement vs a match); how much it matters is
+// entirely the separate severity badge's job (critical/important/
+// informational), so a major/minor split on this badge would just
+// duplicate and potentially contradict that signal.
 const CLASSIFICATION_LABELS: Record<string, string> = {
   major_deviation: "New Obligation",
   missing_from_subcontract: "Standard protection removed",
   additional_in_subcontract: "Additional Requirement",
-  minor_deviation: "Minor deviation",
+  minor_deviation: "New Obligation",
   matches_standard: "Matches standard"
 };
 
@@ -134,6 +142,41 @@ function parsePositiveFindings(value: unknown): PositiveFinding[] {
   });
 }
 
+type CategorySummary = { whatThisMeans: string; keyRisks: string[]; protectYourself: string[] };
+
+// review.categorySummaries is a Prisma Json? column (Phase 1.75) — same
+// defensive-read reasoning as parsePositiveFindings above: only enforced
+// by lib/grok.ts's zod schema at write time, not by the database column
+// itself. Reviews generated before this shipped have this null/undefined,
+// and any entry that fails validation here is simply dropped rather than
+// crashing the page — a missing entry for a given category is exactly how
+// the UI decides to fall back to the pre-Phase-1.75 flat findings list for
+// that category (see DeviationReportView's categoryGroups.map below).
+function parseCategorySummaries(value: unknown): Record<string, CategorySummary> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  const result: Record<string, CategorySummary> = {};
+  for (const [category, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const record = entry as Record<string, unknown>;
+    const keyRisks = record.keyRisks;
+    const protectYourself = record.protectYourself;
+    if (
+      typeof record.whatThisMeans === "string" &&
+      Array.isArray(keyRisks) &&
+      keyRisks.every((item) => typeof item === "string") &&
+      Array.isArray(protectYourself) &&
+      protectYourself.every((item) => typeof item === "string")
+    ) {
+      result[category] = {
+        whatThisMeans: record.whatThisMeans,
+        keyRisks: keyRisks as string[],
+        protectYourself: protectYourself as string[]
+      };
+    }
+  }
+  return result;
+}
+
 function ExecutiveSummary({ review }: { review: ReviewWithChain }) {
   const severityCounts = { critical: 0, important: 0, informational: 0 };
   for (const d of review.deviations) {
@@ -141,7 +184,14 @@ function ExecutiveSummary({ review }: { review: ReviewWithChain }) {
   }
 
   const categoryGroups = groupByCategory(review.deviations);
-  const topCriticalCategory = categoryGroups.find((g) => g.deviations.some((d) => d.severity === "critical"));
+  // "other" is never a meaningful place to tell a subcontractor to start
+  // (bug fix, Task 1.3) — excluded here as a hard rule, not merely a
+  // consequence of "other" becoming rare after the taxonomy fix, since
+  // categoryGroups is already sorted by critical count descending, this
+  // still picks the non-"other" category with the most critical findings.
+  const topCriticalCategory = categoryGroups.find(
+    (g) => g.category !== "other" && g.deviations.some((d) => d.severity === "critical")
+  );
   const positiveFindings = parsePositiveFindings(review.positiveFindings);
 
   return (
@@ -272,6 +322,7 @@ export function DeviationReportView({
     : review.standardFormVersion;
 
   const categoryGroups = groupByCategory(review.deviations);
+  const categorySummaries = parseCategorySummaries(review.categorySummaries);
   const selectableDeviations = [...review.deviations, ...review.driftDeviations];
 
   return (
@@ -308,6 +359,21 @@ export function DeviationReportView({
       <div className="flex flex-col gap-3">
         {categoryGroups.map(({ category, deviations }) => {
           const criticalCount = deviations.filter((d) => d.severity === "critical").length;
+          const summary = categorySummaries[category];
+          const clauseList = (
+            <div className="flex flex-col gap-3">
+              {deviations.map((deviation) => (
+                <DeviationCard
+                  key={deviation.id}
+                  deviation={deviation}
+                  selectable
+                  selected={selectedIds.includes(deviation.id)}
+                  onToggle={toggle}
+                />
+              ))}
+            </div>
+          );
+
           return (
             <DashboardSection
               key={category}
@@ -322,17 +388,69 @@ export function DeviationReportView({
                 ) : undefined
               }
             >
-              <div className="flex flex-col gap-3">
-                {deviations.map((deviation) => (
-                  <DeviationCard
-                    key={deviation.id}
-                    deviation={deviation}
-                    selectable
-                    selected={selectedIds.includes(deviation.id)}
-                    onToggle={toggle}
-                  />
-                ))}
-              </div>
+              {summary ? (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h5 className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-1.5">
+                      What This Means
+                    </h5>
+                    <div className="flex flex-col gap-2">
+                      {summary.whatThisMeans
+                        .split(/\n+/)
+                        .map((paragraph) => paragraph.trim())
+                        .filter(Boolean)
+                        .map((paragraph, index) => (
+                          <p key={index} className="text-sm leading-relaxed">
+                            {paragraph}
+                          </p>
+                        ))}
+                    </div>
+                  </div>
+
+                  {summary.keyRisks.length > 0 && (
+                    <div>
+                      <h5 className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-1.5">
+                        Key Risks
+                      </h5>
+                      <ul className="list-disc list-inside text-sm leading-relaxed space-y-1">
+                        {summary.keyRisks.map((risk, index) => (
+                          <li key={index}>{risk}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {summary.protectYourself.length > 0 && (
+                    <div>
+                      <h5 className="text-xs font-bold uppercase tracking-wide text-primary/70 mb-1.5">
+                        How to Protect Yourself
+                      </h5>
+                      <ul className="list-disc list-inside text-sm leading-relaxed text-primary space-y-1">
+                        {summary.protectYourself.map((action, index) => (
+                          <li key={index}>{action}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <DashboardSection
+                    sectionKey={`contract-review-category-${category}-clauses`}
+                    label={`Supporting Clause Analysis (${deviations.length})`}
+                    icon="fact_check"
+                    itemCount={deviations.length}
+                    defaultExpanded={false}
+                  >
+                    {clauseList}
+                  </DashboardSection>
+                </div>
+              ) : (
+                // Backward compatibility (Task 3.2) — reviews generated
+                // before Phase 1.75 (or any category the model omitted a
+                // summary for) have no categorySummaries entry here, so
+                // this falls back to the pre-Phase-1.75 flat findings list
+                // with no summary layer, rather than a broken/empty block.
+                clauseList
+              )}
             </DashboardSection>
           );
         })}

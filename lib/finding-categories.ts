@@ -14,6 +14,7 @@ export const FINDING_CATEGORY_LABELS: Record<string, string> = {
   intellectual_property: "Intellectual Property",
   final_account: "Final Account",
   termination: "Termination",
+  site_facilities_operations: "Site Facilities & Operations",
   other: "Other"
 };
 
@@ -29,6 +30,7 @@ export const FINDING_CATEGORY_ICONS: Record<string, string> = {
   intellectual_property: "copyright",
   final_account: "receipt_long",
   termination: "cancel",
+  site_facilities_operations: "construction",
   other: "category"
 };
 

@@ -18,13 +18,28 @@ const SEVERITY_LABELS: Record<string, string> = {
   informational: "Informational"
 };
 
-export function SeverityBadge({ severity }: { severity: string }) {
+export function SeverityBadge({
+  severity,
+  verbose
+}: {
+  severity: string;
+  // Spec terminology rename: "Major Risk / High Risk" -> "Commercial
+  // Impact: Critical" (contract-intelligence-v2-spec.md's terminology
+  // table). Only applied where this badge stands alone with no adjacent
+  // count/label already spelling out "Critical"/"Important" next to it
+  // (e.g. each finding card) — the executive summary's "{count} Critical"
+  // strip and the small "{N} critical" category badge already say the
+  // word right next to this badge, so prefixing there would just repeat
+  // "Commercial Impact: Critical ... Critical" rather than clarify anything.
+  verbose?: boolean;
+}) {
   const style = SEVERITY_STYLES[severity] ?? SEVERITY_STYLES.informational;
-  const label = SEVERITY_LABELS[severity] ?? severity;
+  const label = (SEVERITY_LABELS[severity] ?? severity) as string;
+  const displayLabel = verbose ? `Commercial Impact: ${label}` : label;
 
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${style}`}>
-      {label}
+      {displayLabel}
     </span>
   );
 }

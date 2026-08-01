@@ -71,7 +71,7 @@ function DeviationCard({
             )}
           </div>
         </div>
-        {deviation.severity && <SeverityBadge severity={deviation.severity} />}
+        {deviation.severity && <SeverityBadge severity={deviation.severity} verbose />}
       </div>
 
       {deviation.subcontractExcerpt && (

@@ -163,6 +163,64 @@ export async function extractVariationItemFromText(
   return ExtractedVariationItemSchema.parse(JSON.parse(raw));
 }
 
+const ExtractedDayWorksLabourEntrySchema = z.object({
+  workerName: z.string(),
+  date: z.string().nullable(),
+  startTime: z.string().nullable(),
+  endTime: z.string().nullable(),
+  totalHours: z.number().nullable(),
+  taskDescription: z.string().nullable()
+});
+
+const ExtractedDayWorksLabourSchema = z.object({
+  entries: z.array(ExtractedDayWorksLabourEntrySchema)
+});
+
+export type ExtractedDayWorksLabourEntry = z.infer<typeof ExtractedDayWorksLabourEntrySchema>;
+
+// Handwritten timesheets are genuinely error-prone — this is deliberately
+// permissive about missing fields (null rather than a guess) since the
+// caller always routes the result through a mandatory review-before-save
+// step, never straight to the database.
+export async function extractDayWorksLabourFromText(
+  documentText: string,
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ExtractedDayWorksLabourEntry[]> {
+  const response = await callGrok(
+    {
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You extract structured labour entries from a photo or scan of a construction Day Works Sheet / labour timesheet, which may be handwritten. Respond with only a JSON object matching this exact shape: " +
+            '{"entries": [{"workerName": string, "date": string | null, "startTime": string | null, "endTime": string | null, "totalHours": number | null, "taskDescription": string | null}]}. ' +
+            "One entry per worker/task line on the sheet. " +
+            "workerName: the worker's name exactly as written. " +
+            "date: the calendar date the work was done, as an ISO 8601 date (YYYY-MM-DD) — if only one date is shown for the whole sheet, apply it to every entry; null only if genuinely no date is legible anywhere on the sheet. " +
+            "startTime/endTime: 24-hour HH:mm, only if explicitly shown for that entry, otherwise null. " +
+            "totalHours: a directly-stated total hours figure for that entry (e.g. '8 hrs'), only if shown AND startTime/endTime are not both present — leave null if start/end times are given instead. " +
+            "taskDescription: a short description of the task performed, if shown, otherwise null. " +
+            "Never guess or invent a value for a field that isn't legible — use null instead."
+        },
+        {
+          role: "user",
+          content: documentText
+        }
+      ]
+    },
+    { ...usageContext, feature: "day_works_labour_extraction" }
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return ExtractedDayWorksLabourSchema.parse(JSON.parse(raw)).entries;
+}
+
 const ExtractedProgrammeItemSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),

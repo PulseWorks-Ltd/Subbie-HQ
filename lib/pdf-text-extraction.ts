@@ -128,6 +128,28 @@ async function ocrPages(buffer: Uint8Array, pageCount: number): Promise<PdfPage[
   return results.sort((a, b) => a.num - b.num);
 }
 
+// Direct-image counterpart to ocrPages above — a Day Works labour sheet is
+// realistically a phone photo (jpg/png) as often as a PDF. Reuses the same
+// bundled-traineddata Tesseract worker setup, just without the PDF-render
+// step since the input is already an image. Not readability-checked like
+// extractPdfPagesWithOcrFallback (a single handwritten photo either OCRs to
+// something usable or it doesn't — no OCR-fallback-from-OCR path to fall
+// back to); callers should treat empty/unusable text as "couldn't be read
+// automatically."
+export async function extractImageTextWithOcr(buffer: Uint8Array): Promise<string> {
+  const tesseractWorker = await createWorker("eng", OEM.LSTM_ONLY, {
+    cachePath: OCR_DATA_DIR,
+    langPath: OCR_DATA_DIR,
+    gzip: false
+  });
+  try {
+    const { data } = await tesseractWorker.recognize(Buffer.from(buffer));
+    return data.text;
+  } finally {
+    await tesseractWorker.terminate();
+  }
+}
+
 // Extracts page text from a PDF, falling back to OCR (render page -> image ->
 // Tesseract) when the normal text layer looks unreadable. Throws
 // UnreadablePdfError if the PDF still can't be read after the OCR attempt —

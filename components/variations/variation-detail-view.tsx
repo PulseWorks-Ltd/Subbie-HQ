@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type {
+  ContractTerms,
   Correspondence,
+  DayWorksLabourEntry,
   DayWorksMaterial,
   DayWorksSheet,
   Update,
@@ -25,7 +27,7 @@ import { CreateVariationDialog } from "@/components/variations/create-variation-
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
-type DayWorksSheetWithMaterials = DayWorksSheet & { materials: DayWorksMaterial[] };
+type DayWorksSheetWithMaterials = DayWorksSheet & { materials: DayWorksMaterial[]; labourEntries: DayWorksLabourEntry[] };
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
@@ -46,7 +48,8 @@ export function VariationDetailView({
   correspondence,
   updates,
   contacts,
-  taggableItems
+  taggableItems,
+  contractTerms
 }: {
   projectId: string;
   item: VariationItem;
@@ -56,6 +59,7 @@ export function VariationDetailView({
   updates: UpdateWithReplies[];
   contacts: ContactOption[];
   taggableItems: VariationItem[];
+  contractTerms: ContractTerms | null;
 }) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -170,7 +174,12 @@ export function VariationDetailView({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {hasVariation && <VariationQuoteSection projectId={projectId} item={item} />}
-        <VariationDayWorksSection projectId={projectId} itemId={item.id} dayWorksSheets={dayWorksSheets} />
+        <VariationDayWorksSection
+          projectId={projectId}
+          itemId={item.id}
+          dayWorksSheets={dayWorksSheets}
+          contractTerms={contractTerms}
+        />
         <VariationPhotosSection projectId={projectId} itemId={item.id} photos={photos} />
         <VariationCorrespondenceSection projectId={projectId} itemId={item.id} correspondence={correspondence} />
       </div>

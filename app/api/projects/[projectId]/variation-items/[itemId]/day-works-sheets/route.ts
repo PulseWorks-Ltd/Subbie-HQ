@@ -32,7 +32,10 @@ export async function GET(request: Request, context: { params: { projectId: stri
   const dayWorksSheets = await prisma.dayWorksSheet.findMany({
     where: { variationItemId: itemId },
     orderBy: { createdAt: "desc" },
-    include: { materials: { orderBy: { createdAt: "asc" } } }
+    include: {
+      materials: { orderBy: { createdAt: "asc" } },
+      labourEntries: { orderBy: { sortOrder: "asc" } }
+    }
   });
 
   return NextResponse.json({ dayWorksSheets });
@@ -66,10 +69,11 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const buffer = new Uint8Array(await file.arrayBuffer());
   const uploadKey = `projects/${projectId}/variation-items/${itemId}/day-works/${Date.now()}-${file.name}`;
-  const { storageKey } = await uploadToS3({ key: uploadKey, body: buffer, contentType: file.type || "application/octet-stream" });
+  const contentType = file.type || "application/octet-stream";
+  const { storageKey } = await uploadToS3({ key: uploadKey, body: buffer, contentType });
 
   const dayWorksSheet = await prisma.dayWorksSheet.create({
-    data: { variationItemId: itemId, fileName: file.name, storageKey }
+    data: { variationItemId: itemId, fileName: file.name, storageKey, contentType }
   });
 
   return NextResponse.json({ dayWorksSheet }, { status: 201 });

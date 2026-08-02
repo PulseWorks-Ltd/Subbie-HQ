@@ -54,6 +54,23 @@ export async function getSignedDownloadUrl(storageKey: string, expiresInSeconds 
   return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
 }
 
+// Fetches the object's bytes directly (rather than a signed URL) for
+// server-side processing — e.g. Day Works labour extraction reading an
+// already-uploaded sheet back out to OCR it.
+export async function downloadFromS3(storageKey: string): Promise<Uint8Array> {
+  if (!process.env.S3_BUCKET) {
+    throw new Error("S3 configuration missing");
+  }
+
+  const command = new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: storageKey });
+  const response = await s3.send(command);
+  const byteArray = await response.Body?.transformToByteArray();
+  if (!byteArray) {
+    throw new Error(`Object body empty for key: ${storageKey}`);
+  }
+  return byteArray;
+}
+
 export async function deleteFromS3(storageKey: string): Promise<void> {
   if (!process.env.S3_BUCKET) {
     throw new Error("S3 configuration missing");

@@ -2,9 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DayWorksMaterial, DayWorksSheet } from "@prisma/client";
+import type { ContractTerms, DayWorksLabourEntry, DayWorksMaterial, DayWorksSheet, DayWorksRateType } from "@prisma/client";
+import { rateForType, summariseLabourCost } from "@/lib/day-works-rates";
+import { DayWorksLabourReviewDialog, type LabourRow } from "@/components/variations/day-works-labour-review-dialog";
+import type { DraftLabourEntry } from "@/app/api/projects/[projectId]/variation-items/[itemId]/day-works-sheets/[sheetId]/labour/extract/route";
 
-type DayWorksSheetWithMaterials = DayWorksSheet & { materials: DayWorksMaterial[] };
+type DayWorksSheetWithDetails = DayWorksSheet & { materials: DayWorksMaterial[]; labourEntries: DayWorksLabourEntry[] };
+
+const RATE_TYPE_LABELS: Record<DayWorksRateType, string> = {
+  normal: "Normal",
+  night: "Night",
+  sunday_holiday: "Sunday / PH"
+};
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -12,6 +21,34 @@ function formatCurrency(amount: number) {
 
 function materialsTotal(materials: DayWorksMaterial[]) {
   return materials.reduce((sum, material) => sum + Number(material.quantity) * Number(material.unitCost), 0);
+}
+
+function toDateInputValue(date: Date) {
+  return new Date(date).toISOString().slice(0, 10);
+}
+
+function draftEntriesToRows(entries: DraftLabourEntry[]): LabourRow[] {
+  return entries.map((entry) => ({
+    workerName: entry.workerName,
+    date: entry.date,
+    startTime: entry.startTime ?? "",
+    endTime: entry.endTime ?? "",
+    hours: entry.hours != null ? String(entry.hours) : "",
+    rateType: entry.rateType,
+    taskDescription: entry.taskDescription ?? ""
+  }));
+}
+
+function savedEntriesToRows(entries: DayWorksLabourEntry[]): LabourRow[] {
+  return entries.map((entry) => ({
+    workerName: entry.workerName,
+    date: toDateInputValue(entry.date),
+    startTime: entry.startTime ?? "",
+    endTime: entry.endTime ?? "",
+    hours: String(Number(entry.hours)),
+    rateType: entry.rateType,
+    taskDescription: entry.taskDescription ?? ""
+  }));
 }
 
 function MaterialForm({
@@ -139,7 +176,7 @@ function MaterialsSection({
 }: {
   projectId: string;
   itemId: string;
-  sheet: DayWorksSheetWithMaterials;
+  sheet: DayWorksSheetWithDetails;
 }) {
   const router = useRouter();
 
@@ -196,17 +233,129 @@ function MaterialsSection({
   );
 }
 
-export function VariationDayWorksSection({
+function LabourSection({
   projectId,
   itemId,
-  dayWorksSheets
+  sheet,
+  contractTerms
 }: {
   projectId: string;
   itemId: string;
-  dayWorksSheets: DayWorksSheetWithMaterials[];
+  sheet: DayWorksSheetWithDetails;
+  contractTerms: ContractTerms | null;
+}) {
+  const router = useRouter();
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [reviewState, setReviewState] = useState<{ rows: LabourRow[]; warning: string | null } | null>(null);
+
+  async function runExtraction() {
+    setIsExtracting(true);
+    setExtractError(null);
+    const response = await fetch(
+      `/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheet.id}/labour/extract`,
+      { method: "POST" }
+    );
+    const body = await response.json().catch(() => null);
+    setIsExtracting(false);
+
+    if (!response.ok) {
+      setExtractError(typeof body?.error === "string" ? body.error : "Could not read this sheet automatically. You can still add labour entries manually.");
+      setReviewState({ rows: [], warning: null });
+      return;
+    }
+
+    setReviewState({ rows: draftEntriesToRows(body.entries ?? []), warning: body.warning ?? null });
+  }
+
+  function openManualEdit() {
+    setReviewState({ rows: savedEntriesToRows(sheet.labourEntries), warning: null });
+  }
+
+  const summary = summariseLabourCost(
+    sheet.labourEntries.map((entry) => ({ hours: Number(entry.hours), rateType: entry.rateType })),
+    contractTerms
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">Labour</p>
+        <div className="flex items-center gap-3">
+          {sheet.labourEntries.length > 0 && (
+            <button onClick={openManualEdit} className="text-xs font-bold text-primary hover:underline">
+              Edit entries
+            </button>
+          )}
+          <button onClick={runExtraction} disabled={isExtracting} className="text-xs font-bold text-primary hover:underline disabled:opacity-60">
+            {isExtracting ? "Reading sheet..." : sheet.labourEntries.length > 0 ? "Re-extract" : "Extract labour"}
+          </button>
+        </div>
+      </div>
+
+      {extractError && <p className="text-xs text-red-600 mb-2">{extractError}</p>}
+
+      {sheet.labourEntries.length === 0 ? (
+        <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-2">
+          No structured labour entries yet — click "Extract labour" to read them from the uploaded sheet.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1 mb-2 text-xs">
+          {sheet.labourEntries.map((entry) => {
+            const rate = rateForType(contractTerms, entry.rateType);
+            const cost = rate != null ? rate * Number(entry.hours) : null;
+            return (
+              <div key={entry.id} className="flex items-center justify-between gap-2">
+                <span className="truncate">
+                  {entry.workerName} — {toDateInputValue(entry.date)} · {Number(entry.hours)}h ·{" "}
+                  {RATE_TYPE_LABELS[entry.rateType]}
+                  {entry.taskDescription ? ` — ${entry.taskDescription}` : ""}
+                </span>
+                <span className="font-bold shrink-0">{cost != null ? formatCurrency(cost) : "—"}</span>
+              </div>
+            );
+          })}
+          {summary.unratedHours > 0 && (
+            <p className="text-amber-600 dark:text-amber-400">
+              {summary.unratedHours.toFixed(2)} hrs not costed — configure the missing rate in Settings.
+            </p>
+          )}
+        </div>
+      )}
+
+      {reviewState && (
+        <DayWorksLabourReviewDialog
+          projectId={projectId}
+          itemId={itemId}
+          sheetId={sheet.id}
+          initialEntries={reviewState.rows}
+          warning={reviewState.warning}
+          contractTerms={contractTerms}
+          onClose={() => setReviewState(null)}
+          onSaved={() => {
+            setReviewState(null);
+            router.refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export function VariationDayWorksSection({
+  projectId,
+  itemId,
+  dayWorksSheets,
+  contractTerms
+}: {
+  projectId: string;
+  itemId: string;
+  dayWorksSheets: DayWorksSheetWithDetails[];
+  contractTerms: ContractTerms | null;
 }) {
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
+  const [pendingReview, setPendingReview] = useState<{ sheetId: string; rows: LabourRow[]; warning: string | null } | null>(null);
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -216,12 +365,25 @@ export function VariationDayWorksSection({
     setIsUploading(true);
     const formData = new FormData();
     formData.set("file", file);
-    await fetch(`/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets`, {
+    const uploadResponse = await fetch(`/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets`, {
       method: "POST",
       body: formData
     });
+    const uploadBody = await uploadResponse.json().catch(() => null);
     setIsUploading(false);
     router.refresh();
+
+    const sheetId = uploadBody?.dayWorksSheet?.id;
+    if (!uploadResponse.ok || !sheetId) return;
+
+    const extractResponse = await fetch(
+      `/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheetId}/labour/extract`,
+      { method: "POST" }
+    );
+    const extractBody = await extractResponse.json().catch(() => null);
+    if (!extractResponse.ok) return;
+
+    setPendingReview({ sheetId, rows: draftEntriesToRows(extractBody.entries ?? []), warning: extractBody.warning ?? null });
   }
 
   async function handleDelete(sheetId: string) {
@@ -247,44 +409,80 @@ export function VariationDayWorksSection({
       ) : (
         <div className="flex flex-col gap-4">
           {dayWorksSheets.map((sheet) => {
-            const total = materialsTotal(sheet.materials);
+            const matTotal = materialsTotal(sheet.materials);
+            const markupPercent = contractTerms?.materialsMarkupPercent ?? null;
+            const markupAmount = markupPercent != null ? matTotal * (markupPercent / 100) : 0;
+            const labourSummary = summariseLabourCost(
+              sheet.labourEntries.map((entry) => ({ hours: Number(entry.hours), rateType: entry.rateType })),
+              contractTerms
+            );
+            const hasAnyLabourHours = labourSummary.totalHours > 0;
+            const canShowFullTotal = !hasAnyLabourHours || labourSummary.anyRateConfigured;
+            const combinedTotal = matTotal + markupAmount + labourSummary.totalPricedCost;
+
             return (
               <div key={sheet.id} className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 flex flex-col gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-1.5">
-                    Labour
-                  </p>
-                  <div className="flex items-center justify-between gap-2">
-                    <a
-                      href={`/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheet.id}/file`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2 text-sm text-primary hover:underline min-w-0 truncate"
-                    >
-                      <span className="material-symbols-outlined text-lg shrink-0">description</span>
-                      <span className="truncate">{sheet.fileName}</span>
-                    </a>
-                    <button
-                      onClick={() => handleDelete(sheet.id)}
-                      className="text-xs font-bold text-red-600 hover:underline shrink-0"
-                    >
-                      Delete sheet
-                    </button>
-                  </div>
+                <div className="flex items-center justify-between gap-2">
+                  <a
+                    href={`/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheet.id}/file`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 text-sm text-primary hover:underline min-w-0 truncate"
+                  >
+                    <span className="material-symbols-outlined text-lg shrink-0">description</span>
+                    <span className="truncate">{sheet.fileName}</span>
+                  </a>
+                  <button
+                    onClick={() => handleDelete(sheet.id)}
+                    className="text-xs font-bold text-red-600 hover:underline shrink-0"
+                  >
+                    Delete sheet
+                  </button>
                 </div>
+
+                <LabourSection projectId={projectId} itemId={itemId} sheet={sheet} contractTerms={contractTerms} />
 
                 <MaterialsSection projectId={projectId} itemId={itemId} sheet={sheet} />
 
-                <p className="text-sm font-bold pt-2 border-t border-[#e7edf3] dark:border-slate-800">
-                  Sheet total: {formatCurrency(total)}{" "}
-                  <span className="text-xs font-normal text-[#4c739a] dark:text-slate-400">
-                    (materials cost — labour hours are recorded on the attached sheet)
-                  </span>
-                </p>
+                <div className="pt-2 border-t border-[#e7edf3] dark:border-slate-800">
+                  {canShowFullTotal ? (
+                    <p className="text-sm font-bold">
+                      Sheet total: {formatCurrency(combinedTotal)}{" "}
+                      <span className="text-xs font-normal text-[#4c739a] dark:text-slate-400">
+                        (labour {formatCurrency(labourSummary.totalPricedCost)} + materials {formatCurrency(matTotal)}
+                        {markupPercent != null ? ` + ${markupPercent}% markup ${formatCurrency(markupAmount)}` : ""})
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-sm font-bold">
+                      Materials total: {formatCurrency(matTotal + markupAmount)}{" "}
+                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
+                        — {labourSummary.totalHours.toFixed(2)} labour hrs recorded; configure Day Works rates in
+                        Settings to include labour cost in this total.
+                      </span>
+                    </p>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {pendingReview && (
+        <DayWorksLabourReviewDialog
+          projectId={projectId}
+          itemId={itemId}
+          sheetId={pendingReview.sheetId}
+          initialEntries={pendingReview.rows}
+          warning={pendingReview.warning}
+          contractTerms={contractTerms}
+          onClose={() => setPendingReview(null)}
+          onSaved={() => {
+            setPendingReview(null);
+            router.refresh();
+          }}
+        />
       )}
     </div>
   );

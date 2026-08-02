@@ -1053,21 +1053,65 @@ model VariationItem {
 }
 
 // fileName/storageKey are the original feature — an uploaded photo/scan of
-// the physical day works sheet, which is where labour/man-hours actually
-// get recorded on paper today; the app has never parsed that into
-// structured data, and this task doesn't change that ("Keep labour
-// entries exactly as they currently work"). materials below is the
-// additive piece: structured line items for materials bought specifically
-// for that day's instructed work, so the full cost sits on one record.
+// the physical day works sheet. contentType is additive (nullable — older
+// rows uploaded before this field existed won't have it) and drives which
+// OCR path labour extraction uses (PDF page-render-and-OCR vs direct image
+// OCR — see lib/pdf-text-extraction.ts). materials is structured line
+// items for materials bought for the day's work; labourEntries is the
+// AI-extracted-then-user-confirmed structured breakdown of the uploaded
+// labour file (see DayWorksLabourEntry) — the file itself remains the
+// supporting evidence, labourEntries is derived from it, never replaces it.
 model DayWorksSheet {
   id              String   @id @default(cuid())
   variationItemId String
   fileName        String
   storageKey      String
+  contentType     String?
   createdAt       DateTime @default(now())
 
-  variationItem VariationItem      @relation(fields: [variationItemId], references: [id])
+  variationItem VariationItem         @relation(fields: [variationItemId], references: [id])
   materials     DayWorksMaterial[]
+  labourEntries DayWorksLabourEntry[]
+}
+
+// Which of the project's three Day Works rates (see ContractTerms) applies
+// to a labour entry/segment. sunday_holiday covers both Sundays and
+// recognised public holidays — first-pass implementation only checks for
+// Sunday (see lib/day-works-rates.ts's isRecognisedHolidayOrSunday), since
+// neither Project nor Organisation has a region/jurisdiction field yet to
+// pick the correct public holiday calendar.
+enum DayWorksRateType {
+  normal
+  night
+  sunday_holiday
+}
+
+// One row = one continuous block of a worker's time at a single rate type.
+// A raw sheet line spanning a rate boundary (e.g. 4pm-6pm) is split into
+// two of these at extraction time (lib/day-works-rates.ts's
+// resolveRateSegments) rather than stored as one row with a fractional
+// rate — keeps cost calculation a simple hours*rate sum per row, no
+// boundary-splitting logic needed again at render time. No stored dollar
+// amount: cost is computed live from the project's current ContractTerms
+// rates (like DayWorksMaterial's quantity*unitCost), not frozen at save
+// time — simplest option, and consistent with rates being editable at any
+// time in Settings. Rows are fully replaced (delete+recreate) on every
+// save from the review UI, not incrementally patched — matches the
+// review-table's "editable draft list" interaction model.
+model DayWorksLabourEntry {
+  id              String           @id @default(cuid())
+  dayWorksSheetId String
+  workerName      String
+  date            DateTime
+  startTime       String?
+  endTime         String?
+  hours           Decimal          @db.Decimal(5, 2)
+  rateType        DayWorksRateType
+  taskDescription String?
+  sortOrder       Int              @default(0)
+  createdAt       DateTime         @default(now())
+
+  dayWorksSheet DayWorksSheet @relation(fields: [dayWorksSheetId], references: [id], onDelete: Cascade)
 }
 
 // One line item = one material bought for the day's work. No markup

@@ -373,85 +373,104 @@ export function DeviationReportView({
               ))}
             </div>
           );
+          const criticalBadge =
+            criticalCount > 0 ? (
+              <span className="text-[10px] font-bold text-red-600 dark:text-red-400">{criticalCount} critical</span>
+            ) : undefined;
 
+          // Backward compatibility (Task 1.3) — reviews generated before
+          // Phase 1.75 (or any category the model omitted a summary for)
+          // have no categorySummaries entry here. Unchanged from before
+          // this task: a single collapsible section wrapping the flat
+          // clause list directly, no summary layer.
+          if (!summary) {
+            return (
+              <DashboardSection
+                key={category}
+                sectionKey={`contract-review-category-${category}`}
+                label={`${findingCategoryLabel(category)} (${deviations.length})`}
+                icon={findingCategoryIcon(category)}
+                itemCount={deviations.length}
+                defaultExpanded={criticalCount > 0}
+                badges={criticalBadge}
+              >
+                {clauseList}
+              </DashboardSection>
+            );
+          }
+
+          // Task 1.1/1.2 — the category summary is a plain, always-visible
+          // header + content now (no click required); only the clause-
+          // level "Supporting Clause Analysis" sub-section stays behind a
+          // toggle, via the same DashboardSection component reused
+          // unchanged for that inner collapse.
           return (
-            <DashboardSection
-              key={category}
-              sectionKey={`contract-review-category-${category}`}
-              label={`${findingCategoryLabel(category)} (${deviations.length})`}
-              icon={findingCategoryIcon(category)}
-              itemCount={deviations.length}
-              defaultExpanded={criticalCount > 0}
-              badges={
-                criticalCount > 0 ? (
-                  <span className="text-[10px] font-bold text-red-600 dark:text-red-400">{criticalCount} critical</span>
-                ) : undefined
-              }
-            >
-              {summary ? (
-                <div className="flex flex-col gap-4">
+            <div key={category} className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3 px-2 py-2">
+                <span className="flex items-center gap-2 text-sm font-bold">
+                  <span className="material-symbols-outlined text-lg text-[#4c739a] dark:text-slate-400">
+                    {findingCategoryIcon(category)}
+                  </span>
+                  {findingCategoryLabel(category)} ({deviations.length})
+                </span>
+                {criticalBadge}
+              </div>
+
+              <div className="flex flex-col gap-4 pl-1">
+                <div>
+                  <h5 className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-1.5">
+                    What This Means
+                  </h5>
+                  <div className="flex flex-col gap-2">
+                    {summary.whatThisMeans
+                      .split(/\n+/)
+                      .map((paragraph) => paragraph.trim())
+                      .filter(Boolean)
+                      .map((paragraph, index) => (
+                        <p key={index} className="text-sm leading-relaxed">
+                          {paragraph}
+                        </p>
+                      ))}
+                  </div>
+                </div>
+
+                {summary.keyRisks.length > 0 && (
                   <div>
                     <h5 className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-1.5">
-                      What This Means
+                      Key Risks
                     </h5>
-                    <div className="flex flex-col gap-2">
-                      {summary.whatThisMeans
-                        .split(/\n+/)
-                        .map((paragraph) => paragraph.trim())
-                        .filter(Boolean)
-                        .map((paragraph, index) => (
-                          <p key={index} className="text-sm leading-relaxed">
-                            {paragraph}
-                          </p>
-                        ))}
-                    </div>
+                    <ul className="list-disc list-inside text-sm leading-relaxed space-y-1">
+                      {summary.keyRisks.map((risk, index) => (
+                        <li key={index}>{risk}</li>
+                      ))}
+                    </ul>
                   </div>
+                )}
 
-                  {summary.keyRisks.length > 0 && (
-                    <div>
-                      <h5 className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-1.5">
-                        Key Risks
-                      </h5>
-                      <ul className="list-disc list-inside text-sm leading-relaxed space-y-1">
-                        {summary.keyRisks.map((risk, index) => (
-                          <li key={index}>{risk}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                {summary.protectYourself.length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-bold uppercase tracking-wide text-primary/70 mb-1.5">
+                      How to Protect Yourself
+                    </h5>
+                    <ul className="list-disc list-inside text-sm leading-relaxed text-primary space-y-1">
+                      {summary.protectYourself.map((action, index) => (
+                        <li key={index}>{action}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                  {summary.protectYourself.length > 0 && (
-                    <div>
-                      <h5 className="text-xs font-bold uppercase tracking-wide text-primary/70 mb-1.5">
-                        How to Protect Yourself
-                      </h5>
-                      <ul className="list-disc list-inside text-sm leading-relaxed text-primary space-y-1">
-                        {summary.protectYourself.map((action, index) => (
-                          <li key={index}>{action}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <DashboardSection
-                    sectionKey={`contract-review-category-${category}-clauses`}
-                    label={`Supporting Clause Analysis (${deviations.length})`}
-                    icon="fact_check"
-                    itemCount={deviations.length}
-                    defaultExpanded={false}
-                  >
-                    {clauseList}
-                  </DashboardSection>
-                </div>
-              ) : (
-                // Backward compatibility (Task 3.2) — reviews generated
-                // before Phase 1.75 (or any category the model omitted a
-                // summary for) have no categorySummaries entry here, so
-                // this falls back to the pre-Phase-1.75 flat findings list
-                // with no summary layer, rather than a broken/empty block.
-                clauseList
-              )}
-            </DashboardSection>
+                <DashboardSection
+                  sectionKey={`contract-review-category-${category}-clauses`}
+                  label={`Supporting Clause Analysis (${deviations.length})`}
+                  icon="fact_check"
+                  itemCount={deviations.length}
+                  defaultExpanded={false}
+                >
+                  {clauseList}
+                </DashboardSection>
+              </div>
+            </div>
           );
         })}
       </div>

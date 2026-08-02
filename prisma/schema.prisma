@@ -1038,6 +1038,13 @@ model VariationItem {
   suggestedForInboundEmails InboundEmail[]   @relation("InboundEmailSuggestedVariationItem")
 }
 
+// fileName/storageKey are the original feature — an uploaded photo/scan of
+// the physical day works sheet, which is where labour/man-hours actually
+// get recorded on paper today; the app has never parsed that into
+// structured data, and this task doesn't change that ("Keep labour
+// entries exactly as they currently work"). materials below is the
+// additive piece: structured line items for materials bought specifically
+// for that day's instructed work, so the full cost sits on one record.
 model DayWorksSheet {
   id              String   @id @default(cuid())
   variationItemId String
@@ -1045,7 +1052,32 @@ model DayWorksSheet {
   storageKey      String
   createdAt       DateTime @default(now())
 
-  variationItem VariationItem @relation(fields: [variationItemId], references: [id])
+  variationItem VariationItem      @relation(fields: [variationItemId], references: [id])
+  materials     DayWorksMaterial[]
+}
+
+// One line item = one material bought for the day's work. No markup
+// field — deliberately out of scope, this records raw cost only (see
+// task rules). Deleting the parent DayWorksSheet cascades here since a
+// material line item has no meaning without its sheet.
+model DayWorksMaterial {
+  id              String  @id @default(cuid())
+  dayWorksSheetId String
+  description     String
+  quantity        Decimal @db.Decimal(10, 2)
+  unit            String
+  unitCost        Decimal @db.Decimal(10, 2)
+  // Optional receipt/photo attachment — same fileName/storageKey/
+  // contentType shape as VariationPhoto (Task: reuse the existing
+  // photo-attachment pattern), but nullable and singular rather than a
+  // one-to-many relation, since this is one optional receipt per line
+  // item, not a photo gallery.
+  photoFileName    String?
+  photoStorageKey  String?
+  photoContentType String?
+  createdAt        DateTime @default(now())
+
+  dayWorksSheet DayWorksSheet @relation(fields: [dayWorksSheetId], references: [id], onDelete: Cascade)
 }
 
 model VariationPhoto {

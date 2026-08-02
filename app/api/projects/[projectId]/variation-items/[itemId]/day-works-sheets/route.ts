@@ -31,7 +31,8 @@ export async function GET(request: Request, context: { params: { projectId: stri
 
   const dayWorksSheets = await prisma.dayWorksSheet.findMany({
     where: { variationItemId: itemId },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
+    include: { materials: { orderBy: { createdAt: "asc" } } }
   });
 
   return NextResponse.json({ dayWorksSheets });

@@ -39,7 +39,11 @@ export default async function VariationItemPage({
   ];
 
   const [dayWorksSheets, photos, correspondence, updates, contacts, taggableItems] = await Promise.all([
-    prisma.dayWorksSheet.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
+    prisma.dayWorksSheet.findMany({
+      where: { variationItemId: itemId },
+      orderBy: { createdAt: "desc" },
+      include: { materials: { orderBy: { createdAt: "asc" } } }
+    }),
     prisma.variationPhoto.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.correspondence.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.update.findMany({

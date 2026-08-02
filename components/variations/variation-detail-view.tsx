@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Correspondence, DayWorksSheet, Update, UpdateAttachment, VariationItem, VariationPhoto } from "@prisma/client";
+import type {
+  Correspondence,
+  DayWorksMaterial,
+  DayWorksSheet,
+  Update,
+  UpdateAttachment,
+  VariationItem,
+  VariationPhoto
+} from "@prisma/client";
 import { StatusBadge } from "@/components/badges/status-badge";
 import { CountdownBadge } from "@/components/badges/countdown-badge";
 import { VariationItemFormDialog } from "@/components/variations/variation-item-form-dialog";
@@ -17,6 +25,7 @@ import { CreateVariationDialog } from "@/components/variations/create-variation-
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
+type DayWorksSheetWithMaterials = DayWorksSheet & { materials: DayWorksMaterial[] };
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
@@ -41,7 +50,7 @@ export function VariationDetailView({
 }: {
   projectId: string;
   item: VariationItem;
-  dayWorksSheets: DayWorksSheet[];
+  dayWorksSheets: DayWorksSheetWithMaterials[];
   photos: VariationPhoto[];
   correspondence: Correspondence[];
   updates: UpdateWithReplies[];

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ContractTerms, RiskLevel } from "@prisma/client";
 import { ContractTermsSection } from "@/components/settings/contract-terms-section";
+import { DayWorksRatesSection } from "@/components/settings/day-works-rates-section";
 import { MainContractorSection } from "@/components/settings/main-contractor-section";
 
 export function SettingsView({
@@ -84,6 +85,8 @@ export function SettingsView({
       <MainContractorSection projectId={projectId} />
 
       <ContractTermsSection projectId={projectId} contractTerms={contractTerms} />
+
+      <DayWorksRatesSection projectId={projectId} contractTerms={contractTerms} />
     </div>
   );
 }

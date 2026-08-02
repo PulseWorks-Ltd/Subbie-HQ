@@ -563,6 +563,20 @@ model ContractTerms {
   suggestedDisputeNoticeMethod        String?
   suggestedGeneralNoticeMethod        String?
 
+  // Day works rate settings (foundational storage only — see this
+  // migration's task notes). No suggested* shadow counterparts yet: unlike
+  // the fields above, nothing currently extracts these from a contract, so
+  // there's nothing to suggest. A later Contract Review extraction prompt
+  // may add suggestedX fields for these the same way, once it exists.
+  // "Normal hours" = Monday-Saturday, 7am-5pm (see the Settings UI help
+  // text) — outside that window is Night rate; Sundays and public holidays
+  // use the separate rate below. Nothing in the codebase reads these yet;
+  // a later Day Works OCR prompt is what will apply them.
+  materialsMarkupPercent    Float?
+  dayWorksRateNormal        Decimal? @db.Decimal(10, 2)
+  dayWorksRateNight         Decimal? @db.Decimal(10, 2)
+  dayWorksRateSundayHoliday Decimal? @db.Decimal(10, 2)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

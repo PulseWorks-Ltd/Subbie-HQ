@@ -24,6 +24,10 @@ export function DocumentPanel({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [clauseSearch, setClauseSearch] = useState("");
+  const [isUpdatingType, setIsUpdatingType] = useState(false);
+  const [isExtractingQuote, setIsExtractingQuote] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const isQuote = document.documentType === "quote";
 
   const trimmedSearch = clauseSearch.trim().toLowerCase();
   const matchingClauses =
@@ -44,6 +48,32 @@ export function DocumentPanel({
       body: JSON.stringify({ status })
     });
     setIsUpdatingStatus(false);
+    router.refresh();
+  }
+
+  async function handleToggleQuote() {
+    setIsUpdatingType(true);
+    await fetch(`/api/projects/${projectId}/contract-documents/${document.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentType: isQuote ? "contract" : "quote" })
+    });
+    setIsUpdatingType(false);
+    router.refresh();
+  }
+
+  async function handleExtractQuote() {
+    setIsExtractingQuote(true);
+    setQuoteError(null);
+    const response = await fetch(`/api/projects/${projectId}/contract-documents/${document.id}/extract-quote`, {
+      method: "POST"
+    });
+    setIsExtractingQuote(false);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setQuoteError(typeof body?.error === "string" ? body.error : "Could not extract quote data.");
+      return;
+    }
     router.refresh();
   }
 
@@ -78,9 +108,30 @@ export function DocumentPanel({
         </button>
 
         <div className="flex items-center gap-3 shrink-0">
+          {isQuote && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
+              Quote
+            </span>
+          )}
           <span className="text-xs text-[#4c739a] dark:text-slate-400">
             {document.clauses.length} clause{document.clauses.length === 1 ? "" : "s"}
           </span>
+          <button
+            onClick={handleToggleQuote}
+            disabled={isUpdatingType}
+            className="h-8 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800 disabled:opacity-50"
+          >
+            {isQuote ? "Unmark as quote" : "Mark as quote"}
+          </button>
+          {isQuote && (
+            <button
+              onClick={handleExtractQuote}
+              disabled={isExtractingQuote}
+              className="h-8 px-3 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 disabled:opacity-50"
+            >
+              {isExtractingQuote ? "Extracting..." : "Extract quote data"}
+            </button>
+          )}
           <select
             value={document.status}
             disabled={isUpdatingStatus}
@@ -108,6 +159,8 @@ export function DocumentPanel({
           </button>
         </div>
       </div>
+
+      {quoteError && <p className="text-xs text-red-600 px-5 -mt-2 pb-3">{quoteError}</p>}
 
       {isExpanded && (
         <div className="border-t border-[#e7edf3] dark:border-slate-800 p-5 pt-4">

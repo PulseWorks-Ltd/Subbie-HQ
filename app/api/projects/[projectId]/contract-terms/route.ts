@@ -12,14 +12,7 @@ const CONFIRMABLE_FIELDS = [
   "retentionPercent",
   "defectsLiabilityPeriodDays",
   "disputeNoticeMethod",
-  "generalNoticeMethod"
-] as const;
-
-// Day works rate settings — foundational storage only (see this prompt's
-// task notes and prisma/schema.prisma's comment on ContractTerms). Not in
-// CONFIRMABLE_FIELDS: nothing extracts/suggests these yet, so there's no
-// suggested* counterpart to confirm from.
-const RATE_FIELDS = [
+  "generalNoticeMethod",
   "materialsMarkupPercent",
   "dayWorksRateNormal",
   "dayWorksRateNight",
@@ -35,9 +28,6 @@ const updateContractTermsSchema = z.object({
   defectsLiabilityPeriodDays: z.number().int().nullable().optional(),
   disputeNoticeMethod: z.string().nullable().optional(),
   generalNoticeMethod: z.string().nullable().optional(),
-  // Day works rate settings — plain direct-edit fields, not part of
-  // CONFIRMABLE_FIELDS since nothing currently extracts/suggests these
-  // (see prisma/schema.prisma's comment on ContractTerms).
   materialsMarkupPercent: z.number().nullable().optional(),
   dayWorksRateNormal: z.number().nullable().optional(),
   dayWorksRateNight: z.number().nullable().optional(),
@@ -87,12 +77,7 @@ export async function PATCH(request: Request, context: { params: { projectId: st
   // Direct field overwrites are structural project config, admin-only —
   // mirrors settings/route.ts's admin split. Confirming an AI-suggested value
   // only needs module access, same as every other confirm-a-suggestion flow.
-  // Day works rate fields are direct edits too (no suggested-value path
-  // exists for them), so they're included in this same admin check even
-  // though they're not part of CONFIRMABLE_FIELDS.
-  const changesDirectFields =
-    CONFIRMABLE_FIELDS.some((field) => payload[field] !== undefined) ||
-    RATE_FIELDS.some((field) => payload[field] !== undefined);
+  const changesDirectFields = CONFIRMABLE_FIELDS.some((field) => payload[field] !== undefined);
   if (changesDirectFields) {
     const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
     if (project?.organisationId) {

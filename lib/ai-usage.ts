@@ -23,7 +23,8 @@ export const AI_FEATURES = [
   "update_thread_summary",
   "external_update_draft",
   "voice_transcription",
-  "day_works_labour_extraction"
+  "day_works_labour_extraction",
+  "quote_extraction"
 ] as const;
 
 export type AiFeature = (typeof AI_FEATURES)[number];

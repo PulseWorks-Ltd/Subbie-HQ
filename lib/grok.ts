@@ -618,7 +618,12 @@ const ExtractedContractTermsSchema = z.object({
   retentionPercent: z.number().nullable(),
   defectsLiabilityPeriodDays: z.number().int().nullable(),
   disputeNoticeMethod: z.string().nullable(),
-  generalNoticeMethod: z.string().nullable()
+  generalNoticeMethod: z.string().nullable(),
+  materialsMarkupPercent: z.number().nullable(),
+  dayWorksRateNormal: z.number().nullable(),
+  dayWorksRateNight: z.number().nullable(),
+  dayWorksRateSundayHoliday: z.number().nullable(),
+  dayWorksRateNotes: z.string().nullable()
 });
 
 export type ExtractedContractTerms = z.infer<typeof ExtractedContractTermsSchema>;
@@ -647,7 +652,7 @@ export async function extractContractTermsFromClauses(
         content:
           "You extract actionable reference data from a construction subcontract agreement's clauses, for a subcontractor's project settings. " +
           "Respond with only a JSON object matching this exact shape: " +
-          '{"paymentClaimMethod": string | null, "paymentClaimDay": number | null, "variationNoticePeriodDays": number | null, "variationNoticeMethod": string | null, "retentionPercent": number | null, "defectsLiabilityPeriodDays": number | null, "disputeNoticeMethod": string | null, "generalNoticeMethod": string | null}. ' +
+          '{"paymentClaimMethod": string | null, "paymentClaimDay": number | null, "variationNoticePeriodDays": number | null, "variationNoticeMethod": string | null, "retentionPercent": number | null, "defectsLiabilityPeriodDays": number | null, "disputeNoticeMethod": string | null, "generalNoticeMethod": string | null, "materialsMarkupPercent": number | null, "dayWorksRateNormal": number | null, "dayWorksRateNight": number | null, "dayWorksRateSundayHoliday": number | null, "dayWorksRateNotes": string | null}. ' +
           "paymentClaimMethod: how/where payment claims must be submitted (e.g. 'email to accounts@...', 'post to registered office'), or null if not stated. " +
           "paymentClaimDay: the day of the month payment claims are due, if a fixed day is stated, else null. " +
           "variationNoticePeriodDays: the number of days' notice required for a variation claim/instruction, if stated, else null. " +
@@ -655,7 +660,10 @@ export async function extractContractTermsFromClauses(
           "retentionPercent: the retention percentage withheld from payments, if stated, else null. " +
           "defectsLiabilityPeriodDays: the defects liability period in days, if stated (convert months/years to days), else null. " +
           "disputeNoticeMethod: how a notice of dispute must be given, if stated, else null. " +
-          "generalNoticeMethod: the default/general method for serving notices under the contract (e.g. post, fax, hand delivery, email), if stated, else null."
+          "generalNoticeMethod: the default/general method for serving notices under the contract (e.g. post, fax, hand delivery, email), if stated, else null. " +
+          "materialsMarkupPercent: the markup/margin percentage the subcontractor may add to materials cost for day works/variations, if stated, else null. " +
+          "dayWorksRateNormal/dayWorksRateNight/dayWorksRateSundayHoliday: the contract's day works labour rate ($/hr) for, respectively, normal hours (Monday-Saturday 7am-5pm), hours outside that window on Monday-Saturday, and Sunday/public holidays — populate whichever of these three the contract genuinely and separately states; leave a bucket null if the contract doesn't distinguish it (e.g. a single flat rate for all hours only fills dayWorksRateNormal). Never invent a number for a distinction the contract doesn't make. " +
+          "dayWorksRateNotes: if the contract's day works rate structure doesn't map cleanly onto the three buckets above (e.g. it states one flat rate for all hours, or draws a different distinction such as a separate Saturday rate), briefly describe what's actually stated here as free text; null if the three buckets above already capture it fully or no day works rate is stated at all."
       },
       { role: "user", content: documentText }
     ]
@@ -667,6 +675,62 @@ export async function extractContractTermsFromClauses(
   }
 
   return ExtractedContractTermsSchema.parse(JSON.parse(raw));
+}
+
+const ExtractedQuoteLineItemSchema = z.object({
+  description: z.string(),
+  amount: z.number().nullable()
+});
+
+const ExtractedQuoteSchema = z.object({
+  quotedValue: z.number().nullable(),
+  quotedDate: z.string().nullable(),
+  scopeSummary: z.string().nullable(),
+  lineItems: z.array(ExtractedQuoteLineItemSchema),
+  commercialNotes: z.string().nullable()
+});
+
+export type ExtractedQuote = z.infer<typeof ExtractedQuoteSchema>;
+
+// A genuinely separate document/call from the contract terms extraction
+// above — a quote is commercial (scope priced by the subcontractor), not
+// the governing contract's clauses, so it gets its own feature tag rather
+// than folding into "contract_review". Groundwork only for a future
+// Payment Claims comparison (see lib/document-processing.ts's
+// processQuoteDocument, which stores this result) — no comparison logic
+// here.
+export async function extractQuoteFromText(
+  documentText: string,
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ExtractedQuote> {
+  const response = await callGrok(
+    {
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You extract structured commercial data from a subcontractor's priced quote for construction work. Respond with only a JSON object matching this exact shape: " +
+            '{"quotedValue": number | null, "quotedDate": string | null, "scopeSummary": string | null, "lineItems": [{"description": string, "amount": number | null}], "commercialNotes": string | null}. ' +
+            "quotedValue: the total quoted price/value, if stated (exclude GST unless no other total is given), else null. " +
+            "quotedDate: the date the quote was issued, as an ISO 8601 date (YYYY-MM-DD), or null if not stated. " +
+            "scopeSummary: a concise 1-3 sentence summary of the scope of work the quote covers. " +
+            "lineItems: one entry per priced line/item on the quote (description and its amount); an empty array if the quote only states a single lump-sum total with no itemised breakdown. " +
+            "commercialNotes: any other clearly-stated commercial terms (e.g. payment terms, validity period, exclusions, GST treatment), briefly summarized as free text, or null if none are stated."
+        },
+        { role: "user", content: documentText }
+      ]
+    },
+    { ...usageContext, feature: "quote_extraction" }
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return ExtractedQuoteSchema.parse(JSON.parse(raw));
 }
 
 const PriorContractDeviationSchema = BucketDeviationSchema.extend({ topicBucket: z.string() });

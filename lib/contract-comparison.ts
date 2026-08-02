@@ -526,7 +526,12 @@ async function runContractReviewWork(
       suggestedRetentionPercent: extractedTerms.retentionPercent,
       suggestedDefectsLiabilityPeriodDays: extractedTerms.defectsLiabilityPeriodDays,
       suggestedDisputeNoticeMethod: extractedTerms.disputeNoticeMethod,
-      suggestedGeneralNoticeMethod: extractedTerms.generalNoticeMethod
+      suggestedGeneralNoticeMethod: extractedTerms.generalNoticeMethod,
+      suggestedMaterialsMarkupPercent: extractedTerms.materialsMarkupPercent,
+      suggestedDayWorksRateNormal: extractedTerms.dayWorksRateNormal,
+      suggestedDayWorksRateNight: extractedTerms.dayWorksRateNight,
+      suggestedDayWorksRateSundayHoliday: extractedTerms.dayWorksRateSundayHoliday,
+      suggestedDayWorksRateNotes: extractedTerms.dayWorksRateNotes
     },
     update: {
       sourceDocumentId: documentId,
@@ -547,7 +552,29 @@ async function runContractReviewWork(
         extractedTerms.defectsLiabilityPeriodDays
       ),
       suggestedDisputeNoticeMethod: suggestIfUnconfirmed(existingTerms?.disputeNoticeMethod, extractedTerms.disputeNoticeMethod),
-      suggestedGeneralNoticeMethod: suggestIfUnconfirmed(existingTerms?.generalNoticeMethod, extractedTerms.generalNoticeMethod)
+      suggestedGeneralNoticeMethod: suggestIfUnconfirmed(existingTerms?.generalNoticeMethod, extractedTerms.generalNoticeMethod),
+      suggestedMaterialsMarkupPercent: suggestIfUnconfirmed(existingTerms?.materialsMarkupPercent, extractedTerms.materialsMarkupPercent),
+      // Decimal fields need a number-typed "confirmed?" value for
+      // suggestIfUnconfirmed's generic to unify with extractedTerms'
+      // (plain number) shape — existingTerms itself is untouched.
+      suggestedDayWorksRateNormal: suggestIfUnconfirmed(
+        existingTerms?.dayWorksRateNormal != null ? Number(existingTerms.dayWorksRateNormal) : existingTerms?.dayWorksRateNormal,
+        extractedTerms.dayWorksRateNormal
+      ),
+      suggestedDayWorksRateNight: suggestIfUnconfirmed(
+        existingTerms?.dayWorksRateNight != null ? Number(existingTerms.dayWorksRateNight) : existingTerms?.dayWorksRateNight,
+        extractedTerms.dayWorksRateNight
+      ),
+      suggestedDayWorksRateSundayHoliday: suggestIfUnconfirmed(
+        existingTerms?.dayWorksRateSundayHoliday != null
+          ? Number(existingTerms.dayWorksRateSundayHoliday)
+          : existingTerms?.dayWorksRateSundayHoliday,
+        extractedTerms.dayWorksRateSundayHoliday
+      ),
+      // Read-only context, not a settable value of its own — always
+      // refreshed by the latest extraction rather than gated by
+      // suggestIfUnconfirmed (there's no "confirmed notes" field to check).
+      suggestedDayWorksRateNotes: extractedTerms.dayWorksRateNotes
     }
   });
   } catch (error) {

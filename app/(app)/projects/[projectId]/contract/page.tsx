@@ -32,7 +32,7 @@ export default async function ContractPage({ params }: { params: Promise<{ proje
     orderBy: { uploadedAt: "desc" }
   });
 
-  const [documents, coverComparison] = await Promise.all([
+  const [documents, coverComparison, quote] = await Promise.all([
     Promise.all(
       rawDocuments.map(async (document) => {
         const review = document.reviews[0];
@@ -45,8 +45,9 @@ export default async function ContractPage({ params }: { params: Promise<{ proje
         return { ...document, reviews: [{ ...review, driftDeviations }] };
       })
     ),
-    getCoverComparisonForProject(projectId)
+    getCoverComparisonForProject(projectId),
+    prisma.projectQuote.findUnique({ where: { projectId } })
   ]);
 
-  return <ContractView projectId={projectId} documents={documents} coverComparison={coverComparison} />;
+  return <ContractView projectId={projectId} documents={documents} coverComparison={coverComparison} quote={quote} />;
 }

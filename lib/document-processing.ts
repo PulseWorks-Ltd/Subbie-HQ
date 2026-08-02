@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { getSignedDownloadUrl } from "./s3";
 import { extractPdfPagesWithOcrFallback, UnreadablePdfError, type PdfPage } from "./pdf-text-extraction";
-import { extractContractClausesFromText, extractProgrammeFromText } from "./grok";
+import { extractContractClausesFromText, extractProgrammeFromText, extractQuoteFromText } from "./grok";
 import { AiSpendCapExceededError } from "./ai-usage";
 
 const PAGE_BATCH_SIZE = 8;
@@ -18,6 +18,31 @@ function batchPages(pages: PdfPage[]): PdfPage[][] {
     batches.push(pages.slice(i, i + PAGE_BATCH_SIZE));
   }
   return batches;
+}
+
+// Distinct from processContractDocument/processProgrammeDocument below —
+// those two are fire-and-forget upload-time jobs tracked via
+// ContractDocument.processingStatus. Quote extraction instead runs
+// synchronously, awaited directly by its API route, and returns its
+// result rather than writing anything itself — a quote is realistically
+// only a few pages (matches the Insurance certificate parse route's same
+// reasoning for staying synchronous), and the caller needs the result
+// immediately to upsert ProjectQuote. Reuses fetchPdfBuffer above since
+// it needs the identical "already-uploaded ContractDocument -> raw bytes"
+// step as the two functions below.
+export async function extractQuoteFromDocument(
+  storageKey: string,
+  trigger: { organisationId: string | null; userId: string | null; contextRef: string }
+) {
+  const buffer = await fetchPdfBuffer(storageKey);
+  const pages = await extractPdfPagesWithOcrFallback(buffer);
+  const fullText = pages.map((p) => `--- PAGE ${p.num} ---\n${p.text}`).join("\n\n");
+
+  return extractQuoteFromText(fullText, {
+    organisationId: trigger.organisationId,
+    userId: trigger.userId,
+    contextRef: trigger.contextRef
+  });
 }
 
 function unreadableMessage(): string {

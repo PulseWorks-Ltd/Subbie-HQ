@@ -16,6 +16,12 @@ enum DocumentStatus {
 enum DocumentKind {
   contract
   programme
+  // Not a separate upload flow — an existing ContractDocument gets
+  // re-tagged to this kind via the same document list (see DocumentPanel's
+  // "Mark as quote" action), rather than the AI guessing which uploaded
+  // document is the quote. Quote extraction (lib/document-processing.ts's
+  // processQuoteDocument) only runs against documents of this kind.
+  quote
 }
 
 enum ItemStatus {
@@ -373,6 +379,7 @@ model Project {
   contractTerms             ContractTerms?
   insuranceDistributions    InsuranceDistribution[]
   contractRequiredCovers    ContractRequiredCover[]
+  quote                     ProjectQuote?
 }
 
 model ProjectMember {
@@ -410,6 +417,7 @@ model ContractDocument {
   contractTermsSourced          ContractTerms[]
   correspondenceOutcomes        Correspondence[]
   contractRequiredCoversSourced ContractRequiredCover[]
+  quoteSourced                  ProjectQuote[]
 }
 
 model Clause {
@@ -563,22 +571,59 @@ model ContractTerms {
   suggestedDisputeNoticeMethod        String?
   suggestedGeneralNoticeMethod        String?
 
-  // Day works rate settings (foundational storage only — see this
-  // migration's task notes). No suggested* shadow counterparts yet: unlike
-  // the fields above, nothing currently extracts these from a contract, so
-  // there's nothing to suggest. A later Contract Review extraction prompt
-  // may add suggestedX fields for these the same way, once it exists.
-  // "Normal hours" = Monday-Saturday, 7am-5pm (see the Settings UI help
-  // text) — outside that window is Night rate; Sundays and public holidays
-  // use the separate rate below. Nothing in the codebase reads these yet;
-  // a later Day Works OCR prompt is what will apply them.
+  // Day works rate settings. "Normal hours" = Monday-Saturday, 7am-5pm (see
+  // the Settings UI help text) — outside that window is Night rate;
+  // Sundays and public holidays use the separate rate below.
   materialsMarkupPercent    Float?
   dayWorksRateNormal        Decimal? @db.Decimal(10, 2)
   dayWorksRateNight         Decimal? @db.Decimal(10, 2)
   dayWorksRateSundayHoliday Decimal? @db.Decimal(10, 2)
 
+  // Suggested from the same terms-extraction call as the block above (see
+  // extractContractTermsFromClauses) — same suggest-don't-overwrite
+  // pattern, confirmed via the generic confirmFields mechanism. The
+  // contract's day works rate structure doesn't always map cleanly onto
+  // exactly these three buckets (e.g. a single flat rate, or an extra
+  // Saturday-specific rate) — suggestedDayWorksRateNotes carries whatever
+  // doesn't fit as free text rather than forcing a number into the wrong
+  // bucket. Notes has no "confirmed" counterpart of its own (it's
+  // read-only context, not a settable value), so it's simply refreshed on
+  // every re-run rather than gated by suggestIfUnconfirmed.
+  suggestedMaterialsMarkupPercent    Float?
+  suggestedDayWorksRateNormal        Decimal? @db.Decimal(10, 2)
+  suggestedDayWorksRateNight         Decimal? @db.Decimal(10, 2)
+  suggestedDayWorksRateSundayHoliday Decimal? @db.Decimal(10, 2)
+  suggestedDayWorksRateNotes         String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  project        Project           @relation(fields: [projectId], references: [id])
+  sourceDocument ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
+}
+
+// Storage-only groundwork for a future Payment Claims comparison (claimed
+// amount vs originally quoted scope/value) — no comparison logic exists
+// yet, and none is built here. One row per project, replaced wholesale on
+// re-extraction (like ContractTerms' suggested* refresh) rather than kept
+// as a history, since there's no versioning requirement yet. lineItems is
+// a plain JSON array ({description, amount}[]) rather than a child table —
+// nothing needs to query/join on individual line items yet; upgrade to a
+// relational model if that changes.
+model ProjectQuote {
+  id               String    @id @default(cuid())
+  projectId        String    @unique
+  sourceDocumentId String?
+  quotedValue      Decimal?  @db.Decimal(12, 2)
+  quotedDate       DateTime?
+  scopeSummary     String?
+  lineItems        Json?
+  // Anything clearly-structured and commercially relevant that isn't one
+  // of the fields above (payment terms, validity period, exclusions) —
+  // free text rather than more bespoke fields, per the task's "any other
+  // clearly-structured commercial terms present" without a fixed shape.
+  commercialNotes  String?
+  extractedAt      DateTime  @default(now())
 
   project        Project           @relation(fields: [projectId], references: [id])
   sourceDocument ContractDocument? @relation(fields: [sourceDocumentId], references: [id])

@@ -2,17 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Clause, ContractDocument } from "@prisma/client";
+import type { Clause, ContractDocument, ProjectQuote } from "@prisma/client";
 import type { ReviewWithChain } from "@/components/contract/contract-review-section";
 import type { CoverComparisonRow } from "@/lib/insurance-cover-comparison";
 import { UploadDocumentDialog } from "@/components/contract/upload-document-dialog";
 import { DocumentPanel } from "@/components/contract/document-panel";
 import { InsuranceCoverComparison } from "@/components/contract/insurance-cover-comparison";
+import { QuoteSummary } from "@/components/contract/quote-summary";
 
 export function ContractView({
   projectId,
   documents,
-  coverComparison
+  coverComparison,
+  quote
 }: {
   projectId: string;
   documents: (ContractDocument & {
@@ -20,6 +22,7 @@ export function ContractView({
     reviews: ReviewWithChain[];
   })[];
   coverComparison: CoverComparisonRow[];
+  quote: ProjectQuote | null;
 }) {
   const router = useRouter();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -65,6 +68,8 @@ export function ContractView({
       </div>
 
       <InsuranceCoverComparison rows={coverComparison} />
+
+      <QuoteSummary quote={quote} />
 
       {documents.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">

@@ -5,7 +5,11 @@ import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/
 import { deleteFromS3 } from "@/lib/s3";
 
 const updateDocumentSchema = z.object({
-  status: z.enum(["draft", "parsed", "confirmed"])
+  status: z.enum(["draft", "parsed", "confirmed"]).optional(),
+  // Lets an already-uploaded document be re-tagged as the project's quote
+  // (see DocumentPanel's "Mark as quote" action) — the AI never guesses
+  // which document is the quote, the user flags it explicitly.
+  documentType: z.enum(["contract", "programme", "quote"]).optional()
 });
 
 export async function PATCH(
@@ -31,7 +35,7 @@ export async function PATCH(
 
   const document = await prisma.contractDocument.update({
     where: { id: documentId, projectId },
-    data: { status: payload.status }
+    data: { status: payload.status, documentType: payload.documentType }
   });
 
   return NextResponse.json({ document });
@@ -78,6 +82,7 @@ export async function DELETE(
   await prisma.$transaction([
     // Detach — these records are independent of the source document.
     prisma.contractTerms.updateMany({ where: { sourceDocumentId: documentId }, data: { sourceDocumentId: null } }),
+    prisma.projectQuote.updateMany({ where: { sourceDocumentId: documentId }, data: { sourceDocumentId: null } }),
     prisma.scopeItem.updateMany({ where: { sourceDocumentId: documentId }, data: { sourceDocumentId: null } }),
     prisma.scopeItem.updateMany({ where: { sourceClauseId: { in: clauseIds } }, data: { sourceClauseId: null } }),
     prisma.programmeItem.updateMany({ where: { sourceDocumentId: documentId }, data: { sourceDocumentId: null } }),

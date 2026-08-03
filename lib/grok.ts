@@ -163,39 +163,77 @@ export async function extractVariationItemFromText(
   return ExtractedVariationItemSchema.parse(JSON.parse(raw));
 }
 
-const ExtractedDayWorksSheetSummarySchema = z.object({
+const ExtractedDayWorksSheetVisionSchema = z.object({
   sheetNumber: z.string().nullable(),
   teamLeaderCount: z.number().int().nullable(),
   teamMemberCount: z.number().int().nullable(),
-  totalHours: z.number().nullable(),
-  date: z.string().nullable(),
   startTime: z.string().nullable(),
   finishTime: z.string().nullable(),
+  // Kept as two separate model outputs rather than asking for a single
+  // "totalHours" (see this feature's earlier OCR-then-regex version) —
+  // real staging testing found that single ambiguous field regularly ended
+  // up holding a per-person figure instead of the crew total, silently
+  // undercounting cost. Splitting them lets code (not the model) verify
+  // consistency in code below rather than trusting either number blindly.
+  hoursPerPerson: z.number().nullable(),
+  totalLabourHours: z.number().nullable(),
+  date: z.string().nullable(),
   task: z.string().nullable(),
-  notes: z.string().nullable(),
   weather: z.string().nullable(),
-  location: z.string().nullable()
+  location: z.string().nullable(),
+  confidence: z.number().min(0).max(1),
+  notes: z.string().nullable()
 });
 
-const ExtractedDayWorksSheetsSchema = z.object({
-  sheets: z.array(ExtractedDayWorksSheetSummarySchema)
+const ExtractedDayWorksSheetsVisionSchema = z.object({
+  sheets: z.array(ExtractedDayWorksSheetVisionSchema)
 });
 
-export type ExtractedDayWorksSheetSummary = z.infer<typeof ExtractedDayWorksSheetSummarySchema>;
+export type ExtractedDayWorksSheetSummary = {
+  sheetNumber: string | null;
+  teamLeaderCount: number | null;
+  teamMemberCount: number | null;
+  // Resolved crew-total hours — the AI's own stated total when present, a
+  // crewSize × hoursPerPerson fallback when it isn't, or null if neither is
+  // available (see the self-verification step below). This is what callers
+  // should treat as "totalHours" for costing; hoursPerPerson itself is
+  // intermediate and not exposed.
+  totalHours: number | null;
+  date: string | null;
+  startTime: string | null;
+  finishTime: string | null;
+  task: string | null;
+  notes: string | null;
+  weather: string | null;
+  location: string | null;
+  confidence: number;
+};
 
-// Deliberately a per-SHEET summary, not a per-worker breakdown — replaces
-// an earlier version that extracted individual workers with start/end
-// times and auto-resolved a tiered rate. Pilot testing found that too
-// much OCR risk and friction; most subcontractors preparing a variation
-// only care about headcount, total hours, and a rate they enter
-// themselves. A single uploaded file may bundle several physical sheets,
-// so the model's actual job is to first detect how many distinct sheets
-// are present, then produce one summary per sheet. Deliberately
-// permissive about missing fields (null rather than a guess) since the
-// caller always routes the result through a mandatory review-before-save
-// step, never straight to the database.
-export async function extractDayWorksSheetSummariesFromText(
-  documentText: string,
+// Absolute-hours slack allowed between crewSize × hoursPerPerson and the
+// sheet's own stated totalLabourHours before treating it as a genuine
+// disagreement rather than rounding (e.g. a sheet stating "24.5" for a
+// 3×8 crew). 10% relative is combined with this floor so larger crews/longer
+// days get proportionally more slack too.
+const LABOUR_TOTAL_MISMATCH_TOLERANCE_HOURS = 1;
+const LABOUR_TOTAL_MISMATCH_CONFIDENCE_CAP = 0.35;
+
+// Deliberately a per-SHEET summary, not a per-worker breakdown — see this
+// feature's task notes. Reads the sheet image(s) directly with a
+// vision-capable model rather than OCR-then-regex: real staging testing on
+// actual handwritten sheets showed OCR producing unusable results (sheet
+// numbers misread, headcounts stuck at 0, hours never extracted), because
+// OCR answers "what characters can I read" when what's actually needed is
+// "what is this form trying to communicate" — a document-understanding
+// task a vision model handles far better, especially arithmetic statements
+// like "3 MEN X 8 = 24" that OCR reliably mangles but a vision model reads
+// as a statement of fact. A single uploaded file may bundle several
+// physical sheets, so the model's actual job is to first detect how many
+// distinct sheets are present, then produce one summary per sheet.
+// Deliberately permissive about missing fields (null rather than a guess)
+// since the caller always routes the result through a mandatory
+// review-before-save step, never straight to the database.
+export async function extractDayWorksSheetSummariesFromImages(
+  images: { dataUrl: string }[],
   usageContext: Omit<AiUsageContext, "feature">
 ): Promise<ExtractedDayWorksSheetSummary[]> {
   const response = await callGrok(
@@ -206,18 +244,24 @@ export async function extractDayWorksSheetSummariesFromText(
         {
           role: "system",
           content:
-            "You extract a per-sheet SUMMARY from a photo or scan of one or more construction Day Works Sheets, which may be handwritten. A single uploaded file may contain multiple distinct physical day works sheets bundled together (e.g. several pages, or several sheets on one page) — first determine how many separate sheets are present, then produce exactly one summary object per sheet. Do NOT extract a per-worker or per-time-entry breakdown; that level of detail is deliberately not wanted. Respond with only a JSON object matching this exact shape: " +
-            '{"sheets": [{"sheetNumber": string | null, "teamLeaderCount": number | null, "teamMemberCount": number | null, "totalHours": number | null, "date": string | null, "startTime": string | null, "finishTime": string | null, "task": string | null, "notes": string | null, "weather": string | null, "location": string | null}]}. ' +
-            "sheetNumber: the sheet's own reference/number exactly as printed or written (e.g. 'DW001', 'DW-15', 'Sheet 7'), or null if genuinely not shown. " +
+            "You read one or more photos/scans of construction Day Works Sheets, which are often handwritten, and extract a per-sheet SUMMARY. Look carefully at every number and word in the image(s) — do not guess from partial visibility. A single set of images may contain multiple distinct physical day works sheets bundled together (e.g. several pages, or several sheets photographed on one page) — first determine how many separate sheets are present, then produce exactly one summary object per sheet, in the order they appear. Do NOT extract a per-worker or per-time-entry breakdown; that level of detail is deliberately not wanted. Respond with only a JSON object matching this exact shape: " +
+            '{"sheets": [{"sheetNumber": string | null, "teamLeaderCount": number | null, "teamMemberCount": number | null, "startTime": string | null, "finishTime": string | null, "hoursPerPerson": number | null, "totalLabourHours": number | null, "date": string | null, "task": string | null, "weather": string | null, "location": string | null, "confidence": number, "notes": string | null}]}. ' +
+            "sheetNumber: the sheet's own reference/number exactly as printed or written (e.g. 'DW001', 'DW-15', 'Sheet 7', '23542'), or null if genuinely not shown — read every digit carefully, handwritten numbers are easy to misread. " +
             "teamLeaderCount: the number of foremen/leading hands/supervisors recorded on this sheet (usually 1), or null if not determinable. " +
             "teamMemberCount: the number of everyone else (regular workers) recorded on this sheet, or null if not determinable. " +
-            "totalHours: the total hours worked for this sheet — use a directly-stated total if shown; otherwise estimate from whatever labour entries are visible; leave null if genuinely too unclear to estimate. Never extract or infer individual workers' names or times — that detail is deliberately not wanted. " +
-            "date/startTime/finishTime/task/notes/weather/location: extract only if clearly legible on the sheet; null if not shown — their absence is normal and never blocks extraction. " +
+            "hoursPerPerson: the number of hours each individual worked, if stated or clearly consistent across the crew (e.g. '8' from '3 MEN X 8 HRS'), or null if not shown or not consistent. " +
+            "totalLabourHours: the TOTAL labour hours across the whole crew for this sheet, ONLY if the sheet states its own total directly (e.g. '3 MEN X 8 = 24 HOURS' means 24) — never calculate this total yourself; if no such total is actually written on the sheet, leave this null and let hoursPerPerson carry the information instead. " +
+            "startTime/finishTime/date/task/weather/location: extract only if clearly legible on the sheet; null if not shown — their absence is normal and never blocks extraction. " +
+            "confidence: your own honest 0-1 confidence in the accuracy of THIS sheet's extraction as a whole — lower it for anything genuinely hard to read (poor handwriting, smudged ink, ambiguous digits); a field being genuinely blank on the sheet is normal and should NOT by itself lower confidence. " +
+            "notes: a brief plain-English note on anything uncertain or unreadable on this sheet, so a human reviewer knows exactly what to double-check — null if nothing is uncertain. " +
             "Never guess or invent a number you can't reasonably support from what's visible — use null instead."
         },
         {
           role: "user",
-          content: documentText
+          content: [
+            { type: "text", text: "Read the Day Works Sheet(s) in the following image(s) and extract the structured data described." },
+            ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image.dataUrl } }))
+          ]
         }
       ]
     },
@@ -229,7 +273,52 @@ export async function extractDayWorksSheetSummariesFromText(
     throw new Error("No response from Grok.");
   }
 
-  return ExtractedDayWorksSheetsSchema.parse(JSON.parse(raw)).sheets;
+  const sheets = ExtractedDayWorksSheetsVisionSchema.parse(JSON.parse(raw)).sheets;
+
+  // Self-verification (deterministic, in code — never trust the model's
+  // own arithmetic): cross-check crewSize × hoursPerPerson against the
+  // model's stated totalLabourHours when both are present, and fall back
+  // to computing the total from crewSize × hoursPerPerson when the sheet
+  // never stated one directly (Task 3.1's graceful-degradation rule).
+  return sheets.map((sheet) => {
+    const crewSize =
+      sheet.teamLeaderCount != null && sheet.teamMemberCount != null
+        ? sheet.teamLeaderCount + sheet.teamMemberCount
+        : null;
+
+    let totalHours = sheet.totalLabourHours;
+    let confidence = sheet.confidence;
+    let notes = sheet.notes;
+
+    if (totalHours == null) {
+      if (crewSize != null && sheet.hoursPerPerson != null) {
+        totalHours = crewSize * sheet.hoursPerPerson;
+      }
+    } else if (crewSize != null && sheet.hoursPerPerson != null) {
+      const expected = crewSize * sheet.hoursPerPerson;
+      const tolerance = Math.max(LABOUR_TOTAL_MISMATCH_TOLERANCE_HOURS, expected * 0.1);
+      if (Math.abs(expected - totalHours) > tolerance) {
+        confidence = Math.min(confidence, LABOUR_TOTAL_MISMATCH_CONFIDENCE_CAP);
+        const mismatchNote = `Crew size × hours per person (${crewSize} × ${sheet.hoursPerPerson} = ${expected}) doesn't match the sheet's stated total (${totalHours}) — please verify.`;
+        notes = notes ? `${notes} ${mismatchNote}` : mismatchNote;
+      }
+    }
+
+    return {
+      sheetNumber: sheet.sheetNumber,
+      teamLeaderCount: sheet.teamLeaderCount,
+      teamMemberCount: sheet.teamMemberCount,
+      totalHours,
+      date: sheet.date,
+      startTime: sheet.startTime,
+      finishTime: sheet.finishTime,
+      task: sheet.task,
+      notes,
+      weather: sheet.weather,
+      location: sheet.location,
+      confidence
+    };
+  });
 }
 
 const ExtractedProgrammeItemSchema = z.object({

@@ -150,6 +150,26 @@ export async function extractImageTextWithOcr(buffer: Uint8Array): Promise<strin
   }
 }
 
+export type PdfPageImage = { num: number; dataUrl: string };
+
+// Renders every page of a PDF straight to an image for a vision-capable
+// model to read directly — no text layer, OCR, or readability heuristic
+// involved (see lib/grok.ts's extractDayWorksSheetSummariesFromImages, the
+// only caller). Same desiredWidth as ocrPages above, since that resolution
+// was already validated to render legibly. imageDataUrl defaults to true on
+// getScreenshot, giving a ready-to-use base64 data URL per page directly.
+export async function renderPdfPagesToImages(buffer: Uint8Array): Promise<PdfPageImage[]> {
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  const screenshot = await parser.getScreenshot({ desiredWidth: 1600 });
+  await parser.destroy();
+
+  if (!screenshot.pages.length) {
+    throw new UnreadablePdfError("No pages found in this PDF.");
+  }
+
+  return screenshot.pages.map((page) => ({ num: page.pageNumber, dataUrl: page.dataUrl }));
+}
+
 // Extracts page text from a PDF, falling back to OCR (render page -> image ->
 // Tesseract) when the normal text layer looks unreadable. Throws
 // UnreadablePdfError if the PDF still can't be read after the OCR attempt —

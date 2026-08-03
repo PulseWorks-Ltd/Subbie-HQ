@@ -1,6 +1,15 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { computeSheetRecordTotal } from "@/lib/variation-package";
+
+// Reasonable-uncertainty threshold below which a row gets flagged for
+// extra scrutiny in the review UI (Task 4) — rows are never blocked from
+// editing or saving regardless of confidence, this is purely a visual
+// prioritisation aid. undefined/null confidence (e.g. a manually-edited
+// saved record reopened via "Edit summary") is never flagged — there's no
+// AI confidence signal to distrust for those.
+const LOW_CONFIDENCE_THRESHOLD = 0.6;
 
 export type SheetRecordRow = {
   sheetNumber: string;
@@ -15,6 +24,7 @@ export type SheetRecordRow = {
   notes: string;
   weather: string;
   location: string;
+  confidence: number | null;
 };
 
 export function emptySheetRecordRow(sheetNumber: string): SheetRecordRow {
@@ -30,7 +40,8 @@ export function emptySheetRecordRow(sheetNumber: string): SheetRecordRow {
     task: "",
     notes: "",
     weather: "",
-    location: ""
+    location: "",
+    confidence: null
   };
 }
 
@@ -39,10 +50,7 @@ function formatCurrency(amount: number) {
 }
 
 function rowTotal(row: SheetRecordRow): number | null {
-  const hours = Number(row.totalHours);
-  const rate = Number(row.ratePerHour);
-  if (!row.totalHours || !row.ratePerHour || !Number.isFinite(hours) || !Number.isFinite(rate)) return null;
-  return hours * rate;
+  return computeSheetRecordTotal(row.totalHours, row.ratePerHour);
 }
 
 // Reviews AI-extracted per-SHEET summaries, not per-worker timesheet
@@ -164,16 +172,31 @@ export function DayWorksSheetRecordReviewDialog({
               {rows.map((row, index) => {
                 const total = rowTotal(row);
                 const isExpanded = expandedIndex === index;
+                const isLowConfidence = row.confidence != null && row.confidence < LOW_CONFIDENCE_THRESHOLD;
                 return (
                   <Fragment key={index}>
-                    <tr className="border-t border-[#e7edf3] dark:border-slate-800">
+                    <tr
+                      className={`border-t border-[#e7edf3] dark:border-slate-800 ${
+                        isLowConfidence ? "bg-amber-50 dark:bg-amber-900/20" : ""
+                      }`}
+                    >
                       <td className="p-1">
-                        <input
-                          type="text"
-                          value={row.sheetNumber}
-                          onChange={(event) => updateRow(index, "sheetNumber", event.target.value)}
-                          className="h-8 w-24 rounded border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2"
-                        />
+                        <div className="flex items-center gap-1">
+                          {isLowConfidence && (
+                            <span
+                              className="material-symbols-outlined text-base text-amber-600 dark:text-amber-400 shrink-0"
+                              title={row.notes || "Low-confidence extraction — please double-check this row."}
+                            >
+                              warning
+                            </span>
+                          )}
+                          <input
+                            type="text"
+                            value={row.sheetNumber}
+                            onChange={(event) => updateRow(index, "sheetNumber", event.target.value)}
+                            className="h-8 w-24 rounded border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2"
+                          />
+                        </div>
                       </td>
                       <td className="p-1">
                         <input
@@ -228,6 +251,13 @@ export function DayWorksSheetRecordReviewDialog({
                         </button>
                       </td>
                     </tr>
+                    {isLowConfidence && row.notes && (
+                      <tr className="bg-amber-50 dark:bg-amber-900/20">
+                        <td colSpan={7} className="px-2 pb-2 text-[11px] text-amber-700 dark:text-amber-400">
+                          {row.notes}
+                        </td>
+                      </tr>
+                    )}
                     {isExpanded && (
                       <tr className="bg-slate-50 dark:bg-slate-800/40">
                         <td colSpan={7} className="p-3">

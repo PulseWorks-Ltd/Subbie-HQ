@@ -1,7 +1,12 @@
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import type { Correspondence, VariationItem, VariationPhoto } from "@prisma/client";
 import { downloadFromS3 } from "./s3";
-import { computeSheetTotals, computePackageTotals, type DayWorksSheetWithLineItems } from "./variation-package";
+import {
+  computeSheetRecordTotal,
+  computeSheetTotals,
+  computePackageTotals,
+  type DayWorksSheetWithLineItems
+} from "./variation-package";
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -245,7 +250,7 @@ export async function generateVariationPackagePdf(params: {
       for (const record of sheet.sheetRecords) {
         const hours = record.totalHours != null ? Number(record.totalHours) : null;
         const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
-        const total = hours != null && rate != null ? hours * rate : null;
+        const total = computeSheetRecordTotal(record.totalHours, record.ratePerHour);
         const description = [
           record.sheetNumber,
           `${record.teamLeaderCount} leader${record.teamLeaderCount === 1 ? "" : "s"}`,

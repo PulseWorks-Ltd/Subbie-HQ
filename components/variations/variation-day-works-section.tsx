@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ContractTerms, DayWorksSheetRecord } from "@prisma/client";
-import { computeSheetTotals, type DayWorksSheetWithLineItems } from "@/lib/variation-package";
+import { computeSheetRecordTotal, computeSheetTotals, type DayWorksSheetWithLineItems } from "@/lib/variation-package";
 import {
   DayWorksSheetRecordReviewDialog,
   emptySheetRecordRow,
@@ -35,10 +35,14 @@ function draftRecordsToRows(records: DraftSheetRecord[]): SheetRecordRow[] {
     task: record.task ?? "",
     notes: record.notes ?? "",
     weather: record.weather ?? "",
-    location: record.location ?? ""
+    location: record.location ?? "",
+    confidence: record.confidence
   }));
 }
 
+// Reopening an already-saved (and therefore already human-reviewed) sheet
+// via "Edit summary" carries no AI confidence signal — confidence: null so
+// the review dialog never flags these rows as low-confidence.
 function savedRecordsToRows(records: DayWorksSheetRecord[]): SheetRecordRow[] {
   return records.map((record) => ({
     sheetNumber: record.sheetNumber,
@@ -52,7 +56,8 @@ function savedRecordsToRows(records: DayWorksSheetRecord[]): SheetRecordRow[] {
     task: record.task ?? "",
     notes: record.notes ?? "",
     weather: record.weather ?? "",
-    location: record.location ?? ""
+    location: record.location ?? "",
+    confidence: null
   }));
 }
 
@@ -494,7 +499,7 @@ function SheetRecordsSection({
           {sheet.sheetRecords.map((record) => {
             const hours = record.totalHours != null ? Number(record.totalHours) : null;
             const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
-            const cost = hours != null && rate != null ? hours * rate : null;
+            const cost = computeSheetRecordTotal(record.totalHours, record.ratePerHour);
             return (
               <div key={record.id} className="flex items-center justify-between gap-2">
                 <span className="truncate">

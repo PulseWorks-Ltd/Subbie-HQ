@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { downloadFromS3 } from "@/lib/s3";
-import { extractImageTextWithOcr, extractPdfPagesWithOcrFallback, UnreadablePdfError } from "@/lib/pdf-text-extraction";
-import { extractDayWorksSheetSummariesFromText } from "@/lib/grok";
+import { renderPdfPagesToImages, UnreadablePdfError } from "@/lib/pdf-text-extraction";
+import { extractDayWorksSheetSummariesFromImages } from "@/lib/grok";
 import { AiSpendCapExceededError } from "@/lib/ai-usage";
 
 async function moduleForItem(projectId: string, itemId: string) {
@@ -24,6 +24,7 @@ export type DraftSheetRecord = {
   notes: string | null;
   weather: string | null;
   location: string | null;
+  confidence: number;
 };
 
 // No per-worker complexity here — unlike the previous version of this
@@ -63,12 +64,13 @@ export async function POST(
   try {
     const buffer = await downloadFromS3(sheet.storageKey);
 
-    let text: string;
+    let images: { dataUrl: string }[];
     if (sheet.contentType === "application/pdf") {
-      const pages = await extractPdfPagesWithOcrFallback(buffer);
-      text = pages.map((p) => p.text).join("\n\n");
+      const pages = await renderPdfPagesToImages(buffer);
+      images = pages.map((page) => ({ dataUrl: page.dataUrl }));
     } else if (sheet.contentType?.startsWith("image/")) {
-      text = await extractImageTextWithOcr(buffer);
+      const base64 = Buffer.from(buffer).toString("base64");
+      images = [{ dataUrl: `data:${sheet.contentType};base64,${base64}` }];
     } else {
       return NextResponse.json(
         { error: "This file type can't be read automatically. Please add a sheet summary manually." },
@@ -77,7 +79,7 @@ export async function POST(
     }
 
     const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
-    const rawSheets = await extractDayWorksSheetSummariesFromText(text, {
+    const rawSheets = await extractDayWorksSheetSummariesFromImages(images, {
       organisationId: project?.organisationId ?? null,
       userId,
       contextRef: sheetId
@@ -94,7 +96,8 @@ export async function POST(
       task: raw.task,
       notes: raw.notes,
       weather: raw.weather,
-      location: raw.location
+      location: raw.location,
+      confidence: raw.confidence
     }));
 
     return NextResponse.json({ records: draftRecords });
@@ -104,7 +107,7 @@ export async function POST(
     }
     const message =
       error instanceof UnreadablePdfError
-        ? "This file's text couldn't be read automatically, even with OCR. Please add a sheet summary manually."
+        ? "This file's pages couldn't be read automatically. Please add a sheet summary manually."
         : "Could not read this document automatically. You can still add a sheet summary manually.";
     return NextResponse.json({ error: message }, { status: 422 });
   }

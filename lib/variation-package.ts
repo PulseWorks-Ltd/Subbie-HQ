@@ -27,6 +27,28 @@ export type LabourSummary = {
   hoursMissingRate: number;
 };
 
+// The single shared "what does one Day Works Sheet Record cost" formula —
+// totalHours already represents the FULL CREW's hours, not one person's
+// (see prisma/schema.prisma's comment on DayWorksSheetRecord and
+// lib/grok.ts's extractDayWorksSheetSummariesFromImages, which resolves
+// that value from the sheet's own stated crew total, falling back to
+// crewSize × hoursPerPerson only when the sheet never stated one). Every
+// consumer — the review dialog, this sheet's live display, the combined
+// package totals, and the generated PDF — must go through this one
+// function so they can never disagree. Accepts loosely-typed input
+// (string | number | Decimal | null) since callers include both live
+// Prisma records and string-valued form rows still being edited.
+export function computeSheetRecordTotal(
+  totalHours: unknown,
+  ratePerHour: unknown
+): number | null {
+  if (totalHours == null || totalHours === "" || ratePerHour == null || ratePerHour === "") return null;
+  const hours = Number(totalHours);
+  const rate = Number(ratePerHour);
+  if (!Number.isFinite(hours) || !Number.isFinite(rate)) return null;
+  return hours * rate;
+}
+
 // Plain hours*rate sum per DayWorksSheetRecord, only when BOTH are
 // present — a record missing either simply doesn't contribute a dollar
 // figure (never a false $0), matching this simplified model's deliberate
@@ -40,11 +62,11 @@ export function computeLabourSummary(sheetRecords: DayWorksSheetRecord[]): Labou
 
   for (const record of sheetRecords) {
     const hours = record.totalHours != null ? Number(record.totalHours) : null;
-    const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
     if (hours == null) continue;
     totalHours += hours;
-    if (rate != null) {
-      total += hours * rate;
+    const recordTotal = computeSheetRecordTotal(record.totalHours, record.ratePerHour);
+    if (recordTotal != null) {
+      total += recordTotal;
     } else {
       hoursMissingRate += hours;
     }

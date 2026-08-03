@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ContractTerms, Correspondence, VariationItem, VariationPackage, VariationPhoto } from "@prisma/client";
-import { rateForType } from "@/lib/day-works-rates";
 import { computePackageTotals, computeSheetTotals, type DayWorksSheetWithLineItems } from "@/lib/variation-package";
 
 function formatCurrency(amount: number) {
@@ -122,21 +121,22 @@ function GeneratePackageReviewDialog({
             <div className="flex flex-col gap-2">
               {dayWorksSheets.map((sheet) => {
                 const totals = computeSheetTotals(sheet, contractTerms);
-                const ratesUsed = (["normal", "night", "sunday_holiday"] as const)
-                  .filter((type) => totals.labourSummary.hoursByType[type] > 0)
-                  .map((type) => {
-                    const rate = rateForType(contractTerms, type);
-                    return `${type === "normal" ? "Normal" : type === "night" ? "Night" : "Sunday/PH"}${rate != null ? ` @ ${formatCurrency(rate)}/hr` : " (rate not set)"}`;
+                const rateSummaries = sheet.sheetRecords
+                  .filter((record) => record.totalHours != null)
+                  .map((record) => {
+                    const hours = Number(record.totalHours);
+                    const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
+                    return `${record.sheetNumber}: ${hours}h${rate != null ? ` @ ${formatCurrency(rate)}/hr` : " (rate not entered)"}`;
                   });
 
                 return (
                   <div key={sheet.id} className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 text-xs">
                     <p className="font-bold mb-1">{sheet.fileName}</p>
-                    {ratesUsed.length > 0 && (
-                      <p className="text-[#4c739a] dark:text-slate-400 mb-1">Rates applied: {ratesUsed.join(", ")}</p>
+                    {rateSummaries.length > 0 && (
+                      <p className="text-[#4c739a] dark:text-slate-400 mb-1">Rates applied: {rateSummaries.join(", ")}</p>
                     )}
                     <div className="flex flex-wrap gap-x-4">
-                      <span>Labour: {formatCurrency(totals.labourSummary.totalPricedCost)}</span>
+                      <span>Labour: {formatCurrency(totals.labour.total)}</span>
                       <span>Materials: {formatCurrency(totals.materialsCost)}</span>
                       <span>Markup: {formatCurrency(totals.materialsMarkupAmount)}</span>
                       <span>Plant: {formatCurrency(totals.plantCost)}</span>

@@ -1,13 +1,12 @@
-import type { ContractTerms, DayWorksLabourEntry, DayWorksMaterial, DayWorksPlant, DayWorksSheet } from "@prisma/client";
-import { summariseLabourCost, type LabourCostSummary } from "./day-works-rates";
+import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheet, DayWorksSheetRecord } from "@prisma/client";
 
 export type DayWorksSheetWithLineItems = DayWorksSheet & {
   materials: DayWorksMaterial[];
   plant: DayWorksPlant[];
-  labourEntries: DayWorksLabourEntry[];
+  sheetRecords: DayWorksSheetRecord[];
 };
 
-type RateFields = Pick<ContractTerms, "dayWorksRateNormal" | "dayWorksRateNight" | "dayWorksRateSundayHoliday" | "materialsMarkupPercent">;
+type RateFields = Pick<ContractTerms, "materialsMarkupPercent">;
 
 export function computeMaterialsCost(materials: DayWorksMaterial[]): number {
   return materials.reduce((sum, m) => sum + Number(m.quantity) * Number(m.unitCost), 0);
@@ -22,8 +21,40 @@ export function computePlantCost(plant: DayWorksPlant[]): number {
   return plant.reduce((sum, p) => sum + Number(p.quantity) * Number(p.unitCost), 0);
 }
 
+export type LabourSummary = {
+  total: number;
+  totalHours: number;
+  hoursMissingRate: number;
+};
+
+// Plain hours*rate sum per DayWorksSheetRecord, only when BOTH are
+// present — a record missing either simply doesn't contribute a dollar
+// figure (never a false $0), matching this simplified model's deliberate
+// removal of any tiered-rate resolution (see prisma/schema.prisma's
+// comment on DayWorksSheetRecord). hoursMissingRate surfaces hours that
+// were recorded but can't yet be costed, for a "not costed" UI note.
+export function computeLabourSummary(sheetRecords: DayWorksSheetRecord[]): LabourSummary {
+  let total = 0;
+  let totalHours = 0;
+  let hoursMissingRate = 0;
+
+  for (const record of sheetRecords) {
+    const hours = record.totalHours != null ? Number(record.totalHours) : null;
+    const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
+    if (hours == null) continue;
+    totalHours += hours;
+    if (rate != null) {
+      total += hours * rate;
+    } else {
+      hoursMissingRate += hours;
+    }
+  }
+
+  return { total, totalHours, hoursMissingRate };
+}
+
 export type SheetTotals = {
-  labourSummary: LabourCostSummary;
+  labour: LabourSummary;
   materialsCost: number;
   materialsMarkupAmount: number;
   plantCost: number;
@@ -33,20 +64,17 @@ export type SheetTotals = {
 // Single source of truth for "what does one Day Works Sheet cost" — used
 // by the sheet's own display, the Variation Package review screen, PDF
 // generation, and the totals frozen onto a generated VariationPackage.
-// Combined total = labour (priced portion only, see summariseLabourCost)
-// + materials + materials markup + plant (unmarked-up).
+// Combined total = labour (priced records only) + materials + materials
+// markup + plant (unmarked-up).
 export function computeSheetTotals(sheet: DayWorksSheetWithLineItems, contractTerms: RateFields | null): SheetTotals {
-  const labourSummary = summariseLabourCost(
-    sheet.labourEntries.map((entry) => ({ hours: Number(entry.hours), rateType: entry.rateType })),
-    contractTerms
-  );
+  const labour = computeLabourSummary(sheet.sheetRecords);
   const materialsCost = computeMaterialsCost(sheet.materials);
   const markupPercent = contractTerms?.materialsMarkupPercent ?? null;
   const materialsMarkupAmount = markupPercent != null ? materialsCost * (markupPercent / 100) : 0;
   const plantCost = computePlantCost(sheet.plant);
-  const combinedTotal = labourSummary.totalPricedCost + materialsCost + materialsMarkupAmount + plantCost;
+  const combinedTotal = labour.total + materialsCost + materialsMarkupAmount + plantCost;
 
-  return { labourSummary, materialsCost, materialsMarkupAmount, plantCost, combinedTotal };
+  return { labour, materialsCost, materialsMarkupAmount, plantCost, combinedTotal };
 }
 
 export type PackageTotals = {
@@ -69,7 +97,7 @@ export function computePackageTotals(sheets: DayWorksSheetWithLineItems[], contr
 
   for (const sheet of sheets) {
     const totals = computeSheetTotals(sheet, contractTerms);
-    labourTotal += totals.labourSummary.totalPricedCost;
+    labourTotal += totals.labour.total;
     materialsTotal += totals.materialsCost;
     materialsMarkupTotal += totals.materialsMarkupAmount;
     plantTotal += totals.plantCost;

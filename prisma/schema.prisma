@@ -1106,14 +1106,16 @@ model VariationItem {
 }
 
 // fileName/storageKey are the original feature — an uploaded photo/scan of
-// the physical day works sheet. contentType is additive (nullable — older
-// rows uploaded before this field existed won't have it) and drives which
-// OCR path labour extraction uses (PDF page-render-and-OCR vs direct image
+// the physical day works sheet(s). contentType is additive (nullable —
+// older rows uploaded before this field existed won't have it) and drives
+// which OCR path extraction uses (PDF page-render-and-OCR vs direct image
 // OCR — see lib/pdf-text-extraction.ts). materials is structured line
-// items for materials bought for the day's work; labourEntries is the
-// AI-extracted-then-user-confirmed structured breakdown of the uploaded
-// labour file (see DayWorksLabourEntry) — the file itself remains the
-// supporting evidence, labourEntries is derived from it, never replaces it.
+// items for materials bought for the day's work; sheetRecords is the
+// AI-extracted-then-user-confirmed per-physical-sheet summary derived
+// from the uploaded file (see DayWorksSheetRecord) — the file itself
+// remains the supporting evidence, sheetRecords is derived from it, never
+// replaces it. One uploaded file can bundle several physical sheets, so
+// this is one-to-many.
 model DayWorksSheet {
   id              String   @id @default(cuid())
   variationItemId String
@@ -1122,48 +1124,46 @@ model DayWorksSheet {
   contentType     String?
   createdAt       DateTime @default(now())
 
-  variationItem VariationItem         @relation(fields: [variationItemId], references: [id])
+  variationItem VariationItem        @relation(fields: [variationItemId], references: [id])
   materials     DayWorksMaterial[]
   plant         DayWorksPlant[]
-  labourEntries DayWorksLabourEntry[]
+  sheetRecords  DayWorksSheetRecord[]
 }
 
-// Which of the project's three Day Works rates (see ContractTerms) applies
-// to a labour entry/segment. sunday_holiday covers both Sundays and
-// recognised public holidays — first-pass implementation only checks for
-// Sunday (see lib/day-works-rates.ts's isRecognisedHolidayOrSunday), since
-// neither Project nor Organisation has a region/jurisdiction field yet to
-// pick the correct public holiday calendar.
-enum DayWorksRateType {
-  normal
-  night
-  sunday_holiday
-}
-
-// One row = one continuous block of a worker's time at a single rate type.
-// A raw sheet line spanning a rate boundary (e.g. 4pm-6pm) is split into
-// two of these at extraction time (lib/day-works-rates.ts's
-// resolveRateSegments) rather than stored as one row with a fractional
-// rate — keeps cost calculation a simple hours*rate sum per row, no
-// boundary-splitting logic needed again at render time. No stored dollar
-// amount: cost is computed live from the project's current ContractTerms
-// rates (like DayWorksMaterial's quantity*unitCost), not frozen at save
-// time — simplest option, and consistent with rates being editable at any
-// time in Settings. Rows are fully replaced (delete+recreate) on every
-// save from the review UI, not incrementally patched — matches the
-// review-table's "editable draft list" interaction model.
-model DayWorksLabourEntry {
-  id              String           @id @default(cuid())
+// One row = one physical day works sheet's SUMMARY, not a per-worker
+// breakdown — per-worker/rate-tier extraction was replaced by this
+// simpler per-sheet summary after pilot testing found the tiered version
+// too much OCR risk/friction. ratePerHour is plain manual entry, no
+// rate-type/tier selection (lib/day-works-rates.ts's tiered-rate logic
+// and its own local DayWorksRateType — no longer a Prisma enum, since
+// nothing here references it — are deliberately left in place, unused;
+// the product roadmap intends to reintroduce automatic rate selection
+// later once this simpler version has proven itself with real pilot
+// users). total (totalHours * ratePerHour) is computed live wherever
+// displayed, not stored — matches DayWorksMaterial's quantity*unitCost
+// pattern — and simply isn't shown when either is blank, never a false
+// $0. Every field below sheetNumber/teamLeaderCount/teamMemberCount is
+// optional — this is a deliberately low-friction review step (see this
+// model's task notes), not a form with required fields. Rows are fully
+// replaced (delete+recreate) on every save from the review UI, matching
+// the previous per-worker model's same "editable draft list" pattern.
+model DayWorksSheetRecord {
+  id              String   @id @default(cuid())
   dayWorksSheetId String
-  workerName      String
-  date            DateTime
+  sheetNumber     String
+  teamLeaderCount Int
+  teamMemberCount Int
+  totalHours      Decimal? @db.Decimal(6, 2)
+  ratePerHour     Decimal? @db.Decimal(10, 2)
+  date            DateTime?
   startTime       String?
-  endTime         String?
-  hours           Decimal          @db.Decimal(5, 2)
-  rateType        DayWorksRateType
-  taskDescription String?
-  sortOrder       Int              @default(0)
-  createdAt       DateTime         @default(now())
+  finishTime      String?
+  task            String?
+  notes           String?
+  weather         String?
+  location        String?
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
 
   dayWorksSheet DayWorksSheet @relation(fields: [dayWorksSheetId], references: [id], onDelete: Cascade)
 }

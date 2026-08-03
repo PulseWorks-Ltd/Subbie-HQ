@@ -57,7 +57,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       include: {
         materials: { orderBy: { createdAt: "asc" } },
         plant: { orderBy: { createdAt: "asc" } },
-        labourEntries: { orderBy: { sortOrder: "asc" } }
+        sheetRecords: { orderBy: { sortOrder: "asc" } }
       }
     }),
     prisma.contractTerms.findUnique({ where: { projectId } })

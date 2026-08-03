@@ -1,5 +1,5 @@
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
-import type { Correspondence, DayWorksRateType, VariationItem, VariationPhoto } from "@prisma/client";
+import type { Correspondence, VariationItem, VariationPhoto } from "@prisma/client";
 import { downloadFromS3 } from "./s3";
 import { computeSheetTotals, computePackageTotals, type DayWorksSheetWithLineItems } from "./variation-package";
 
@@ -7,12 +7,6 @@ const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
 const MARGIN = 50;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-
-const RATE_TYPE_LABELS: Record<DayWorksRateType, string> = {
-  normal: "Normal",
-  night: "Night",
-  sunday_holiday: "Sunday / PH"
-};
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -134,7 +128,7 @@ export async function generateVariationPackagePdf(params: {
   photos: VariationPhoto[];
   correspondence: Correspondence[];
   dayWorksSheets: DayWorksSheetWithLineItems[];
-  contractTerms: { dayWorksRateNormal: unknown; dayWorksRateNight: unknown; dayWorksRateSundayHoliday: unknown; materialsMarkupPercent: number | null } | null;
+  contractTerms: { materialsMarkupPercent: number | null } | null;
   generatedByName: string;
 }): Promise<Uint8Array> {
   const { item, photos, correspondence, dayWorksSheets, contractTerms, generatedByName } = params;
@@ -144,7 +138,7 @@ export async function generateVariationPackagePdf(params: {
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
   const w = new PdfWriter(doc, font, boldFont);
 
-  const packageTotals = computePackageTotals(dayWorksSheets, contractTerms as never);
+  const packageTotals = computePackageTotals(dayWorksSheets, contractTerms);
 
   // --- Header ---
   w.heading(`Variation Package — ${item.reference}`);
@@ -242,22 +236,26 @@ export async function generateVariationPackagePdf(params: {
     w.text("No Day Works Sheets attached.");
   }
   for (const sheet of dayWorksSheets) {
-    const totals = computeSheetTotals(sheet, contractTerms as never);
+    const totals = computeSheetTotals(sheet, contractTerms);
     w.spacer(4);
     w.text(sheet.fileName, { bold: true });
 
-    if (sheet.labourEntries.length > 0) {
-      w.text("Labour:", { bold: true, indent: 10 });
-      for (const entry of sheet.labourEntries) {
-        w.row(
-          `${entry.workerName} — ${formatDate(entry.date)} · ${Number(entry.hours)}h · ${RATE_TYPE_LABELS[entry.rateType]}${
-            entry.taskDescription ? ` — ${entry.taskDescription}` : ""
-          }`,
-          "",
-          { indent: 16 }
-        );
+    if (sheet.sheetRecords.length > 0) {
+      w.text("Dayworks Summary:", { bold: true, indent: 10 });
+      for (const record of sheet.sheetRecords) {
+        const hours = record.totalHours != null ? Number(record.totalHours) : null;
+        const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
+        const total = hours != null && rate != null ? hours * rate : null;
+        const description = [
+          record.sheetNumber,
+          `${record.teamLeaderCount} leader${record.teamLeaderCount === 1 ? "" : "s"}`,
+          `${record.teamMemberCount} member${record.teamMemberCount === 1 ? "" : "s"}`,
+          hours != null ? `${hours}h` : "hours not recorded",
+          rate != null ? `@ ${formatCurrency(rate)}/hr` : "rate not entered"
+        ].join(" · ");
+        w.row(description, total != null ? formatCurrency(total) : "—", { indent: 16 });
       }
-      w.row("Labour total", formatCurrency(totals.labourSummary.totalPricedCost), { bold: true, indent: 10 });
+      w.row("Labour total", formatCurrency(totals.labour.total), { bold: true, indent: 10 });
     }
 
     if (sheet.materials.length > 0) {

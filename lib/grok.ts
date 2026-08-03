@@ -163,29 +163,41 @@ export async function extractVariationItemFromText(
   return ExtractedVariationItemSchema.parse(JSON.parse(raw));
 }
 
-const ExtractedDayWorksLabourEntrySchema = z.object({
-  workerName: z.string(),
+const ExtractedDayWorksSheetSummarySchema = z.object({
+  sheetNumber: z.string().nullable(),
+  teamLeaderCount: z.number().int().nullable(),
+  teamMemberCount: z.number().int().nullable(),
+  totalHours: z.number().nullable(),
   date: z.string().nullable(),
   startTime: z.string().nullable(),
-  endTime: z.string().nullable(),
-  totalHours: z.number().nullable(),
-  taskDescription: z.string().nullable()
+  finishTime: z.string().nullable(),
+  task: z.string().nullable(),
+  notes: z.string().nullable(),
+  weather: z.string().nullable(),
+  location: z.string().nullable()
 });
 
-const ExtractedDayWorksLabourSchema = z.object({
-  entries: z.array(ExtractedDayWorksLabourEntrySchema)
+const ExtractedDayWorksSheetsSchema = z.object({
+  sheets: z.array(ExtractedDayWorksSheetSummarySchema)
 });
 
-export type ExtractedDayWorksLabourEntry = z.infer<typeof ExtractedDayWorksLabourEntrySchema>;
+export type ExtractedDayWorksSheetSummary = z.infer<typeof ExtractedDayWorksSheetSummarySchema>;
 
-// Handwritten timesheets are genuinely error-prone — this is deliberately
+// Deliberately a per-SHEET summary, not a per-worker breakdown — replaces
+// an earlier version that extracted individual workers with start/end
+// times and auto-resolved a tiered rate. Pilot testing found that too
+// much OCR risk and friction; most subcontractors preparing a variation
+// only care about headcount, total hours, and a rate they enter
+// themselves. A single uploaded file may bundle several physical sheets,
+// so the model's actual job is to first detect how many distinct sheets
+// are present, then produce one summary per sheet. Deliberately
 // permissive about missing fields (null rather than a guess) since the
 // caller always routes the result through a mandatory review-before-save
 // step, never straight to the database.
-export async function extractDayWorksLabourFromText(
+export async function extractDayWorksSheetSummariesFromText(
   documentText: string,
   usageContext: Omit<AiUsageContext, "feature">
-): Promise<ExtractedDayWorksLabourEntry[]> {
+): Promise<ExtractedDayWorksSheetSummary[]> {
   const response = await callGrok(
     {
       model: GROK_MODEL,
@@ -194,15 +206,14 @@ export async function extractDayWorksLabourFromText(
         {
           role: "system",
           content:
-            "You extract structured labour entries from a photo or scan of a construction Day Works Sheet / labour timesheet, which may be handwritten. Respond with only a JSON object matching this exact shape: " +
-            '{"entries": [{"workerName": string, "date": string | null, "startTime": string | null, "endTime": string | null, "totalHours": number | null, "taskDescription": string | null}]}. ' +
-            "One entry per worker/task line on the sheet. " +
-            "workerName: the worker's name exactly as written. " +
-            "date: the calendar date the work was done, as an ISO 8601 date (YYYY-MM-DD) — if only one date is shown for the whole sheet, apply it to every entry; null only if genuinely no date is legible anywhere on the sheet. " +
-            "startTime/endTime: 24-hour HH:mm, only if explicitly shown for that entry, otherwise null. " +
-            "totalHours: a directly-stated total hours figure for that entry (e.g. '8 hrs'), only if shown AND startTime/endTime are not both present — leave null if start/end times are given instead. " +
-            "taskDescription: a short description of the task performed, if shown, otherwise null. " +
-            "Never guess or invent a value for a field that isn't legible — use null instead."
+            "You extract a per-sheet SUMMARY from a photo or scan of one or more construction Day Works Sheets, which may be handwritten. A single uploaded file may contain multiple distinct physical day works sheets bundled together (e.g. several pages, or several sheets on one page) — first determine how many separate sheets are present, then produce exactly one summary object per sheet. Do NOT extract a per-worker or per-time-entry breakdown; that level of detail is deliberately not wanted. Respond with only a JSON object matching this exact shape: " +
+            '{"sheets": [{"sheetNumber": string | null, "teamLeaderCount": number | null, "teamMemberCount": number | null, "totalHours": number | null, "date": string | null, "startTime": string | null, "finishTime": string | null, "task": string | null, "notes": string | null, "weather": string | null, "location": string | null}]}. ' +
+            "sheetNumber: the sheet's own reference/number exactly as printed or written (e.g. 'DW001', 'DW-15', 'Sheet 7'), or null if genuinely not shown. " +
+            "teamLeaderCount: the number of foremen/leading hands/supervisors recorded on this sheet (usually 1), or null if not determinable. " +
+            "teamMemberCount: the number of everyone else (regular workers) recorded on this sheet, or null if not determinable. " +
+            "totalHours: the total hours worked for this sheet — use a directly-stated total if shown; otherwise estimate from whatever labour entries are visible; leave null if genuinely too unclear to estimate. Never extract or infer individual workers' names or times — that detail is deliberately not wanted. " +
+            "date/startTime/finishTime/task/notes/weather/location: extract only if clearly legible on the sheet; null if not shown — their absence is normal and never blocks extraction. " +
+            "Never guess or invent a number you can't reasonably support from what's visible — use null instead."
         },
         {
           role: "user",
@@ -210,7 +221,7 @@ export async function extractDayWorksLabourFromText(
         }
       ]
     },
-    { ...usageContext, feature: "day_works_labour_extraction" }
+    { ...usageContext, feature: "day_works_sheet_extraction" }
   );
 
   const raw = response.choices[0]?.message?.content;
@@ -218,7 +229,7 @@ export async function extractDayWorksLabourFromText(
     throw new Error("No response from Grok.");
   }
 
-  return ExtractedDayWorksLabourSchema.parse(JSON.parse(raw)).entries;
+  return ExtractedDayWorksSheetsSchema.parse(JSON.parse(raw)).sheets;
 }
 
 const ExtractedProgrammeItemSchema = z.object({

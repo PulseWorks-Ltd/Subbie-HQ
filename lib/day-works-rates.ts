@@ -1,6 +1,14 @@
-import type { ContractTerms, DayWorksRateType } from "@prisma/client";
+import type { ContractTerms } from "@prisma/client";
 
-export type { DayWorksRateType };
+// Not a Prisma enum — DayWorksRateType (tiered normal/night/sunday_holiday
+// rate resolution) was only ever a column type on the now-removed
+// DayWorksLabourEntry model. Prisma doesn't generate a TS export for an
+// enum no model field references, so this is a plain local type instead.
+// This whole file is otherwise untouched and still fully functional —
+// deliberately left in place, unused by the new per-sheet-summary flow,
+// per this simplification's task notes (the product roadmap intends to
+// reintroduce automatic rate selection later).
+export type DayWorksRateType = "normal" | "night" | "sunday_holiday";
 
 const NORMAL_START_HOUR = 7; // 7am
 const NORMAL_END_HOUR = 17; // 5pm

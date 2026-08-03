@@ -35,7 +35,7 @@ export async function GET(request: Request, context: { params: { projectId: stri
     include: {
       materials: { orderBy: { createdAt: "asc" } },
       plant: { orderBy: { createdAt: "asc" } },
-      labourEntries: { orderBy: { sortOrder: "asc" } }
+      sheetRecords: { orderBy: { sortOrder: "asc" } }
     }
   });
 

@@ -45,7 +45,7 @@ export default async function VariationItemPage({
       include: {
         materials: { orderBy: { createdAt: "asc" } },
         plant: { orderBy: { createdAt: "asc" } },
-        labourEntries: { orderBy: { sortOrder: "asc" } }
+        sheetRecords: { orderBy: { sortOrder: "asc" } }
       }
     }),
     prisma.variationPhoto.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),

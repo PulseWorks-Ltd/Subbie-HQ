@@ -2,19 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms, DayWorksLabourEntry, DayWorksRateType } from "@prisma/client";
-import { rateForType, summariseLabourCost } from "@/lib/day-works-rates";
+import type { ContractTerms, DayWorksSheetRecord } from "@prisma/client";
 import { computeSheetTotals, type DayWorksSheetWithLineItems } from "@/lib/variation-package";
-import { DayWorksLabourReviewDialog, type LabourRow } from "@/components/variations/day-works-labour-review-dialog";
-import type { DraftLabourEntry } from "@/app/api/projects/[projectId]/variation-items/[itemId]/day-works-sheets/[sheetId]/labour/extract/route";
+import {
+  DayWorksSheetRecordReviewDialog,
+  emptySheetRecordRow,
+  type SheetRecordRow
+} from "@/components/variations/day-works-sheet-record-review-dialog";
+import type { DraftSheetRecord } from "@/app/api/projects/[projectId]/variation-items/[itemId]/day-works-sheets/[sheetId]/sheet-records/extract/route";
 
 type DayWorksSheetWithDetails = DayWorksSheetWithLineItems;
-
-const RATE_TYPE_LABELS: Record<DayWorksRateType, string> = {
-  normal: "Normal",
-  night: "Night",
-  sunday_holiday: "Sunday / PH"
-};
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -24,27 +21,38 @@ function toDateInputValue(date: Date) {
   return new Date(date).toISOString().slice(0, 10);
 }
 
-function draftEntriesToRows(entries: DraftLabourEntry[]): LabourRow[] {
-  return entries.map((entry) => ({
-    workerName: entry.workerName,
-    date: entry.date,
-    startTime: entry.startTime ?? "",
-    endTime: entry.endTime ?? "",
-    hours: entry.hours != null ? String(entry.hours) : "",
-    rateType: entry.rateType,
-    taskDescription: entry.taskDescription ?? ""
+function draftRecordsToRows(records: DraftSheetRecord[]): SheetRecordRow[] {
+  if (records.length === 0) return [emptySheetRecordRow("Sheet 1")];
+  return records.map((record) => ({
+    sheetNumber: record.sheetNumber,
+    teamLeaderCount: String(record.teamLeaderCount),
+    teamMemberCount: String(record.teamMemberCount),
+    totalHours: record.totalHours != null ? String(record.totalHours) : "",
+    ratePerHour: "",
+    date: record.date ?? "",
+    startTime: record.startTime ?? "",
+    finishTime: record.finishTime ?? "",
+    task: record.task ?? "",
+    notes: record.notes ?? "",
+    weather: record.weather ?? "",
+    location: record.location ?? ""
   }));
 }
 
-function savedEntriesToRows(entries: DayWorksLabourEntry[]): LabourRow[] {
-  return entries.map((entry) => ({
-    workerName: entry.workerName,
-    date: toDateInputValue(entry.date),
-    startTime: entry.startTime ?? "",
-    endTime: entry.endTime ?? "",
-    hours: String(Number(entry.hours)),
-    rateType: entry.rateType,
-    taskDescription: entry.taskDescription ?? ""
+function savedRecordsToRows(records: DayWorksSheetRecord[]): SheetRecordRow[] {
+  return records.map((record) => ({
+    sheetNumber: record.sheetNumber,
+    teamLeaderCount: String(record.teamLeaderCount),
+    teamMemberCount: String(record.teamMemberCount),
+    totalHours: record.totalHours != null ? String(Number(record.totalHours)) : "",
+    ratePerHour: record.ratePerHour != null ? String(Number(record.ratePerHour)) : "",
+    date: record.date ? toDateInputValue(record.date) : "",
+    startTime: record.startTime ?? "",
+    finishTime: record.finishTime ?? "",
+    task: record.task ?? "",
+    notes: record.notes ?? "",
+    weather: record.weather ?? "",
+    location: record.location ?? ""
   }));
 }
 
@@ -415,104 +423,105 @@ function PlantSection({
   );
 }
 
-function LabourSection({
+function SheetRecordsSection({
   projectId,
   itemId,
-  sheet,
-  contractTerms
+  sheet
 }: {
   projectId: string;
   itemId: string;
   sheet: DayWorksSheetWithDetails;
-  contractTerms: ContractTerms | null;
 }) {
   const router = useRouter();
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
-  const [reviewState, setReviewState] = useState<{ rows: LabourRow[]; warning: string | null } | null>(null);
+  const [reviewState, setReviewState] = useState<{ rows: SheetRecordRow[]; warning: string | null } | null>(null);
 
   async function runExtraction() {
     setIsExtracting(true);
     setExtractError(null);
     const response = await fetch(
-      `/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheet.id}/labour/extract`,
+      `/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheet.id}/sheet-records/extract`,
       { method: "POST" }
     );
     const body = await response.json().catch(() => null);
     setIsExtracting(false);
 
     if (!response.ok) {
-      setExtractError(typeof body?.error === "string" ? body.error : "Could not read this sheet automatically. You can still add labour entries manually.");
-      setReviewState({ rows: [], warning: null });
+      setExtractError(
+        typeof body?.error === "string" ? body.error : "Could not read this sheet automatically. You can still add a summary manually."
+      );
+      setReviewState({ rows: [emptySheetRecordRow("Sheet 1")], warning: null });
       return;
     }
 
-    setReviewState({ rows: draftEntriesToRows(body.entries ?? []), warning: body.warning ?? null });
+    setReviewState({ rows: draftRecordsToRows(body.records ?? []), warning: body.warning ?? null });
   }
 
   function openManualEdit() {
-    setReviewState({ rows: savedEntriesToRows(sheet.labourEntries), warning: null });
+    setReviewState({ rows: savedRecordsToRows(sheet.sheetRecords), warning: null });
   }
 
-  const summary = summariseLabourCost(
-    sheet.labourEntries.map((entry) => ({ hours: Number(entry.hours), rateType: entry.rateType })),
-    contractTerms
-  );
+  const hoursMissingRate = sheet.sheetRecords.reduce((sum, record) => {
+    if (record.totalHours != null && record.ratePerHour == null) return sum + Number(record.totalHours);
+    return sum;
+  }, 0);
 
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">Labour</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">Dayworks Summary</p>
         <div className="flex items-center gap-3">
-          {sheet.labourEntries.length > 0 && (
+          {sheet.sheetRecords.length > 0 && (
             <button onClick={openManualEdit} className="text-xs font-bold text-primary hover:underline">
-              Edit entries
+              Edit summary
             </button>
           )}
           <button onClick={runExtraction} disabled={isExtracting} className="text-xs font-bold text-primary hover:underline disabled:opacity-60">
-            {isExtracting ? "Reading sheet..." : sheet.labourEntries.length > 0 ? "Re-extract" : "Extract labour"}
+            {isExtracting ? "Reading sheet..." : sheet.sheetRecords.length > 0 ? "Re-extract" : "Extract summary"}
           </button>
         </div>
       </div>
 
       {extractError && <p className="text-xs text-red-600 mb-2">{extractError}</p>}
 
-      {sheet.labourEntries.length === 0 ? (
+      {sheet.sheetRecords.length === 0 ? (
         <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-2">
-          No structured labour entries yet — click "Extract labour" to read them from the uploaded sheet.
+          No dayworks summary yet — click "Extract summary" to read it from the uploaded sheet.
         </p>
       ) : (
         <div className="flex flex-col gap-1 mb-2 text-xs">
-          {sheet.labourEntries.map((entry) => {
-            const rate = rateForType(contractTerms, entry.rateType);
-            const cost = rate != null ? rate * Number(entry.hours) : null;
+          {sheet.sheetRecords.map((record) => {
+            const hours = record.totalHours != null ? Number(record.totalHours) : null;
+            const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
+            const cost = hours != null && rate != null ? hours * rate : null;
             return (
-              <div key={entry.id} className="flex items-center justify-between gap-2">
+              <div key={record.id} className="flex items-center justify-between gap-2">
                 <span className="truncate">
-                  {entry.workerName} — {toDateInputValue(entry.date)} · {Number(entry.hours)}h ·{" "}
-                  {RATE_TYPE_LABELS[entry.rateType]}
-                  {entry.taskDescription ? ` — ${entry.taskDescription}` : ""}
+                  {record.sheetNumber} — {record.teamLeaderCount} leader{record.teamLeaderCount === 1 ? "" : "s"},{" "}
+                  {record.teamMemberCount} member{record.teamMemberCount === 1 ? "" : "s"}
+                  {hours != null ? ` · ${hours}h` : ""}
+                  {rate != null ? ` @ ${formatCurrency(rate)}/hr` : ""}
                 </span>
                 <span className="font-bold shrink-0">{cost != null ? formatCurrency(cost) : "—"}</span>
               </div>
             );
           })}
-          {summary.unratedHours > 0 && (
+          {hoursMissingRate > 0 && (
             <p className="text-amber-600 dark:text-amber-400">
-              {summary.unratedHours.toFixed(2)} hrs not costed — configure the missing rate in Settings.
+              {hoursMissingRate.toFixed(2)} hrs not costed — enter a rate above.
             </p>
           )}
         </div>
       )}
 
       {reviewState && (
-        <DayWorksLabourReviewDialog
+        <DayWorksSheetRecordReviewDialog
           projectId={projectId}
           itemId={itemId}
           sheetId={sheet.id}
-          initialEntries={reviewState.rows}
+          initialRows={reviewState.rows}
           warning={reviewState.warning}
-          contractTerms={contractTerms}
           onClose={() => setReviewState(null)}
           onSaved={() => {
             setReviewState(null);
@@ -537,7 +546,7 @@ export function VariationDayWorksSection({
 }) {
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
-  const [pendingReview, setPendingReview] = useState<{ sheetId: string; rows: LabourRow[]; warning: string | null } | null>(null);
+  const [pendingReview, setPendingReview] = useState<{ sheetId: string; rows: SheetRecordRow[]; warning: string | null } | null>(null);
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -559,13 +568,13 @@ export function VariationDayWorksSection({
     if (!uploadResponse.ok || !sheetId) return;
 
     const extractResponse = await fetch(
-      `/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheetId}/labour/extract`,
+      `/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheetId}/sheet-records/extract`,
       { method: "POST" }
     );
     const extractBody = await extractResponse.json().catch(() => null);
     if (!extractResponse.ok) return;
 
-    setPendingReview({ sheetId, rows: draftEntriesToRows(extractBody.entries ?? []), warning: extractBody.warning ?? null });
+    setPendingReview({ sheetId, rows: draftRecordsToRows(extractBody.records ?? []), warning: extractBody.warning ?? null });
   }
 
   async function handleDelete(sheetId: string) {
@@ -591,13 +600,11 @@ export function VariationDayWorksSection({
       ) : (
         <div className="flex flex-col gap-4">
           {dayWorksSheets.map((sheet) => {
-            const { labourSummary, materialsCost, materialsMarkupAmount, plantCost, combinedTotal } = computeSheetTotals(
+            const { labour, materialsCost, materialsMarkupAmount, plantCost, combinedTotal } = computeSheetTotals(
               sheet,
               contractTerms
             );
             const markupPercent = contractTerms?.materialsMarkupPercent ?? null;
-            const hasAnyLabourHours = labourSummary.totalHours > 0;
-            const canShowFullTotal = !hasAnyLabourHours || labourSummary.anyRateConfigured;
 
             return (
               <div key={sheet.id} className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 flex flex-col gap-3">
@@ -619,29 +626,24 @@ export function VariationDayWorksSection({
                   </button>
                 </div>
 
-                <LabourSection projectId={projectId} itemId={itemId} sheet={sheet} contractTerms={contractTerms} />
+                <SheetRecordsSection projectId={projectId} itemId={itemId} sheet={sheet} />
 
                 <MaterialsSection projectId={projectId} itemId={itemId} sheet={sheet} />
 
                 <PlantSection projectId={projectId} itemId={itemId} sheet={sheet} />
 
                 <div className="pt-2 border-t border-[#e7edf3] dark:border-slate-800">
-                  {canShowFullTotal ? (
-                    <p className="text-sm font-bold">
-                      Sheet total: {formatCurrency(combinedTotal)}{" "}
-                      <span className="text-xs font-normal text-[#4c739a] dark:text-slate-400">
-                        (labour {formatCurrency(labourSummary.totalPricedCost)} + materials {formatCurrency(materialsCost)}
-                        {markupPercent != null ? ` + ${markupPercent}% markup ${formatCurrency(materialsMarkupAmount)}` : ""}
-                        {" "}+ plant {formatCurrency(plantCost)})
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="text-sm font-bold">
-                      Materials + plant total: {formatCurrency(materialsCost + materialsMarkupAmount + plantCost)}{" "}
-                      <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
-                        — {labourSummary.totalHours.toFixed(2)} labour hrs recorded; configure Day Works rates in
-                        Settings to include labour cost in this total.
-                      </span>
+                  <p className="text-sm font-bold">
+                    Sheet total: {formatCurrency(combinedTotal)}{" "}
+                    <span className="text-xs font-normal text-[#4c739a] dark:text-slate-400">
+                      (labour {formatCurrency(labour.total)} + materials {formatCurrency(materialsCost)}
+                      {markupPercent != null ? ` + ${markupPercent}% markup ${formatCurrency(materialsMarkupAmount)}` : ""}
+                      {" "}+ plant {formatCurrency(plantCost)})
+                    </span>
+                  </p>
+                  {labour.hoursMissingRate > 0 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      {labour.hoursMissingRate.toFixed(2)} labour hrs not costed — enter a rate above to include them.
                     </p>
                   )}
                 </div>
@@ -652,13 +654,12 @@ export function VariationDayWorksSection({
       )}
 
       {pendingReview && (
-        <DayWorksLabourReviewDialog
+        <DayWorksSheetRecordReviewDialog
           projectId={projectId}
           itemId={itemId}
           sheetId={pendingReview.sheetId}
-          initialEntries={pendingReview.rows}
+          initialRows={pendingReview.rows}
           warning={pendingReview.warning}
-          contractTerms={contractTerms}
           onClose={() => setPendingReview(null)}
           onSaved={() => {
             setPendingReview(null);

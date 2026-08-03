@@ -5,11 +5,19 @@ import { ActivateAccessView } from "@/components/activate/activate-access-view";
 
 const ACCESS_GRANTED_STATUSES = new Set(["pilot", "trialing", "active"]);
 
-// Deliberately outside the (app) route group — this is the redirect target
-// of app/(app)/layout.tsx's access gate, so it must not itself be wrapped
-// by that same layout (would loop). Not part of the main app nav either —
-// a blocking gate, not a page a user navigates to normally.
-export default async function ActivatePage() {
+// Inside the (app) route group (moved here from a standalone top-level
+// route) so it renders within the normal app shell — TopNav, account
+// menu — rather than as a stripped-down page with no way out (Task 1.1).
+// Safe now that app/(app)/layout.tsx no longer hard-redirects here; it
+// used to live outside this route group specifically to avoid a redirect
+// loop against that old gate, which no longer exists.
+export default async function ActivatePage({
+  searchParams
+}: {
+  searchParams: Promise<{ checkout?: string }>;
+}) {
+  const { checkout } = await searchParams;
+
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
@@ -24,7 +32,8 @@ export default async function ActivatePage() {
 
   if (ACCESS_GRANTED_STATUSES.has(membership.organisation.accessStatus)) {
     // Already unlocked (e.g. the webhook landed while they were sitting on
-    // this page after checkout) — send them into the real app.
+    // this page). Also the normal landing spot once ActivateAccessView's
+    // post-checkout polling (Task 2) confirms access itself.
     redirect("/");
   }
 
@@ -33,6 +42,7 @@ export default async function ActivatePage() {
       accessStatus={membership.organisation.accessStatus}
       isAdmin={membership.isAdmin}
       organisationName={membership.organisation.name}
+      justCompletedCheckout={checkout === "success"}
     />
   );
 }

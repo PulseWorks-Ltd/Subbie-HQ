@@ -65,6 +65,21 @@ export function UpdateThread({
     router.refresh();
   }
 
+  async function handleRemoveTag() {
+    if (!update.variationItem) return;
+    if (!confirm(`Remove this Update's tag from ${update.variationItem.reference}? The Update itself will remain on the Updates page.`)) {
+      return;
+    }
+    setIsSavingTag(true);
+    await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variationItemId: null })
+    });
+    setIsSavingTag(false);
+    router.refresh();
+  }
+
   // Every photo across the whole thread (the top-level update plus every
   // reply), so the outbound-email panel can offer them all for selection —
   // not just the ones on the most recent entry.
@@ -159,6 +174,15 @@ export function UpdateThread({
               >
                 {update.variationItem ? "Change tag" : "+ Tag"}
               </button>
+              {update.variationItem && (
+                <button
+                  onClick={handleRemoveTag}
+                  disabled={isSavingTag}
+                  className="text-[11px] font-medium text-red-600 hover:underline disabled:opacity-60"
+                >
+                  Remove tag
+                </button>
+              )}
             </>
           )}
         </div>

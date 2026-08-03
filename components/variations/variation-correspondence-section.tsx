@@ -8,14 +8,17 @@ import type { Correspondence } from "@prisma/client";
 export function VariationCorrespondenceSection({
   projectId,
   itemId,
+  reference,
   correspondence
 }: {
   projectId: string;
   itemId: string;
+  reference: string;
   correspondence: Correspondence[];
 }) {
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -29,6 +32,16 @@ export function VariationCorrespondenceSection({
     formData.set("file", file);
     await fetch(`/api/projects/${projectId}/correspondence`, { method: "POST", body: formData });
     setIsUploading(false);
+    router.refresh();
+  }
+
+  async function handleUnlink(correspondenceId: string) {
+    if (!confirm(`Unlink this email from ${reference}? It will remain in Correspondence.`)) return;
+    setUnlinkingId(correspondenceId);
+    await fetch(`/api/projects/${projectId}/variation-items/${itemId}/correspondence/${correspondenceId}`, {
+      method: "DELETE"
+    });
+    setUnlinkingId(null);
     router.refresh();
   }
 
@@ -47,16 +60,24 @@ export function VariationCorrespondenceSection({
       ) : (
         <div className="flex flex-col gap-2">
           {correspondence.map((item) => (
-            <a
-              key={item.id}
-              href={`/api/projects/${projectId}/correspondence/${item.id}/file`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 text-sm text-primary hover:underline truncate"
-            >
-              <span className="material-symbols-outlined text-lg shrink-0">mail</span>
-              <span className="truncate">{item.title}</span>
-            </a>
+            <div key={item.id} className="flex items-center justify-between gap-2">
+              <a
+                href={`/api/projects/${projectId}/correspondence/${item.id}/file`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 text-sm text-primary hover:underline min-w-0 truncate"
+              >
+                <span className="material-symbols-outlined text-lg shrink-0">mail</span>
+                <span className="truncate">{item.title}</span>
+              </a>
+              <button
+                onClick={() => handleUnlink(item.id)}
+                disabled={unlinkingId === item.id}
+                className="text-xs font-bold text-red-600 hover:underline disabled:opacity-60 shrink-0"
+              >
+                {unlinkingId === item.id ? "Unlinking..." : "Unlink"}
+              </button>
+            </div>
           ))}
         </div>
       )}

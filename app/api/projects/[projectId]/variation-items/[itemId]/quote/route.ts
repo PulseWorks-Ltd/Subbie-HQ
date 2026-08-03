@@ -51,3 +51,42 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   return NextResponse.json({ variationItem }, { status: 201 });
 }
+
+// Hard-deletes the underlying file — matches the POST handler's own
+// existing precedent (a Replace upload already deletes the previous
+// quote's S3 object outright, not just detaching the reference), so
+// Remove behaves consistently with the replace flow's already-established
+// treatment of quote files as disposable/replaceable rather than
+// permanently retained.
+export async function DELETE(request: Request, context: { params: { projectId: string; itemId: string } }) {
+  const userId = await requireUserId(request);
+  const { projectId, itemId } = context.params;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const hasAccess = await requireProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const module_ = await moduleForItem(projectId, itemId);
+  if (!module_) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const canAccessModule = await requireModuleAccess(projectId, userId, module_);
+  if (!canAccessModule) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const existing = await prisma.variationItem.findFirst({ where: { id: itemId, projectId } });
+  if (existing?.quoteStorageKey) {
+    await deleteFromS3(existing.quoteStorageKey).catch(() => {});
+  }
+
+  const variationItem = await prisma.variationItem.update({
+    where: { id: itemId, projectId },
+    data: { quoteFileName: null, quoteStorageKey: null }
+  });
+
+  return NextResponse.json({ variationItem });
+}

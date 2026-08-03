@@ -44,7 +44,12 @@ export function CorrespondenceView({
   const [query, setQuery] = useState(initialQuery);
 
   async function handleDelete(row: CorrespondenceRow) {
-    if (!confirm(`Delete "${row.title}"?`)) return;
+    if (
+      !confirm(
+        `Permanently delete "${row.title}"? This is different from unlinking it from a Variation/SI — the record itself will be gone for good, not just detached. This cannot be undone.`
+      )
+    )
+      return;
     await fetch(`/api/projects/${projectId}/correspondence/${row.id}`, { method: "DELETE" });
     router.refresh();
   }

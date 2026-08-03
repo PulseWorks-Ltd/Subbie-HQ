@@ -7,6 +7,7 @@ import type { VariationItem } from "@prisma/client";
 export function VariationQuoteSection({ projectId, item }: { projectId: string; item: VariationItem }) {
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -21,14 +22,33 @@ export function VariationQuoteSection({ projectId, item }: { projectId: string; 
     router.refresh();
   }
 
+  async function handleRemove() {
+    if (!confirm(`Remove this quote from ${item.reference}? You can upload a new one afterward.`)) return;
+    setIsRemoving(true);
+    await fetch(`/api/projects/${projectId}/variation-items/${item.id}/quote`, { method: "DELETE" });
+    setIsRemoving(false);
+    router.refresh();
+  }
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold">Quote</h3>
-        <label className="text-xs font-bold text-primary hover:underline cursor-pointer">
-          {isUploading ? "Uploading..." : item.quoteFileName ? "Replace" : "+ Upload"}
-          <input type="file" onChange={handleUpload} disabled={isUploading} className="hidden" />
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-bold text-primary hover:underline cursor-pointer">
+            {isUploading ? "Uploading..." : item.quoteFileName ? "Replace" : "+ Upload"}
+            <input type="file" onChange={handleUpload} disabled={isUploading} className="hidden" />
+          </label>
+          {item.quoteFileName && (
+            <button
+              onClick={handleRemove}
+              disabled={isRemoving}
+              className="text-xs font-bold text-red-600 hover:underline disabled:opacity-60"
+            >
+              {isRemoving ? "Removing..." : "Remove"}
+            </button>
+          )}
+        </div>
       </div>
 
       {item.quoteFileName ? (

@@ -30,7 +30,7 @@ export function VariationPhotosSection({
   }
 
   async function handleDelete(photoId: string) {
-    if (!confirm("Delete this photo?")) return;
+    if (!confirm("Delete this photo? This can't be undone.")) return;
     await fetch(`/api/projects/${projectId}/variation-items/${itemId}/photos/${photoId}`, { method: "DELETE" });
     router.refresh();
   }

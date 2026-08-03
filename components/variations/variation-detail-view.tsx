@@ -182,7 +182,12 @@ export function VariationDetailView({
           contractTerms={contractTerms}
         />
         <VariationPhotosSection projectId={projectId} itemId={item.id} photos={photos} />
-        <VariationCorrespondenceSection projectId={projectId} itemId={item.id} correspondence={correspondence} />
+        <VariationCorrespondenceSection
+          projectId={projectId}
+          itemId={item.id}
+          reference={item.reference}
+          correspondence={correspondence}
+        />
       </div>
 
       <VariationLinkedUpdatesSection projectId={projectId} updates={updates} contacts={contacts} taggableItems={taggableItems} />

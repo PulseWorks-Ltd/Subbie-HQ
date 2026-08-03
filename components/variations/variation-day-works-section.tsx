@@ -569,7 +569,7 @@ export function VariationDayWorksSection({
   }
 
   async function handleDelete(sheetId: string) {
-    if (!confirm("Delete this day works sheet?")) return;
+    if (!confirm("Delete this Day Works Sheet? This will permanently remove its labour, materials, and plant entries.")) return;
     await fetch(`/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheetId}`, {
       method: "DELETE"
     });

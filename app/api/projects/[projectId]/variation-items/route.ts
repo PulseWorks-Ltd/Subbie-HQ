@@ -12,6 +12,7 @@ const createVariationItemSchema = z.object({
   dueAt: z.string().date().optional(),
   fileName: z.string().optional(),
   storageKey: z.string().optional(),
+  instructedByName: z.string().optional(),
   // Only meaningful for type: "variation" — see the schema comment on
   // VariationItem.variationCreatedAt for why a standalone Variation gets
   // one immediately, at creation.
@@ -82,6 +83,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       dueAt: payload.dueAt ? new Date(payload.dueAt) : undefined,
       fileName: payload.fileName,
       storageKey: payload.storageKey,
+      instructedByName: payload.instructedByName,
       // A standalone Variation inherently carries a Variation identity from
       // the moment it exists — a Site Instruction only gets one later, via
       // the separate "Create Variation" PATCH action (see [itemId]/route.ts).

@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms, DayWorksLabourEntry, DayWorksMaterial, DayWorksSheet, DayWorksRateType } from "@prisma/client";
+import type { ContractTerms, DayWorksLabourEntry, DayWorksRateType } from "@prisma/client";
 import { rateForType, summariseLabourCost } from "@/lib/day-works-rates";
+import { computeSheetTotals, type DayWorksSheetWithLineItems } from "@/lib/variation-package";
 import { DayWorksLabourReviewDialog, type LabourRow } from "@/components/variations/day-works-labour-review-dialog";
 import type { DraftLabourEntry } from "@/app/api/projects/[projectId]/variation-items/[itemId]/day-works-sheets/[sheetId]/labour/extract/route";
 
-type DayWorksSheetWithDetails = DayWorksSheet & { materials: DayWorksMaterial[]; labourEntries: DayWorksLabourEntry[] };
+type DayWorksSheetWithDetails = DayWorksSheetWithLineItems;
 
 const RATE_TYPE_LABELS: Record<DayWorksRateType, string> = {
   normal: "Normal",
@@ -17,10 +18,6 @@ const RATE_TYPE_LABELS: Record<DayWorksRateType, string> = {
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
-}
-
-function materialsTotal(materials: DayWorksMaterial[]) {
-  return materials.reduce((sum, material) => sum + Number(material.quantity) * Number(material.unitCost), 0);
 }
 
 function toDateInputValue(date: Date) {
@@ -233,6 +230,191 @@ function MaterialsSection({
   );
 }
 
+// Mirrors MaterialForm exactly (same fields, same S3 photo-attachment
+// pattern) — the only difference is which endpoint it posts to and that
+// this line item never receives materials markup (Task 1.1).
+function PlantForm({
+  projectId,
+  itemId,
+  sheetId
+}: {
+  projectId: string;
+  itemId: string;
+  sheetId: string;
+}) {
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+  const [description, setDescription] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState("");
+  const [unitCost, setUnitCost] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setIsSaving(true);
+
+    const formData = new FormData();
+    formData.set("description", description);
+    formData.set("quantity", quantity);
+    formData.set("unit", unit);
+    formData.set("unitCost", unitCost);
+    if (photo) formData.set("photo", photo);
+
+    const response = await fetch(
+      `/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheetId}/plant`,
+      { method: "POST", body: formData }
+    );
+    setIsSaving(false);
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(typeof body?.error === "string" ? body.error : "Could not add plant.");
+      return;
+    }
+
+    setDescription("");
+    setQuantity("");
+    setUnit("");
+    setUnitCost("");
+    setPhoto(null);
+    router.refresh();
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+      <label className="flex flex-col gap-1 text-[11px] font-medium flex-1 min-w-[140px]">
+        Description
+        <input
+          type="text"
+          required
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="e.g. Scissor Lift"
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-[11px] font-medium w-16">
+        Qty
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          required
+          value={quantity}
+          onChange={(event) => setQuantity(event.target.value)}
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-[11px] font-medium w-20">
+        Unit
+        <input
+          type="text"
+          required
+          placeholder="day"
+          value={unit}
+          onChange={(event) => setUnit(event.target.value)}
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-[11px] font-medium w-24">
+        Unit cost
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          required
+          value={unitCost}
+          onChange={(event) => setUnitCost(event.target.value)}
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <label className="text-[11px] font-bold text-primary hover:underline cursor-pointer h-8 flex items-center px-1 whitespace-nowrap">
+        {photo ? "Photo selected" : "+ Docket"}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+          className="hidden"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={isSaving}
+        className="h-8 px-3 rounded-lg bg-primary text-white text-[11px] font-bold hover:bg-primary/90 disabled:opacity-60 whitespace-nowrap"
+      >
+        {isSaving ? "Adding..." : "+ Add plant"}
+      </button>
+      {error && <p className="text-xs text-red-600 w-full">{error}</p>}
+    </form>
+  );
+}
+
+function PlantSection({
+  projectId,
+  itemId,
+  sheet
+}: {
+  projectId: string;
+  itemId: string;
+  sheet: DayWorksSheetWithDetails;
+}) {
+  const router = useRouter();
+
+  async function handleDeletePlant(plantId: string) {
+    if (!confirm("Delete this plant line item?")) return;
+    await fetch(
+      `/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheet.id}/plant/${plantId}`,
+      { method: "DELETE" }
+    );
+    router.refresh();
+  }
+
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-1.5">
+        Plant <span className="font-normal normal-case">(no markup applied)</span>
+      </p>
+
+      {sheet.plant.length === 0 ? (
+        <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-2">No plant recorded yet.</p>
+      ) : (
+        <div className="flex flex-col gap-1.5 mb-2">
+          {sheet.plant.map((item) => (
+            <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="truncate">
+                  {item.description} — {Number(item.quantity)} {item.unit} @ {formatCurrency(Number(item.unitCost))}
+                </span>
+                {item.photoStorageKey && (
+                  <a
+                    href={`/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheet.id}/plant/${item.id}/photo`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline shrink-0"
+                  >
+                    Docket
+                  </a>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-bold">{formatCurrency(Number(item.quantity) * Number(item.unitCost))}</span>
+                <button onClick={() => handleDeletePlant(item.id)} className="text-red-600 hover:underline">
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <PlantForm projectId={projectId} itemId={itemId} sheetId={sheet.id} />
+    </div>
+  );
+}
+
 function LabourSection({
   projectId,
   itemId,
@@ -409,16 +591,13 @@ export function VariationDayWorksSection({
       ) : (
         <div className="flex flex-col gap-4">
           {dayWorksSheets.map((sheet) => {
-            const matTotal = materialsTotal(sheet.materials);
-            const markupPercent = contractTerms?.materialsMarkupPercent ?? null;
-            const markupAmount = markupPercent != null ? matTotal * (markupPercent / 100) : 0;
-            const labourSummary = summariseLabourCost(
-              sheet.labourEntries.map((entry) => ({ hours: Number(entry.hours), rateType: entry.rateType })),
+            const { labourSummary, materialsCost, materialsMarkupAmount, plantCost, combinedTotal } = computeSheetTotals(
+              sheet,
               contractTerms
             );
+            const markupPercent = contractTerms?.materialsMarkupPercent ?? null;
             const hasAnyLabourHours = labourSummary.totalHours > 0;
             const canShowFullTotal = !hasAnyLabourHours || labourSummary.anyRateConfigured;
-            const combinedTotal = matTotal + markupAmount + labourSummary.totalPricedCost;
 
             return (
               <div key={sheet.id} className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 flex flex-col gap-3">
@@ -444,18 +623,21 @@ export function VariationDayWorksSection({
 
                 <MaterialsSection projectId={projectId} itemId={itemId} sheet={sheet} />
 
+                <PlantSection projectId={projectId} itemId={itemId} sheet={sheet} />
+
                 <div className="pt-2 border-t border-[#e7edf3] dark:border-slate-800">
                   {canShowFullTotal ? (
                     <p className="text-sm font-bold">
                       Sheet total: {formatCurrency(combinedTotal)}{" "}
                       <span className="text-xs font-normal text-[#4c739a] dark:text-slate-400">
-                        (labour {formatCurrency(labourSummary.totalPricedCost)} + materials {formatCurrency(matTotal)}
-                        {markupPercent != null ? ` + ${markupPercent}% markup ${formatCurrency(markupAmount)}` : ""})
+                        (labour {formatCurrency(labourSummary.totalPricedCost)} + materials {formatCurrency(materialsCost)}
+                        {markupPercent != null ? ` + ${markupPercent}% markup ${formatCurrency(materialsMarkupAmount)}` : ""}
+                        {" "}+ plant {formatCurrency(plantCost)})
                       </span>
                     </p>
                   ) : (
                     <p className="text-sm font-bold">
-                      Materials total: {formatCurrency(matTotal + markupAmount)}{" "}
+                      Materials + plant total: {formatCurrency(materialsCost + materialsMarkupAmount + plantCost)}{" "}
                       <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
                         — {labourSummary.totalHours.toFixed(2)} labour hrs recorded; configure Day Works rates in
                         Settings to include labour cost in this total.

@@ -244,6 +244,7 @@ model User {
   pushSubscriptions       PushSubscription[]
   updateReads             UpdateRead[]
   passwordResetTokens     PasswordResetToken[]
+  variationPackages       VariationPackage[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -1085,16 +1086,23 @@ model VariationItem {
   // once variationCreatedAt is set. No auto-calculation from Day Works
   // Sheet hours (deliberately out of scope, kept manual for now).
   variationValue     Decimal?
+  // Free text — who on site/the Main Contractor gave the instruction (e.g.
+  // "J. Smith, Site Manager"), shown on a generated Variation Package.
+  // Nothing upstream captures this structurally (no linked contact/user),
+  // so it's a plain optional field the user fills in themselves, same
+  // convention as generalNoticeMethod/disputeNoticeMethod on ContractTerms.
+  instructedByName   String?
 
-  project                   Project          @relation(fields: [projectId], references: [id])
+  project                   Project             @relation(fields: [projectId], references: [id])
   updates                   Update[]
   dayWorksSheets            DayWorksSheet[]
   photos                    VariationPhoto[]
   correspondence            Correspondence[]
+  packages                  VariationPackage[]
   // TODO: when preparing this item for submission (submitted_for_claim), surface
   // linked `correspondence` rows (including filed inbound emails) as supporting
   // evidence for the reviewer — not built yet, see Incoming Emails Task 4.2.
-  suggestedForInboundEmails InboundEmail[]   @relation("InboundEmailSuggestedVariationItem")
+  suggestedForInboundEmails InboundEmail[]      @relation("InboundEmailSuggestedVariationItem")
 }
 
 // fileName/storageKey are the original feature — an uploaded photo/scan of
@@ -1116,6 +1124,7 @@ model DayWorksSheet {
 
   variationItem VariationItem         @relation(fields: [variationItemId], references: [id])
   materials     DayWorksMaterial[]
+  plant         DayWorksPlant[]
   labourEntries DayWorksLabourEntry[]
 }
 
@@ -1183,6 +1192,29 @@ model DayWorksMaterial {
   dayWorksSheet DayWorksSheet @relation(fields: [dayWorksSheetId], references: [id], onDelete: Cascade)
 }
 
+// Structurally identical to DayWorksMaterial (description/quantity/unit/
+// unitCost/optional photo) — deliberately its own model rather than a
+// "kind" discriminator on DayWorksMaterial, since Plant does NOT receive
+// materialsMarkupPercent (Task 1.1: markup stays scoped to Materials only
+// — flagged in this session's report as a deliberate assumption the app
+// owner may want to revisit with a separate configurable plant markup
+// rate later). Keeping them as separate models makes that scoping
+// impossible to blur by accident in the total-calculation code.
+model DayWorksPlant {
+  id              String  @id @default(cuid())
+  dayWorksSheetId String
+  description     String
+  quantity        Decimal @db.Decimal(10, 2)
+  unit            String
+  unitCost        Decimal @db.Decimal(10, 2)
+  photoFileName    String?
+  photoStorageKey  String?
+  photoContentType String?
+  createdAt        DateTime @default(now())
+
+  dayWorksSheet DayWorksSheet @relation(fields: [dayWorksSheetId], references: [id], onDelete: Cascade)
+}
+
 model VariationPhoto {
   id              String   @id @default(cuid())
   variationItemId String
@@ -1192,6 +1224,40 @@ model VariationPhoto {
   createdAt       DateTime @default(now())
 
   variationItem VariationItem @relation(fields: [variationItemId], references: [id])
+}
+
+// An immutable snapshot generated from everything currently attached to a
+// VariationItem (photos, correspondence, Day Works Sheets) at the moment
+// of generation — the PDF itself and the totals below are both frozen
+// here and never recomputed in place. If underlying evidence changes
+// afterward, the user generates a NEW VariationPackage row (and a new
+// PDF) rather than this one being mutated — a package that's potentially
+// already been sent to a Main Contractor must stay a stable record of
+// what was actually claimed at that time. A VariationItem can accumulate
+// many of these over time as evidence grows.
+//
+// The five totals are stored as real columns (not just baked into the
+// PDF) specifically so a future Payment Claims module can aggregate them
+// across many variations without re-parsing any PDF — this is the
+// designed reuse point called out in this feature's task notes.
+model VariationPackage {
+  id                   String   @id @default(cuid())
+  variationItemId      String
+  generatedByUserId    String
+  fileName             String
+  storageKey           String
+  labourTotal          Decimal  @db.Decimal(12, 2)
+  materialsTotal       Decimal  @db.Decimal(12, 2)
+  materialsMarkupTotal Decimal  @db.Decimal(12, 2)
+  plantTotal           Decimal  @db.Decimal(12, 2)
+  grandTotal           Decimal  @db.Decimal(12, 2)
+  photoCount           Int
+  correspondenceCount  Int
+  dayWorksSheetCount   Int
+  createdAt            DateTime @default(now())
+
+  variationItem VariationItem @relation(fields: [variationItemId], references: [id])
+  generatedBy   User          @relation(fields: [generatedByUserId], references: [id])
 }
 
 model Correspondence {

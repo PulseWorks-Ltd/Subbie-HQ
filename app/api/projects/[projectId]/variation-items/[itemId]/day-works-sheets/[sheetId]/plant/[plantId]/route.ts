@@ -5,10 +5,10 @@ import { deleteFromS3 } from "@/lib/s3";
 
 export async function DELETE(
   request: Request,
-  context: { params: { projectId: string; itemId: string; sheetId: string } }
+  context: { params: { projectId: string; itemId: string; sheetId: string; plantId: string } }
 ) {
   const userId = await requireUserId(request);
-  const { projectId, itemId, sheetId } = context.params;
+  const { projectId, itemId, sheetId, plantId } = context.params;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -30,24 +30,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const sheet = await prisma.dayWorksSheet.findFirst({
-    where: { id: sheetId, variationItemId: itemId },
-    include: { materials: true, plant: true }
+  const plant = await prisma.dayWorksPlant.findFirst({
+    where: { id: plantId, dayWorksSheetId: sheetId, dayWorksSheet: { variationItemId: itemId } }
   });
-  if (sheet) {
-    await deleteFromS3(sheet.storageKey).catch(() => {});
-    // Materials/plant cascade at the DB level (onDelete: Cascade), but
-    // their S3 receipt/docket photos don't clean up themselves — deleted
-    // here first.
-    await Promise.all([
-      ...sheet.materials
-        .filter((material) => material.photoStorageKey)
-        .map((material) => deleteFromS3(material.photoStorageKey as string).catch(() => {})),
-      ...sheet.plant
-        .filter((plantItem) => plantItem.photoStorageKey)
-        .map((plantItem) => deleteFromS3(plantItem.photoStorageKey as string).catch(() => {}))
-    ]);
-    await prisma.dayWorksSheet.delete({ where: { id: sheetId } });
+  if (plant) {
+    if (plant.photoStorageKey) {
+      await deleteFromS3(plant.photoStorageKey).catch(() => {});
+    }
+    await prisma.dayWorksPlant.delete({ where: { id: plantId } });
   }
 
   return NextResponse.json({ ok: true });

@@ -6,14 +6,13 @@ import Link from "next/link";
 import type {
   ContractTerms,
   Correspondence,
-  DayWorksLabourEntry,
-  DayWorksMaterial,
-  DayWorksSheet,
   Update,
   UpdateAttachment,
   VariationItem,
+  VariationPackage,
   VariationPhoto
 } from "@prisma/client";
+import type { DayWorksSheetWithLineItems } from "@/lib/variation-package";
 import { StatusBadge } from "@/components/badges/status-badge";
 import { CountdownBadge } from "@/components/badges/countdown-badge";
 import { VariationItemFormDialog } from "@/components/variations/variation-item-form-dialog";
@@ -22,12 +21,12 @@ import { VariationDayWorksSection } from "@/components/variations/variation-day-
 import { VariationPhotosSection } from "@/components/variations/variation-photos-section";
 import { VariationCorrespondenceSection } from "@/components/variations/variation-correspondence-section";
 import { VariationLinkedUpdatesSection } from "@/components/variations/variation-linked-updates-section";
+import { VariationPackageSection } from "@/components/variations/variation-package-section";
 import { CreateVariationDialog } from "@/components/variations/create-variation-dialog";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
-type DayWorksSheetWithMaterials = DayWorksSheet & { materials: DayWorksMaterial[]; labourEntries: DayWorksLabourEntry[] };
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
@@ -49,17 +48,19 @@ export function VariationDetailView({
   updates,
   contacts,
   taggableItems,
-  contractTerms
+  contractTerms,
+  packages
 }: {
   projectId: string;
   item: VariationItem;
-  dayWorksSheets: DayWorksSheetWithMaterials[];
+  dayWorksSheets: DayWorksSheetWithLineItems[];
   photos: VariationPhoto[];
   correspondence: Correspondence[];
   updates: UpdateWithReplies[];
   contacts: ContactOption[];
   taggableItems: VariationItem[];
   contractTerms: ContractTerms | null;
+  packages: VariationPackage[];
 }) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -185,6 +186,17 @@ export function VariationDetailView({
       </div>
 
       <VariationLinkedUpdatesSection projectId={projectId} updates={updates} contacts={contacts} taggableItems={taggableItems} />
+
+      <VariationPackageSection
+        projectId={projectId}
+        itemId={item.id}
+        item={item}
+        dayWorksSheets={dayWorksSheets}
+        photos={photos}
+        correspondence={correspondence}
+        contractTerms={contractTerms}
+        packages={packages}
+      />
 
       {isCreateVariationOpen && (
         <CreateVariationDialog

@@ -38,12 +38,13 @@ export default async function VariationItemPage({
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [dayWorksSheets, photos, correspondence, updates, contacts, taggableItems, contractTerms] = await Promise.all([
+  const [dayWorksSheets, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages] = await Promise.all([
     prisma.dayWorksSheet.findMany({
       where: { variationItemId: itemId },
       orderBy: { createdAt: "desc" },
       include: {
         materials: { orderBy: { createdAt: "asc" } },
+        plant: { orderBy: { createdAt: "asc" } },
         labourEntries: { orderBy: { sortOrder: "asc" } }
       }
     }),
@@ -78,7 +79,8 @@ export default async function VariationItemPage({
           orderBy: { createdAt: "desc" }
         })
       : Promise.resolve([]),
-    prisma.contractTerms.findUnique({ where: { projectId } })
+    prisma.contractTerms.findUnique({ where: { projectId } }),
+    prisma.variationPackage.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } })
   ]);
 
   return (
@@ -92,6 +94,7 @@ export default async function VariationItemPage({
       contacts={contacts}
       taggableItems={taggableItems}
       contractTerms={contractTerms}
+      packages={packages}
     />
   );
 }

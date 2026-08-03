@@ -34,6 +34,7 @@ export function VariationItemFormDialog({
   const [description, setDescription] = useState(item?.description ?? "");
   const [notifiedAt, setNotifiedAt] = useState(toDateInputValue(item?.notifiedAt ?? null));
   const [dueAt, setDueAt] = useState(toDateInputValue(item?.dueAt ?? null));
+  const [instructedByName, setInstructedByName] = useState(item?.instructedByName ?? "");
   const [status, setStatus] = useState(item?.status ?? "open");
   const [percentComplete, setPercentComplete] = useState(
     item?.percentComplete != null ? String(item.percentComplete) : ""
@@ -108,6 +109,7 @@ export function VariationItemFormDialog({
             percentComplete: percentComplete ? Number(percentComplete) : null,
             notifiedAt: notifiedAt ? new Date(notifiedAt).toISOString() : undefined,
             dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
+            instructedByName: instructedByName || null,
             variationValue: hasVariation ? (variationValue ? Number(variationValue) : null) : undefined
           })
         })
@@ -134,6 +136,7 @@ export function VariationItemFormDialog({
               dueAt: dueAt || undefined,
               fileName: fileName || undefined,
               storageKey: storageKey || undefined,
+              instructedByName: instructedByName || undefined,
               variationValue: type === "variation" && variationValue ? Number(variationValue) : undefined
             })
           });
@@ -286,6 +289,17 @@ export function VariationItemFormDialog({
                   />
                 </label>
               </div>
+
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Instructed by <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+                <input
+                  type="text"
+                  value={instructedByName}
+                  onChange={(event) => setInstructedByName(event.target.value)}
+                  placeholder="e.g. J. Smith, Site Manager"
+                  className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </label>
             </>
           )}
 

@@ -162,7 +162,15 @@ export function IncomingEmailReviewDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 w-full max-w-lg max-h-[85vh] overflow-y-auto">
+      <div className="relative bg-white dark:bg-slate-900 rounded-xl border border-[#e7edf3] dark:border-slate-800 w-full max-w-lg max-h-[85vh] overflow-y-auto">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-3 right-3 rounded-lg p-1 text-[#4c739a] hover:bg-[#e7edf3] dark:text-slate-400 dark:hover:bg-slate-800"
+        >
+          <span className="material-symbols-outlined text-xl">close</span>
+        </button>
         <div className="p-5 border-b border-[#e7edf3] dark:border-slate-800">
           <p className="font-bold">{email.subject}</p>
           <p className="text-xs text-[#4c739a] dark:text-slate-400">From {email.sender}</p>

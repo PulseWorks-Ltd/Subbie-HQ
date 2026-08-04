@@ -15,12 +15,14 @@ export function VariationLinkedUpdatesSection({
   projectId,
   updates,
   contacts,
-  taggableItems
+  taggableItems,
+  defaultRatePerHour
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   contacts: ContactOption[];
   taggableItems: VariationItem[];
+  defaultRatePerHour: string;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -36,6 +38,7 @@ export function VariationLinkedUpdatesSection({
               update={update}
               contacts={contacts}
               taggableItems={taggableItems}
+              defaultRatePerHour={defaultRatePerHour}
             />
           ))}
         </div>

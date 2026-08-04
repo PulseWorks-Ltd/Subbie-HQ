@@ -69,6 +69,13 @@ export function VariationDetailView({
   const isSiteInstruction = item.type === "site_instruction";
   const hasVariation = item.variationCreatedAt != null;
 
+  // Mirrors VariationDayWorksSection's own defaultRatePerHour derivation —
+  // ContractTerms is one row per project (not per item), so this same
+  // value applies regardless of which item a "Use as Day Works Sheet"
+  // action ends up targeting from the Linked Updates section below.
+  const defaultRatePerHour =
+    contractTerms?.dayWorksRateNormal != null ? String(Number(contractTerms.dayWorksRateNormal)) : "";
+
   async function handleConfirmSuggested() {
     setIsConfirming(true);
     await fetch(`/api/projects/${projectId}/variation-items/${item.id}`, {
@@ -190,7 +197,13 @@ export function VariationDetailView({
         />
       </div>
 
-      <VariationLinkedUpdatesSection projectId={projectId} updates={updates} contacts={contacts} taggableItems={taggableItems} />
+      <VariationLinkedUpdatesSection
+        projectId={projectId}
+        updates={updates}
+        contacts={contacts}
+        taggableItems={taggableItems}
+        defaultRatePerHour={defaultRatePerHour}
+      />
 
       <VariationPackageSection
         projectId={projectId}

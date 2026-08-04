@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { UseAsDayWorksSheetAction, type TaggableItem } from "@/components/day-works/use-as-day-works-sheet-action";
 
 export type PictureItem = {
   id: string;
@@ -10,11 +11,22 @@ export type PictureItem = {
   linkedLabel: string;
   linkedHref: string;
   createdAt: Date;
+  defaultVariationItemId: string | null;
 };
 
 type FilterKey = "all" | "update" | "variation-photo";
 
-export function PicturesView({ items }: { items: PictureItem[] }) {
+export function PicturesView({
+  items,
+  projectId,
+  taggableItems,
+  defaultRatePerHour
+}: {
+  items: PictureItem[];
+  projectId: string;
+  taggableItems: TaggableItem[];
+  defaultRatePerHour: string;
+}) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const filteredItems = items.filter((item) => filter === "all" || item.source === filter);
 
@@ -72,6 +84,16 @@ export function PicturesView({ items }: { items: PictureItem[] }) {
               >
                 {item.linkedLabel}
               </Link>
+              <div className="flex items-center gap-1 text-primary">
+                <UseAsDayWorksSheetAction
+                  projectId={projectId}
+                  source={{ type: item.source === "update" ? "update-attachment" : "variation-photo", id: item.id }}
+                  taggableItems={taggableItems}
+                  defaultVariationItemId={item.defaultVariationItemId}
+                  defaultRatePerHour={defaultRatePerHour}
+                />
+                <span className="text-[11px] font-bold">Day Works Sheet</span>
+              </div>
             </div>
           ))}
         </div>

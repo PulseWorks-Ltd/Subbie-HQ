@@ -32,7 +32,7 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
 
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { mainContractorId: true } });
 
-  const [updates, taggableItems, contacts] = await Promise.all([
+  const [updates, taggableItems, contacts, contractTerms] = await Promise.all([
     prisma.update.findMany({
       where: { projectId, parentId: null },
       include: {
@@ -61,8 +61,23 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
           select: { id: true, name: true, email: true, role: true },
           orderBy: { name: "asc" }
         })
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    prisma.contractTerms.findUnique({ where: { projectId } })
   ]);
 
-  return <UpdatesView projectId={projectId} updates={updates} taggableItems={taggableItems} contacts={contacts} />;
+  // Same "Use as Day Works Sheet" pre-fill as the item's own "+Upload"
+  // flow (VariationDayWorksSection) — ContractTerms is one row per
+  // project, so the same value applies to whichever item ends up selected.
+  const defaultRatePerHour =
+    contractTerms?.dayWorksRateNormal != null ? String(Number(contractTerms.dayWorksRateNormal)) : "";
+
+  return (
+    <UpdatesView
+      projectId={projectId}
+      updates={updates}
+      taggableItems={taggableItems}
+      contacts={contacts}
+      defaultRatePerHour={defaultRatePerHour}
+    />
+  );
 }

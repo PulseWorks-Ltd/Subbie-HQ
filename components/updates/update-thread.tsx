@@ -35,12 +35,14 @@ export function UpdateThread({
   projectId,
   update,
   contacts,
-  taggableItems
+  taggableItems,
+  defaultRatePerHour
 }: {
   projectId: string;
   update: UpdateWithReplies;
   contacts: ContactOption[];
   taggableItems: VariationItem[];
+  defaultRatePerHour: string;
 }) {
   const router = useRouter();
   const [isReplying, setIsReplying] = useState(false);
@@ -191,7 +193,13 @@ export function UpdateThread({
       <p className="text-sm text-[#0d141b] dark:text-slate-200 leading-relaxed whitespace-pre-wrap mb-1">
         {update.body}
       </p>
-      <AttachmentThumbnails projectId={projectId} attachments={update.attachments} />
+      <AttachmentThumbnails
+        projectId={projectId}
+        attachments={update.attachments}
+        taggableItems={taggableItems}
+        defaultVariationItemId={update.variationItem?.id ?? null}
+        defaultRatePerHour={defaultRatePerHour}
+      />
 
       {update.replies.length > 0 && (
         <div className="flex flex-col gap-3 mt-4 pl-4 border-l-2 border-[#e7edf3] dark:border-slate-800">
@@ -206,7 +214,13 @@ export function UpdateThread({
               <p className="text-sm text-[#0d141b] dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                 {reply.body}
               </p>
-              <AttachmentThumbnails projectId={projectId} attachments={reply.attachments} />
+              <AttachmentThumbnails
+                projectId={projectId}
+                attachments={reply.attachments}
+                taggableItems={taggableItems}
+                defaultVariationItemId={update.variationItem?.id ?? null}
+                defaultRatePerHour={defaultRatePerHour}
+              />
             </div>
           ))}
         </div>

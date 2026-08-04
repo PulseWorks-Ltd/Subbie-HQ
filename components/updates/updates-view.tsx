@@ -18,12 +18,14 @@ export function UpdatesView({
   projectId,
   updates,
   taggableItems,
-  contacts
+  contacts,
+  defaultRatePerHour
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   taggableItems: VariationItem[];
   contacts: ContactOption[];
+  defaultRatePerHour: string;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -53,6 +55,7 @@ export function UpdatesView({
                 update={update}
                 contacts={contacts}
                 taggableItems={taggableItems}
+                defaultRatePerHour={defaultRatePerHour}
               />
             ))}
           </div>

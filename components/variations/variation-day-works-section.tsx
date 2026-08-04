@@ -21,7 +21,10 @@ function toDateInputValue(date: Date) {
   return new Date(date).toISOString().slice(0, 10);
 }
 
-function draftRecordsToRows(records: DraftSheetRecord[], defaultRatePerHour: string): SheetRecordRow[] {
+// Exported for reuse by components/day-works/use-as-day-works-sheet-action.tsx
+// (the "Use as Day Works Sheet" entry point from Update attachments/Pictures)
+// — same draft-shape-to-editable-row mapping, not duplicated.
+export function draftRecordsToRows(records: DraftSheetRecord[], defaultRatePerHour: string): SheetRecordRow[] {
   if (records.length === 0) return [emptySheetRecordRow("Sheet 1", defaultRatePerHour)];
   return records.map((record) => ({
     sheetNumber: record.sheetNumber,

@@ -275,6 +275,12 @@ model Organisation {
   // whatever the user typed. Nullable since existing organisations won't
   // have one set and shouldn't be forced to pick one.
   trade                   String?
+  // Data capture only — NOT wired into Contract Review, which unconditionally
+  // compares every organisation against SA-2017 regardless of this value.
+  // Free text (like trade above), not a Prisma enum, so adding e.g.
+  // per-state Australian granularity later doesn't need a migration.
+  // Nullable, defaults unset for every existing organisation.
+  jurisdiction            String?
   variationCompletionMode VariationCompletionMode @default(requires_confirmation)
   // Pilot-phase safety cap, not real billing — the sum of this org's
   // AiUsageLog.costUsd within the current calendar month is checked against

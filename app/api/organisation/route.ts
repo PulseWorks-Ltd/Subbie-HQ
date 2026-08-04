@@ -7,7 +7,8 @@ import { requireOrganisationAdmin } from "@/lib/organisation";
 const updateOrganisationSchema = z.object({
   variationCompletionMode: z.enum(["auto", "requires_confirmation"]).optional(),
   name: z.string().min(1).optional(),
-  trade: z.string().min(1).nullable().optional()
+  trade: z.string().min(1).nullable().optional(),
+  jurisdiction: z.string().min(1).nullable().optional()
 });
 
 export async function PATCH(request: Request) {
@@ -27,7 +28,8 @@ export async function PATCH(request: Request) {
     data: {
       variationCompletionMode: payload.variationCompletionMode,
       name: payload.name,
-      trade: payload.trade
+      trade: payload.trade,
+      jurisdiction: payload.jurisdiction
     }
   });
 

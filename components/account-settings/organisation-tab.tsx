@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TRADE_PRESETS } from "@/lib/trades";
+import { JURISDICTION_PRESETS } from "@/lib/jurisdictions";
 import { PLAN_DISPLAY, type PlanTier } from "@/lib/stripe";
 
 const ACCESS_STATUS_LABEL: Record<string, string> = {
@@ -99,6 +100,7 @@ export function OrganisationTab({
     id: string;
     name: string;
     trade: string | null;
+    jurisdiction: string | null;
     accessStatus: string;
     planTier: string | null;
     trialEndsAt: Date | null;
@@ -113,6 +115,7 @@ export function OrganisationTab({
     organisation.trade == null ? "" : isPreset ? organisation.trade : "Other"
   );
   const [customTrade, setCustomTrade] = useState(!isPreset ? organisation.trade ?? "" : "");
+  const [jurisdiction, setJurisdiction] = useState<string>(organisation.jurisdiction ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -128,7 +131,7 @@ export function OrganisationTab({
     const response = await fetch("/api/organisation", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), trade })
+      body: JSON.stringify({ name: name.trim(), trade, jurisdiction: jurisdiction || null })
     });
     setIsSaving(false);
 
@@ -189,6 +192,22 @@ export function OrganisationTab({
             />
           </label>
         )}
+
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Jurisdiction <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+          <select
+            value={jurisdiction}
+            onChange={(event) => setJurisdiction(event.target.value)}
+            className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="">Not set</option>
+            {JURISDICTION_PRESETS.map((preset) => (
+              <option key={preset} value={preset}>
+                {preset}
+              </option>
+            ))}
+          </select>
+        </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
         {successMessage && <p className="text-sm text-green-600 dark:text-green-400">{successMessage}</p>}

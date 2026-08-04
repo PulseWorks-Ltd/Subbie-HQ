@@ -61,6 +61,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               id: membership!.organisationId,
               name: membership!.organisation.name,
               trade: membership!.organisation.trade,
+              jurisdiction: membership!.organisation.jurisdiction,
               accessStatus: membership!.organisation.accessStatus,
               planTier: membership!.organisation.planTier,
               trialEndsAt: membership!.organisation.trialEndsAt,

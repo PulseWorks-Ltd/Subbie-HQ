@@ -39,6 +39,7 @@ export function AccountSettingsView({
     id: string;
     name: string;
     trade: string | null;
+    jurisdiction: string | null;
     accessStatus: string;
     planTier: string | null;
     trialEndsAt: Date | null;

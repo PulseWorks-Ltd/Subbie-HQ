@@ -81,7 +81,7 @@ export function MobileUpdatesView({
       ) : (
         <div className="flex flex-col gap-3">
           {updates.map((update) => (
-            <MobileThread key={update.id} projectId={projectId} update={update} />
+            <MobileThread key={update.id} projectId={projectId} update={update} taggableItems={taggableItems} />
           ))}
         </div>
       )}

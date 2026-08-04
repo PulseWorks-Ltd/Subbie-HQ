@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { PushNotificationsButton } from "@/components/mobile/push-notifications-button";
 import { ServiceWorkerRegistration } from "@/components/mobile/service-worker-registration";
+import { MobileNav } from "@/components/mobile/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getOrganisationMembership } from "@/lib/organisation";
+import { hasModuleAccess } from "@/lib/permissions";
 
 export default async function MobileLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -13,6 +16,9 @@ export default async function MobileLayout({ children }: { children: React.React
     // this layout check with a real session.
     redirect("/login?callbackUrl=/m");
   }
+
+  const membership = await getOrganisationMembership(session.user.id);
+  const canSeeIncomingEmails = hasModuleAccess(membership, "incoming_emails");
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -52,6 +58,7 @@ export default async function MobileLayout({ children }: { children: React.React
         </div>
       </header>
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4">{children}</main>
+      <MobileNav canSeeIncomingEmails={canSeeIncomingEmails} />
     </div>
   );
 }

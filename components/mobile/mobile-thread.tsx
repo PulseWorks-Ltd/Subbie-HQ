@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Update, UpdateAttachment } from "@prisma/client";
+import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 import { formatUserName } from "@/lib/user-display";
 
@@ -28,12 +28,54 @@ function authorLabel(author: Author) {
   return formatUserName(author) ?? author.email;
 }
 
-export function MobileThread({ projectId, update }: { projectId: string; update: UpdateWithReplies }) {
+export function MobileThread({
+  projectId,
+  update,
+  taggableItems
+}: {
+  projectId: string;
+  update: UpdateWithReplies;
+  taggableItems: VariationItem[];
+}) {
   const router = useRouter();
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditingTag, setIsEditingTag] = useState(false);
+  const [tagSelection, setTagSelection] = useState(update.variationItem?.id ?? "");
+  const [isSavingTag, setIsSavingTag] = useState(false);
+
+  // Same PATCH endpoint and tag semantics as desktop's UpdateThread (Task
+  // 2.1) — "which SI/Variation this belongs to" often only becomes clear
+  // after the update's already posted, so this needs to be editable after
+  // the fact, not just at compose time.
+  async function handleSaveTag() {
+    setIsSavingTag(true);
+    await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variationItemId: tagSelection || null })
+    });
+    setIsSavingTag(false);
+    setIsEditingTag(false);
+    router.refresh();
+  }
+
+  async function handleRemoveTag() {
+    if (!update.variationItem) return;
+    if (!confirm(`Remove this Update's tag from ${update.variationItem.reference}? The Update itself will remain on the Updates page.`)) {
+      return;
+    }
+    setIsSavingTag(true);
+    await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variationItemId: null })
+    });
+    setIsSavingTag(false);
+    router.refresh();
+  }
 
   async function handleReply(event: React.FormEvent) {
     event.preventDefault();
@@ -60,11 +102,63 @@ export function MobileThread({ projectId, update }: { projectId: string; update:
         <p className="text-sm font-bold">{authorLabel(update.author)}</p>
         <p className="text-[11px] text-[#4c739a] dark:text-slate-400 shrink-0">{formatTimestamp(update.createdAt)}</p>
       </div>
-      {update.variationItem && (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary mb-1">
-          {update.variationItem.reference}
-        </span>
+
+      {isEditingTag ? (
+        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+          <select
+            value={tagSelection}
+            onChange={(event) => setTagSelection(event.target.value)}
+            className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="">Not tied to a Variation/SI</option>
+            {taggableItems.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.reference} · {option.title}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleSaveTag}
+            disabled={isSavingTag}
+            className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
+          >
+            {isSavingTag ? "Saving..." : "Save"}
+          </button>
+          <button
+            onClick={() => {
+              setTagSelection(update.variationItem?.id ?? "");
+              setIsEditingTag(false);
+            }}
+            className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+          {update.variationItem && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
+              {update.variationItem.reference}
+            </span>
+          )}
+          <button
+            onClick={() => setIsEditingTag(true)}
+            className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
+          >
+            {update.variationItem ? "Change tag" : "+ Tag"}
+          </button>
+          {update.variationItem && (
+            <button
+              onClick={handleRemoveTag}
+              disabled={isSavingTag}
+              className="text-[11px] font-medium text-red-600 hover:underline disabled:opacity-60"
+            >
+              Remove tag
+            </button>
+          )}
+        </div>
       )}
+
       <p className="text-sm leading-relaxed whitespace-pre-wrap mb-1">{update.body}</p>
       <AttachmentThumbnails projectId={projectId} attachments={update.attachments} />
 

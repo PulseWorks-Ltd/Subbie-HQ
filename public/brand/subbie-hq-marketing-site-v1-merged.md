@@ -42,7 +42,7 @@ legislation and deserve individual care, not a generation pass.
 
 ### Hero
 
-**H1: Know Exactly What Your Contract Expects**
+**H1: Know What Your Contract Requires. Capture the Evidence. Get Paid.**
 
 **Sub-heading:** Manage contracts, Site Instructions, Dayworks,
 Variations and payment claims from one place — so nothing gets missed,
@@ -152,10 +152,13 @@ variation paid faster.]"*
 
 ### Final CTA
 
-**Understand your contract. Protect your entitlement. Get paid for the
-work you actually do.**
+**Everything you need to keep the job organised and the money flowing — from the first page of the contract to the last dollar claimed.**
 
-[Start Free Trial] [Book a Demo]
+[Start Free Trial]
+
+*(Note: "Book a Demo" was removed sitewide in the marketing-site-fixes
+prompt since no real demo-booking flow exists — don't reintroduce it
+here without that flow actually existing.)*
 
 ---
 ---
@@ -421,13 +424,64 @@ Roofing Contractors, Concrete Contractors, Interior Fitout Contractors
 Subbie HQ vs Generic Construction Software, Subbie HQ vs Project
 Management Software
 
-**Problem/SEO pages** (each needs individual care — legislative content):
-How to Manage Variations, How to Prepare Better Payment Claims, How to
-Avoid Payment Disputes, Understanding Delay Notices, Liquidated Damages
-Explained, Understanding SA-2017, How to Protect Your Variations, Keeping
-Better Dayworks Records, Final Account Explained, Extension of Time
-Explained, Construction Record Keeping, Construction Contract
-Administration
+**Problem/SEO pages — organised into four groups** (per further product
+positioning discussion; this structure both improves SEO targeting and
+reinforces the "Contracts Manager" positioning by mapping directly onto
+what the product already does or is roadmapped to do):
+
+⚠️ **Jurisdictional caveat — read before writing any of these:** several
+topics below (Adjudication, Time Bars, Retentions, Payment Claims) don't
+just vary by topic, they vary by JURISDICTION. NZ has one Construction
+Contracts Act. Australia has separate Security of Payment legislation per
+state, and the specific rules differ from each other and from NZ's
+regime. A single generic article risks being flatly wrong for roughly
+half the audience depending which side of the Tasman they're reading
+from. Each flagged topic below needs either two versions (NZ + AU) or a
+single version explicitly scoped to one jurisdiction with a clear note
+that the other differs — never written as if the rules are universal.
+This applies on top of the existing "verify against real legislation
+before publishing" rule already in place for legal content.
+
+**Getting Paid**
+- Payment Claims ⚠️ jurisdiction-sensitive (existing outline already
+  covers NZ CCA version — see page 9 above; AU version still needed)
+- Retentions ⚠️ jurisdiction-sensitive
+- Variations (partially covered — existing "Site Instruction vs
+  Variation" guide overlaps, this would be a deeper standalone piece)
+- Final Accounts
+- Set-off ⚠️ jurisdiction-sensitive
+
+**Managing the Job**
+- Site Instructions (overlaps with existing guide — reconcile rather
+  than duplicate)
+- Dayworks (overlaps with the Dayworks feature page — this would be the
+  educational/how-to companion, not a rewrite of the feature page)
+- Delay Notices
+- Extensions of Time
+- RFIs
+- Daily Records
+
+**Understanding Contracts**
+- Liquidated Damages
+- Time Bars ⚠️ jurisdiction-sensitive
+- Insurance Requirements
+- Indemnities
+- IP Clauses
+- Warranties
+
+**Running a Subcontracting Business**
+- Cash Flow
+- Pricing Variations
+- Avoiding Disputes
+- Keeping Project Records
+- Preparing for Adjudication ⚠️ jurisdiction-sensitive — genuinely
+  different processes NZ vs AU, and different again between AU states;
+  needs the most careful scoping of anything on this list
+
+Same discipline as before applies to all of these: write and verify a
+small number at a time, each checked for accuracy, not batch-generated —
+if anything, the jurisdictional split makes that discipline more
+important here, not less.
 
 **Resource Centre:** long-term target of 100+ interlinked articles,
 building topical authority over time — genuinely ongoing content work,

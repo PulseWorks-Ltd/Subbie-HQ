@@ -11,7 +11,9 @@ export function HomepageView() {
       <MarketingHeader />
       <main>
         <section className="max-w-4xl mx-auto px-4 py-20 text-center flex flex-col items-center gap-6">
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tight">Know Exactly What Your Contract Expects</h1>
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tight">
+            Know What Your Contract Requires. Capture the Evidence. Get Paid.
+          </h1>
           <p className="text-lg text-[#4c739a] dark:text-slate-400 max-w-2xl">
             Manage contracts, Site Instructions, Dayworks, Variations and payment claims from one place — so
             nothing gets missed, and nothing gets left unpaid.
@@ -178,7 +180,8 @@ export function HomepageView() {
         <section className="bg-primary/5 dark:bg-primary/10 py-16">
           <div className="max-w-2xl mx-auto px-4 text-center flex flex-col items-center gap-6">
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Understand your contract. Protect your entitlement. Get paid for the work you actually do.
+              Everything you need to keep the job organised and the money flowing — from the first page of the
+              contract to the last dollar claimed.
             </h2>
             {/* Sole CTA — "Book a Demo" was removed: it linked to /signup
                 identically to this button, and there's no real

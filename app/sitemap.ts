@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
 
-// No canonical production domain is configured anywhere in this codebase
-// yet (checked .env.example, .env.staging, README) — set
-// NEXT_PUBLIC_APP_URL once the real domain is decided. Falls back to a
-// placeholder so this still builds/runs correctly in the meantime.
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://subbiehq.com";
+// Real production domain is the hyphenated subbie-hq.com — not subbiehq.com
+// (that was a wrong placeholder that shipped live and got indexed with the
+// wrong domain in every <loc>). No NEXT_PUBLIC_APP_URL is set anywhere in
+// this codebase (checked .env.example, .env.staging, README), so this
+// fallback is what actually serves in production today.
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://subbie-hq.com";
 
 const MARKETING_PATHS = [
   "/",

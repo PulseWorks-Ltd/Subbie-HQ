@@ -649,13 +649,14 @@ export async function synthesizeContractReview(
       }))
   );
 
-  const response = await callGrok({
-    model: GROK_MODEL,
-    response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content:
+  async function runSynthesisCall(): Promise<SynthesisResult> {
+    const response = await callGrok({
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
           `You are prioritizing, categorizing, and summarizing a list of already-classified deviations found between a subcontract agreement and ${comparisonLabel}, for a subcontractor to review quickly without missing anything important. ` +
           "Respond with only a JSON object matching this exact shape: " +
           '{"executiveSummary": string, "overallRiskLevel": "low" | "medium" | "high", "keyObservations": string[], "positiveFindings": [{"title": string, "context": string}], "categorySummaries": {"<category>": {"whatThisMeans": string, "keyRisks": string[], "protectYourself": string[]}, ...}, "deviations": [{"topicBucket": string, "baselineClauseRef": string | null, "baselineClauseTitle": string | null, "subcontractClauseRef": string | null, "subcontractExcerpt": string | null, "classification": string, "impact": "low" | "medium" | "high", "priorityScore": number, "category": string, "severity": "critical" | "important" | "informational", "rationale": string, "recommendation": string | null}]}. ' +
@@ -695,19 +696,54 @@ export async function synthesizeContractReview(
           "categorySummaries must NEVER use live or real-time status language. Do not say or imply the subcontractor currently IS or IS NOT compliant, do not use words like \"currently\", \"right now\", or any status/traffic-light framing — you have no visibility into the actual state of this specific project. Only describe what the CONTRACT requires and how to protect against that requirement in general (e.g. \"Track site instructions in writing before starting extra work\", never \"You are not currently tracking site instructions\"). " +
           "Do not invent new deviations or drop any of the input deviations — reorder, categorize, and score them, do not filter them out."
       },
-      {
-        role: "user",
-        content: JSON.stringify({ deviations: relevant, matchedClauses })
-      }
-    ]
-  }, { ...usageContext, feature: "contract_review" });
+        {
+          role: "user",
+          content: JSON.stringify({ deviations: relevant, matchedClauses })
+        }
+      ]
+    }, { ...usageContext, feature: "contract_review" });
 
-  const raw = response.choices[0]?.message?.content;
-  if (!raw) {
-    throw new Error("No response from Grok.");
+    const raw = response.choices[0]?.message?.content;
+    if (!raw) {
+      throw new Error("No response from Grok.");
+    }
+
+    return SynthesisResultSchema.parse(JSON.parse(raw));
   }
 
-  return SynthesisResultSchema.parse(JSON.parse(raw));
+  let result = await runSynthesisCall();
+
+  // Integrity guard — confirmed in production (2026-08-03, review
+  // cmsdub98m00069trgycqrh83c): given 270 real map-phase deviations as
+  // input, this call returned a syntactically valid, schema-passing
+  // response with a fully-written executiveSummary, keyObservations,
+  // positiveFindings, and all 12 categorySummaries populated — but its own
+  // "deviations" array was empty. That response was persisted and shown to
+  // a real user as a normal "complete" review: a confident, specific
+  // narrative sitting on top of zero actual ContractDeviation rows, with
+  // no category breakdown and 0/0/0 severity counts, and nothing in the
+  // pipeline detected the inconsistency. AI usage logs for that run showed
+  // every call succeeding — this isn't a transport/parsing failure, the
+  // model's own response was self-contradictory. relevant.length > 0 is
+  // the exact, narrowly-scoped condition that failure exhibited (a real,
+  // non-empty input echoed back as an empty array) — deliberately not a
+  // stricter count-matching check, since there's no evidence minor
+  // under-counts are a real problem, only total wipeouts. One retry is
+  // cheap and recovers a transient case; a second failure is treated as a
+  // genuine pipeline failure (propagates to runContractReviewWork's
+  // existing catch, marking the review "failed" with a clear message)
+  // rather than ever silently persisting ungrounded narrative content
+  // again.
+  if (relevant.length > 0 && result.deviations.length === 0) {
+    result = await runSynthesisCall();
+    if (relevant.length > 0 && result.deviations.length === 0) {
+      throw new Error(
+        "The AI review generated a summary but no supporting deviation details for this contract — this looks like an unreliable response rather than a genuinely clean contract. Please try running the review again."
+      );
+    }
+  }
+
+  return result;
 }
 
 const ExtractedContractTermsSchema = z.object({

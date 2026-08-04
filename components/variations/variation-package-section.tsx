@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ContractTerms, Correspondence, VariationItem, VariationPackage, VariationPhoto } from "@prisma/client";
-import { computePackageTotals, computeSheetTotals, type DayWorksSheetWithLineItems } from "@/lib/variation-package";
+import {
+  computePackageTotals,
+  computeSheetTotals,
+  PACKAGE_CATEGORIES,
+  PACKAGE_CATEGORY_LABELS,
+  type DayWorksSheetWithLineItems,
+  type PackageCategory
+} from "@/lib/variation-package";
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -33,6 +40,7 @@ function GeneratePackageReviewDialog({
   dayWorksSheets,
   photos,
   correspondence,
+  updates,
   contractTerms,
   onClose,
   onGenerated
@@ -43,6 +51,7 @@ function GeneratePackageReviewDialog({
   dayWorksSheets: DayWorksSheetWithLineItems[];
   photos: VariationPhoto[];
   correspondence: Correspondence[];
+  updates: { id: string }[];
   contractTerms: ContractTerms | null;
   onClose: () => void;
   onGenerated: () => void;
@@ -50,12 +59,48 @@ function GeneratePackageReviewDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const packageTotals = computePackageTotals(dayWorksSheets, contractTerms);
+  // Per-generation only (Task 2.3) — a fresh useState initializer runs
+  // every time this dialog mounts, which is every time it's opened (see
+  // VariationPackageSection's `{isReviewOpen && <GeneratePackageReviewDialog .../>}`),
+  // so this naturally resets to all-checked with no extra reset logic.
+  const [included, setIncluded] = useState<Record<PackageCategory, boolean>>({
+    quote: true,
+    day_works_sheets: true,
+    si_source_document: true,
+    correspondence: true,
+    linked_updates: true,
+    photos: true
+  });
+
+  const categoryCounts: Record<PackageCategory, number> = {
+    quote: item.quoteFileName && item.quoteStorageKey ? 1 : 0,
+    day_works_sheets: dayWorksSheets.length,
+    si_source_document: item.fileName && item.storageKey ? 1 : 0,
+    correspondence: correspondence.length,
+    linked_updates: updates.length,
+    photos: photos.length
+  };
+
+  function toggleCategory(category: PackageCategory) {
+    setIncluded((current) => ({ ...current, [category]: !current[category] }));
+  }
+
+  // Grand Total (Task 2.1/2.2) — Day Works Sheets is the only category
+  // that contributes a dollar figure, so excluding it means computing the
+  // exact same shared helper (computePackageTotals) against an empty
+  // array rather than duplicating its maths — an empty array already
+  // naturally sums to all-zero.
+  const packageTotals = computePackageTotals(included.day_works_sheets ? dayWorksSheets : [], contractTerms);
 
   async function handleGenerate() {
     setError(null);
     setIsGenerating(true);
-    const response = await fetch(`/api/projects/${projectId}/variation-items/${itemId}/packages`, { method: "POST" });
+    const includedCategories = PACKAGE_CATEGORIES.filter((category) => included[category]);
+    const response = await fetch(`/api/projects/${projectId}/variation-items/${itemId}/packages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ includedCategories })
+    });
     setIsGenerating(false);
 
     if (!response.ok) {
@@ -97,11 +142,41 @@ function GeneratePackageReviewDialog({
           </div>
 
           <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-4">
-            <p className="font-bold mb-2">
-              Evidence: Photos ({photos.length}), Correspondence ({correspondence.length}), Day Works Sheets (
-              {dayWorksSheets.length})
+            <p className="font-bold mb-2">Include in this package</p>
+            <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-3">
+              Unchecking a category leaves it out of this generated document only — it stays attached to this item
+              and is available again next time you generate a package.
             </p>
-            {photos.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              {PACKAGE_CATEGORIES.map((category) => {
+                const count = categoryCounts[category];
+                const disabled = count === 0;
+                return (
+                  <label
+                    key={category}
+                    className={`flex items-center gap-2 text-sm ${disabled ? "opacity-50" : "cursor-pointer"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!disabled && included[category]}
+                      disabled={disabled}
+                      onChange={() => toggleCategory(category)}
+                      className="size-4 rounded border-[#cfdbe7] dark:border-slate-700 text-primary focus:ring-primary/40"
+                    />
+                    {PACKAGE_CATEGORY_LABELS[category]} ({count})
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-4">
+            <p className="font-bold mb-2">
+              Photos ({included.photos ? photos.length : 0}), Correspondence (
+              {included.correspondence ? correspondence.length : 0}), Day Works Sheets (
+              {included.day_works_sheets ? dayWorksSheets.length : 0})
+            </p>
+            {included.photos && photos.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {photos.slice(0, 8).map((photo) => (
                   <img
@@ -120,7 +195,7 @@ function GeneratePackageReviewDialog({
             )}
           </div>
 
-          {dayWorksSheets.length > 0 && (
+          {included.day_works_sheets && dayWorksSheets.length > 0 && (
             <div className="flex flex-col gap-2">
               {dayWorksSheets.map((sheet) => {
                 const totals = computeSheetTotals(sheet, contractTerms);
@@ -186,6 +261,7 @@ export function VariationPackageSection({
   dayWorksSheets,
   photos,
   correspondence,
+  updates,
   contractTerms,
   packages
 }: {
@@ -195,6 +271,7 @@ export function VariationPackageSection({
   dayWorksSheets: DayWorksSheetWithLineItems[];
   photos: VariationPhoto[];
   correspondence: Correspondence[];
+  updates: { id: string }[];
   contractTerms: ContractTerms | null;
   packages: VariationPackage[];
 }) {
@@ -233,6 +310,16 @@ export function VariationPackageSection({
                   Grand total {formatCurrency(Number(pkg.grandTotal))} · Photos ({pkg.photoCount}), Correspondence (
                   {pkg.correspondenceCount}), Day Works Sheets ({pkg.dayWorksSheetCount})
                 </p>
+                {(() => {
+                  const excluded = PACKAGE_CATEGORIES.filter((category) => !pkg.includedCategories.includes(category));
+                  return excluded.length > 0 ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Excluded from this package: {excluded.map((category) => PACKAGE_CATEGORY_LABELS[category]).join(", ")}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#4c739a] dark:text-slate-400">All categories included</p>
+                  );
+                })()}
               </div>
               <a
                 href={`/api/projects/${projectId}/variation-items/${itemId}/packages/${pkg.id}/file`}
@@ -255,6 +342,7 @@ export function VariationPackageSection({
           dayWorksSheets={dayWorksSheets}
           photos={photos}
           correspondence={correspondence}
+          updates={updates}
           contractTerms={contractTerms}
           onClose={() => setIsReviewOpen(false)}
           onGenerated={() => {

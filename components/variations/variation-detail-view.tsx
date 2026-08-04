@@ -212,6 +212,7 @@ export function VariationDetailView({
         dayWorksSheets={dayWorksSheets}
         photos={photos}
         correspondence={correspondence}
+        updates={updates}
         contractTerms={contractTerms}
         packages={packages}
       />

@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
 import { generateVariationPackagePdf } from "@/lib/variation-package-pdf";
-import { computePackageTotals } from "@/lib/variation-package";
+import { computePackageTotals, PACKAGE_CATEGORIES, type PackageCategory } from "@/lib/variation-package";
+
+// Missing/malformed body defaults to every category (matches the
+// long-standing unconditional behaviour this endpoint had before
+// per-generation filtering existed).
+const generatePackageSchema = z.object({
+  includedCategories: z.array(z.enum(PACKAGE_CATEGORIES)).optional()
+});
 
 async function moduleForItem(projectId: string, itemId: string) {
   const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
@@ -39,6 +47,14 @@ export async function POST(request: Request, context: { params: { projectId: str
   if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const rawBody = await request.json().catch(() => ({}));
+  const parsed = generatePackageSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid category selection" }, { status: 400 });
+  }
+  const includedCategories: PackageCategory[] = parsed.data.includedCategories ?? [...PACKAGE_CATEGORIES];
+  const isIncluded = (category: PackageCategory) => includedCategories.includes(category);
 
   const [item, user] = await Promise.all([
     prisma.variationItem.findFirst({ where: { id: itemId, projectId } }),
@@ -78,12 +94,30 @@ export async function POST(request: Request, context: { params: { projectId: str
   const generatedByName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Unknown user";
 
+  // Filter here, once, rather than threading category checks through the
+  // PDF generator — generateVariationPackagePdf already gates every
+  // section on these same arrays'/item's fields being present, so an
+  // excluded category simply becomes "zero items"/"no file" to every part
+  // of the document (cover summary, computed totals, and the real-evidence
+  // embed sections alike), with zero changes needed inside that function.
+  const filteredPhotos = isIncluded("photos") ? photos : [];
+  const filteredCorrespondence = isIncluded("correspondence") ? correspondence : [];
+  const filteredDayWorksSheets = isIncluded("day_works_sheets") ? dayWorksSheets : [];
+  const filteredUpdates = isIncluded("linked_updates") ? updates : [];
+  const filteredItem = {
+    ...item,
+    quoteFileName: isIncluded("quote") ? item.quoteFileName : null,
+    quoteStorageKey: isIncluded("quote") ? item.quoteStorageKey : null,
+    fileName: isIncluded("si_source_document") ? item.fileName : null,
+    storageKey: isIncluded("si_source_document") ? item.storageKey : null
+  };
+
   const pdfBytes = await generateVariationPackagePdf({
-    item,
-    photos,
-    correspondence,
-    dayWorksSheets,
-    updates,
+    item: filteredItem,
+    photos: filteredPhotos,
+    correspondence: filteredCorrespondence,
+    dayWorksSheets: filteredDayWorksSheets,
+    updates: filteredUpdates,
     contractTerms,
     generatedByName
   });
@@ -91,7 +125,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   const uploadKey = `projects/${projectId}/variation-items/${itemId}/packages/${Date.now()}-variation-package-${item.reference}.pdf`;
   const { storageKey } = await uploadToS3({ key: uploadKey, body: pdfBytes, contentType: "application/pdf" });
 
-  const totals = computePackageTotals(dayWorksSheets, contractTerms);
+  const totals = computePackageTotals(filteredDayWorksSheets, contractTerms);
 
   const variationPackage = await prisma.variationPackage.create({
     data: {
@@ -104,9 +138,10 @@ export async function POST(request: Request, context: { params: { projectId: str
       materialsMarkupTotal: totals.materialsMarkupTotal,
       plantTotal: totals.plantTotal,
       grandTotal: totals.grandTotal,
-      photoCount: photos.length,
-      correspondenceCount: correspondence.length,
-      dayWorksSheetCount: dayWorksSheets.length
+      photoCount: filteredPhotos.length,
+      correspondenceCount: filteredCorrespondence.length,
+      dayWorksSheetCount: filteredDayWorksSheets.length,
+      includedCategories
     }
   });
 

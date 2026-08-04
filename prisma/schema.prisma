@@ -1260,6 +1260,14 @@ model VariationPackage {
   photoCount           Int
   correspondenceCount  Int
   dayWorksSheetCount   Int
+  // Which of PACKAGE_CATEGORIES (lib/variation-package.ts) were included
+  // in THIS specific generation — per-generation only, never changes what
+  // evidence is actually attached to the item. Existing rows predate this
+  // feature and are backfilled to the full category list, since every
+  // category was unconditionally included before this existed (see this
+  // migration's backfill UPDATE) — an empty array here would wrongly read
+  // as "nothing was included."
+  includedCategories   String[] @default([])
   createdAt            DateTime @default(now())
 
   variationItem VariationItem @relation(fields: [variationItemId], references: [id])

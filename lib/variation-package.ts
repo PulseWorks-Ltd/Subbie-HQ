@@ -1,5 +1,30 @@
 import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheet, DayWorksSheetRecord } from "@prisma/client";
 
+// The 6 categories a Variation Package generation can include/exclude
+// (per-generation only — see VariationPackage.includedCategories). Order
+// matches the order these sections actually appear in the generated PDF
+// (see lib/variation-package-pdf.ts). Shared between the review dialog,
+// the generation API route, and the stored-package display so the set of
+// valid keys only ever lives in one place.
+export const PACKAGE_CATEGORIES = [
+  "quote",
+  "day_works_sheets",
+  "si_source_document",
+  "correspondence",
+  "linked_updates",
+  "photos"
+] as const;
+export type PackageCategory = (typeof PACKAGE_CATEGORIES)[number];
+
+export const PACKAGE_CATEGORY_LABELS: Record<PackageCategory, string> = {
+  quote: "Quote",
+  day_works_sheets: "Day Works Sheets",
+  si_source_document: "SI Source Document",
+  correspondence: "Correspondence",
+  linked_updates: "Linked Updates",
+  photos: "Photos"
+};
+
 export type DayWorksSheetWithLineItems = DayWorksSheet & {
   materials: DayWorksMaterial[];
   plant: DayWorksPlant[];

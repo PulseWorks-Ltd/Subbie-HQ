@@ -3,10 +3,13 @@ import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 
 export function HomepageView() {
+  // No min-h-screen/flex-1 stretch — same fix as app/(marketing)/layout.tsx,
+  // kept consistent here since this page renders its own header/footer
+  // outside that route group.
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col">
       <MarketingHeader />
-      <main className="flex-1">
+      <main>
         <section className="max-w-4xl mx-auto px-4 py-20 text-center flex flex-col items-center gap-6">
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight">Know Exactly What Your Contract Expects</h1>
           <p className="text-lg text-[#4c739a] dark:text-slate-400 max-w-2xl">
@@ -158,32 +161,35 @@ export function HomepageView() {
           </p>
         </section>
 
-        <section className="max-w-3xl mx-auto px-4 py-14 text-center">
-          <p className="italic text-[#4c739a] dark:text-slate-400">
-            &ldquo;[Pilot user quote — e.g. catching a risky clause, or getting a variation paid faster.]&rdquo;
-          </p>
-          <p className="text-sm font-bold mt-2">— [Name], [Trade], [Region]</p>
-        </section>
+        {/*
+          Social proof placeholder — hidden until a real pilot quote exists.
+          Drop the quote/name/trade/region in below and remove this comment
+          to bring the section back; keep the same markup/classes so it
+          matches the rest of the page without a rebuild.
+
+          <section className="max-w-3xl mx-auto px-4 py-14 text-center">
+            <p className="italic text-[#4c739a] dark:text-slate-400">
+              &ldquo;[Pilot user quote — e.g. catching a risky clause, or getting a variation paid faster.]&rdquo;
+            </p>
+            <p className="text-sm font-bold mt-2">— [Name], [Trade], [Region]</p>
+          </section>
+        */}
 
         <section className="bg-primary/5 dark:bg-primary/10 py-16">
           <div className="max-w-2xl mx-auto px-4 text-center flex flex-col items-center gap-6">
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
               Understand your contract. Protect your entitlement. Get paid for the work you actually do.
             </h2>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/signup"
-                className="h-11 px-6 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90"
-              >
-                Start Free Trial
-              </Link>
-              <Link
-                href="/signup"
-                className="h-11 px-6 flex items-center justify-center rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800"
-              >
-                Book a Demo
-              </Link>
-            </div>
+            {/* Sole CTA — "Book a Demo" was removed: it linked to /signup
+                identically to this button, and there's no real
+                demo-booking flow to point it at instead. Re-add once one
+                exists (e.g. a Calendly link or contact email). */}
+            <Link
+              href="/signup"
+              className="h-11 px-6 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90"
+            >
+              Start Free Trial
+            </Link>
           </div>
         </section>
       </main>

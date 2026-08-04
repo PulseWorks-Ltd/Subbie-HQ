@@ -28,7 +28,7 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
   }
 
   return (
-    <div className="min-h-screen px-4 py-12">
+    <div className="px-4 py-12">
       <div className="max-w-4xl mx-auto flex flex-col gap-10">
         <div className="text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -125,11 +125,19 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
                 <td className="py-2 px-4">✓</td>
                 <td className="py-2 px-4">✓</td>
               </tr>
+              {/*
+                Directional wording, not specific numbers — no usage-limit
+                enforcement exists yet (see lib/ai-usage.ts). The intended
+                real values once that's built are Starter 1/mo,
+                Professional 2/mo, Enterprise 4/mo — implement the limit
+                and restore these exact numbers here in the same change,
+                not the copy alone.
+              */}
               <tr className="border-b border-[#e7edf3] dark:border-slate-800">
                 <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Contract Reviews</td>
-                <td className="py-2 px-4">1/mo</td>
-                <td className="py-2 px-4">2/mo</td>
-                <td className="py-2 px-4">4/mo</td>
+                <td className="py-2 px-4">Includes monthly contract reviews</td>
+                <td className="py-2 px-4">More contract reviews included</td>
+                <td className="py-2 px-4">Highest contract review allowance</td>
               </tr>
               <tr className="border-b border-[#e7edf3] dark:border-slate-800">
                 <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">

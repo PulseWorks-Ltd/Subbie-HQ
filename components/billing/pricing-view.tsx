@@ -35,9 +35,12 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
           <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 mx-auto mb-4 dark:hidden" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 mx-auto mb-4 hidden dark:block" />
-          <h1 className="text-2xl font-black tracking-tight">Simple, per-organisation pricing</h1>
-          <p className="text-sm text-[#4c739a] dark:text-slate-400 mt-1">
-            Unlimited users on every plan. 14-day free trial, no charge until it ends.
+          <h1 className="text-2xl font-black tracking-tight">Simple Pricing That Doesn&apos;t Punish You for Being Busy</h1>
+          <p className="text-sm text-[#4c739a] dark:text-slate-400 mt-2 max-w-xl mx-auto">
+            Projects, Variations, Site Instructions, photos, correspondence, users — unlimited, on every plan,
+            always. The only thing that changes between tiers is your monthly contract review allowance and AI
+            drafting allowance, because that&apos;s the part that costs us something to run — we&apos;d rather
+            pass the saving to you than charge you for using the software you&apos;re already paying for.
           </p>
         </div>
 
@@ -84,6 +87,74 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
             );
           })}
         </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-[#cfdbe7] dark:border-slate-800">
+                <th className="text-left font-bold py-2 pr-4"></th>
+                <th className="text-left font-bold py-2 px-4">Starter</th>
+                <th className="text-left font-bold py-2 px-4">Professional</th>
+                <th className="text-left font-bold py-2 px-4">Enterprise</th>
+              </tr>
+            </thead>
+            <tbody className="text-[#4c739a] dark:text-slate-400">
+              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
+                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Price</td>
+                <td className="py-2 px-4">$49/mo</td>
+                <td className="py-2 px-4">$149/mo</td>
+                <td className="py-2 px-4">$249/mo</td>
+              </tr>
+              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
+                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">
+                  Projects, Variations, Site Instructions, Photos, Correspondence
+                </td>
+                <td className="py-2 px-4">Unlimited</td>
+                <td className="py-2 px-4">Unlimited</td>
+                <td className="py-2 px-4">Unlimited</td>
+              </tr>
+              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
+                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Users</td>
+                <td className="py-2 px-4">Unlimited</td>
+                <td className="py-2 px-4">Unlimited</td>
+                <td className="py-2 px-4">Unlimited</td>
+              </tr>
+              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
+                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Mobile app</td>
+                <td className="py-2 px-4">✓</td>
+                <td className="py-2 px-4">✓</td>
+                <td className="py-2 px-4">✓</td>
+              </tr>
+              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
+                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Contract Reviews</td>
+                <td className="py-2 px-4">1/mo</td>
+                <td className="py-2 px-4">2/mo</td>
+                <td className="py-2 px-4">4/mo</td>
+              </tr>
+              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
+                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">
+                  Update & email drafting help
+                </td>
+                <td className="py-2 px-4">Generous</td>
+                <td className="py-2 px-4">Higher</td>
+                <td className="py-2 px-4">Highest</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">
+                  Additional Contract Reviews
+                </td>
+                <td className="py-2 px-4">$10 each</td>
+                <td className="py-2 px-4">$10 each</td>
+                <td className="py-2 px-4">$10 each</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-sm italic text-[#4c739a] dark:text-slate-400 text-center">
+          14-day free trial on every plan. You&apos;ll know exactly what you&apos;re paying for before you&apos;re
+          ever charged.
+        </p>
       </div>
     </div>
   );

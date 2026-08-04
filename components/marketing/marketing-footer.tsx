@@ -60,8 +60,11 @@ export function MarketingFooter() {
             Compare & Guides
           </p>
           <FooterLink href="/compare/spreadsheets-and-paper" label="vs Spreadsheets & Paper" />
-          <FooterLink href="/guides/payment-claims-construction-contracts-act" label="Payment Claims Under the CCA" />
-          <FooterLink href="/guides/site-instruction-vs-variation" label="Site Instruction vs Variation" />
+          {/* Draft-only pages (see the "DRAFT" banner on each) — pulled from
+              nav/indexing until actually written; routes stay reachable
+              directly, see app/sitemap.ts and app/robots.ts. */}
+          <FooterPlaceholder label="Payment Claims Under the CCA" />
+          <FooterPlaceholder label="Site Instruction vs Variation" />
           <FooterPlaceholder label="vs Generic Construction Software" />
           <FooterPlaceholder label="More guides coming soon" />
         </div>

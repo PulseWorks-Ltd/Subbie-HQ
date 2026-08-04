@@ -14,12 +14,18 @@ const INDUSTRY_LINKS = [
   { href: "/industries/painting", label: "Painting Contractors" }
 ];
 
-const GUIDE_LINKS = [
-  { href: "/guides/payment-claims-construction-contracts-act", label: "Payment Claims Under the CCA" },
-  { href: "/guides/site-instruction-vs-variation", label: "Site Instruction vs Variation" }
+type NavLink = { href: string; label: string; disabled?: boolean };
+
+// Both currently disabled: draft-only pages (DRAFT banner), pulled from
+// nav/indexing until actually written — same treatment as the footer's
+// greyed-out Phase 2 placeholders. Routes stay reachable directly; see
+// app/sitemap.ts and app/robots.ts.
+const GUIDE_LINKS: NavLink[] = [
+  { href: "/guides/payment-claims-construction-contracts-act", label: "Payment Claims Under the CCA", disabled: true },
+  { href: "/guides/site-instruction-vs-variation", label: "Site Instruction vs Variation", disabled: true }
 ];
 
-function NavDropdown({ label, links }: { label: string; links: { href: string; label: string }[] }) {
+function NavDropdown({ label, links }: { label: string; links: NavLink[] }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -38,15 +44,21 @@ function NavDropdown({ label, links }: { label: string; links: { href: string; l
       {isOpen && (
         <div className="absolute top-full left-0 pt-2 z-50">
           <div className="flex flex-col rounded-lg border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark shadow-lg py-2 min-w-56">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="px-4 py-2 text-sm font-medium text-[#0d141b] dark:text-slate-50 hover:bg-[#e7edf3] dark:hover:bg-slate-800"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {links.map((link) =>
+              link.disabled ? (
+                <span key={link.href} className="px-4 py-2 text-sm font-medium text-[#0d141b]/40 dark:text-slate-50/30">
+                  {link.label}
+                </span>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="px-4 py-2 text-sm font-medium text-[#0d141b] dark:text-slate-50 hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
           </div>
         </div>
       )}
@@ -117,11 +129,17 @@ export function MarketingHeader() {
             </Link>
           ))}
           <p className="text-xs font-bold uppercase text-[#4c739a] dark:text-slate-400 mt-2">Guides</p>
-          {GUIDE_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium">
-              {link.label}
-            </Link>
-          ))}
+          {GUIDE_LINKS.map((link) =>
+            link.disabled ? (
+              <span key={link.href} className="text-sm font-medium text-[#0d141b]/40 dark:text-slate-50/30">
+                {link.label}
+              </span>
+            ) : (
+              <Link key={link.href} href={link.href} className="text-sm font-medium">
+                {link.label}
+              </Link>
+            )
+          )}
           <div className="flex gap-3 mt-4">
             <Link
               href="/login"

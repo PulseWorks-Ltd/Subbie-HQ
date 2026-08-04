@@ -33,6 +33,52 @@ function formatDate(date: Date | null | undefined) {
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// pdf-lib's standard fonts (Helvetica etc.) use WinAnsi encoding, a fixed
+// ~Windows-1252 character set, and THROW rather than skip a character
+// outside it — confirmed in production: "WinAnsi cannot encode "​"
+// (0x200b)" (a zero-width space) crashed an entire Variation Package
+// generation because it appeared once in a rendered email body. Real
+// email/user text regularly contains characters like this (zero-width
+// spaces, emoji, symbols), often invisibly, without the sender knowing.
+//
+// Empirically verified against pdf-lib directly (not assumed): smart
+// quotes, em/en dashes, ellipsis, and non-breaking space all already
+// encode correctly via WinAnsi — Windows-1252 natively includes them —
+// so this only touches characters that genuinely can't be encoded (zero-
+// width spaces, emoji, most symbol/dingbat characters, non-Latin
+// scripts), tested against the real font object via the exact call that
+// crashed in production (widthOfTextAtSize), not a hand-maintained guess
+// at WinAnsi's repertoire. That also makes this robust to any future
+// unsupported character, not just U+200B specifically.
+const encodabilityCache = new Map<string, boolean>();
+
+function canEncode(font: PDFFont, char: string): boolean {
+  const cached = encodabilityCache.get(char);
+  if (cached !== undefined) return cached;
+  let ok: boolean;
+  try {
+    font.widthOfTextAtSize(char, 10);
+    ok = true;
+  } catch {
+    ok = false;
+  }
+  encodabilityCache.set(char, ok);
+  return ok;
+}
+
+// Genuinely unencodable characters are stripped rather than replaced with
+// a placeholder glyph — a zero-width space has zero visual width anyway
+// (stripping it changes nothing visible), and for something like an
+// emoji or dingbat, dropping it silently is preferable to risking the
+// placeholder itself also being unencodable.
+function sanitizeForPdf(font: PDFFont, text: string): string {
+  let result = "";
+  for (const char of text) {
+    result += canEncode(font, char) ? char : "";
+  }
+  return result;
+}
+
 // Thin pagination-aware cursor around pdf-lib's page-at-a-time drawing API
 // — pdf-lib has no built-in flowed-text/pagination support, so this is the
 // minimum needed to lay out a multi-section, multi-page document without
@@ -87,12 +133,14 @@ class PdfWriter {
   }
 
   heading(text: string) {
+    text = sanitizeForPdf(this.boldFont, text);
     this.ensureSpace(28);
     this.page.drawText(text, { x: MARGIN, y: this.y, size: 14, font: this.boldFont, color: rgb(0.05, 0.08, 0.12) });
     this.y -= 22;
   }
 
   subheading(text: string) {
+    text = sanitizeForPdf(this.boldFont, text);
     this.ensureSpace(20);
     this.page.drawText(text, { x: MARGIN, y: this.y, size: 11, font: this.boldFont, color: rgb(0.1, 0.1, 0.12) });
     this.y -= 16;
@@ -103,7 +151,7 @@ class PdfWriter {
     const font = opts.bold ? this.boldFont : this.font;
     const indent = opts.indent ?? 0;
     const color = opts.color ? rgb(...opts.color) : rgb(0.15, 0.15, 0.18);
-    const lines = this.wrap(text, font, size, CONTENT_WIDTH - indent);
+    const lines = this.wrap(sanitizeForPdf(font, text), font, size, CONTENT_WIDTH - indent);
     for (const line of lines) {
       this.ensureSpace(size + 5);
       this.page.drawText(line, { x: MARGIN + indent, y: this.y, size, font, color });
@@ -115,6 +163,8 @@ class PdfWriter {
     this.ensureSpace(15);
     const font = opts.bold ? this.boldFont : this.font;
     const indent = opts.indent ?? 0;
+    left = sanitizeForPdf(font, left);
+    right = sanitizeForPdf(font, right);
     this.page.drawText(left, { x: MARGIN + indent, y: this.y, size: 10, font, color: rgb(0.15, 0.15, 0.18) });
     const rightWidth = font.widthOfTextAtSize(right, 10);
     this.page.drawText(right, {
@@ -442,7 +492,8 @@ export async function generateVariationPackagePdf(params: {
         });
         w.page.drawText("(image unavailable)", { x: x + 6, y: rowStartY - thumbSize / 2, size: 7, font });
       }
-      const caption = photo.fileName.length > 18 ? `${photo.fileName.slice(0, 15)}...` : photo.fileName;
+      const rawCaption = photo.fileName.length > 18 ? `${photo.fileName.slice(0, 15)}...` : photo.fileName;
+      const caption = sanitizeForPdf(font, rawCaption);
       w.page.drawText(caption, { x, y: rowStartY - thumbSize - 12, size: 7, font, color: rgb(0.4, 0.4, 0.45) });
 
       col += 1;

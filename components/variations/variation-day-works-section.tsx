@@ -21,14 +21,14 @@ function toDateInputValue(date: Date) {
   return new Date(date).toISOString().slice(0, 10);
 }
 
-function draftRecordsToRows(records: DraftSheetRecord[]): SheetRecordRow[] {
-  if (records.length === 0) return [emptySheetRecordRow("Sheet 1")];
+function draftRecordsToRows(records: DraftSheetRecord[], defaultRatePerHour: string): SheetRecordRow[] {
+  if (records.length === 0) return [emptySheetRecordRow("Sheet 1", defaultRatePerHour)];
   return records.map((record) => ({
     sheetNumber: record.sheetNumber,
     teamLeaderCount: String(record.teamLeaderCount),
     teamMemberCount: String(record.teamMemberCount),
     totalHours: record.totalHours != null ? String(record.totalHours) : "",
-    ratePerHour: "",
+    ratePerHour: defaultRatePerHour,
     date: record.date ?? "",
     startTime: record.startTime ?? "",
     finishTime: record.finishTime ?? "",
@@ -431,11 +431,13 @@ function PlantSection({
 function SheetRecordsSection({
   projectId,
   itemId,
-  sheet
+  sheet,
+  defaultRatePerHour
 }: {
   projectId: string;
   itemId: string;
   sheet: DayWorksSheetWithDetails;
+  defaultRatePerHour: string;
 }) {
   const router = useRouter();
   const [isExtracting, setIsExtracting] = useState(false);
@@ -456,11 +458,11 @@ function SheetRecordsSection({
       setExtractError(
         typeof body?.error === "string" ? body.error : "Could not read this sheet automatically. You can still add a summary manually."
       );
-      setReviewState({ rows: [emptySheetRecordRow("Sheet 1")], warning: null });
+      setReviewState({ rows: [emptySheetRecordRow("Sheet 1", defaultRatePerHour)], warning: null });
       return;
     }
 
-    setReviewState({ rows: draftRecordsToRows(body.records ?? []), warning: body.warning ?? null });
+    setReviewState({ rows: draftRecordsToRows(body.records ?? [], defaultRatePerHour), warning: body.warning ?? null });
   }
 
   function openManualEdit() {
@@ -527,6 +529,7 @@ function SheetRecordsSection({
           sheetId={sheet.id}
           initialRows={reviewState.rows}
           warning={reviewState.warning}
+          defaultRatePerHour={defaultRatePerHour}
           onClose={() => setReviewState(null)}
           onSaved={() => {
             setReviewState(null);
@@ -552,6 +555,14 @@ export function VariationDayWorksSection({
   const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
   const [pendingReview, setPendingReview] = useState<{ sheetId: string; rows: SheetRecordRow[]; warning: string | null } | null>(null);
+
+  // The project's configured Normal-hours Day Works rate, pre-filled onto
+  // every row a review dialog opens with (Task 1.1) — most sheets are
+  // standard hours, so this is the sensible default; genuinely empty when
+  // Settings has no rate configured, same graceful-degradation principle
+  // already used elsewhere in this feature.
+  const defaultRatePerHour =
+    contractTerms?.dayWorksRateNormal != null ? String(Number(contractTerms.dayWorksRateNormal)) : "";
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -579,7 +590,11 @@ export function VariationDayWorksSection({
     const extractBody = await extractResponse.json().catch(() => null);
     if (!extractResponse.ok) return;
 
-    setPendingReview({ sheetId, rows: draftRecordsToRows(extractBody.records ?? []), warning: extractBody.warning ?? null });
+    setPendingReview({
+      sheetId,
+      rows: draftRecordsToRows(extractBody.records ?? [], defaultRatePerHour),
+      warning: extractBody.warning ?? null
+    });
   }
 
   async function handleDelete(sheetId: string) {
@@ -631,7 +646,12 @@ export function VariationDayWorksSection({
                   </button>
                 </div>
 
-                <SheetRecordsSection projectId={projectId} itemId={itemId} sheet={sheet} />
+                <SheetRecordsSection
+                  projectId={projectId}
+                  itemId={itemId}
+                  sheet={sheet}
+                  defaultRatePerHour={defaultRatePerHour}
+                />
 
                 <MaterialsSection projectId={projectId} itemId={itemId} sheet={sheet} />
 
@@ -665,6 +685,7 @@ export function VariationDayWorksSection({
           sheetId={pendingReview.sheetId}
           initialRows={pendingReview.rows}
           warning={pendingReview.warning}
+          defaultRatePerHour={defaultRatePerHour}
           onClose={() => setPendingReview(null)}
           onSaved={() => {
             setPendingReview(null);

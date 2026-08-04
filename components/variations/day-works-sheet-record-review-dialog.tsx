@@ -27,13 +27,16 @@ export type SheetRecordRow = {
   confidence: number | null;
 };
 
-export function emptySheetRecordRow(sheetNumber: string): SheetRecordRow {
+// ratePerHour defaults to "" (unchanged behaviour) unless a caller passes
+// the project's configured Normal-hours rate — see DayWorksSheetRecordReviewDialog's
+// defaultRatePerHour prop and this feature's task notes.
+export function emptySheetRecordRow(sheetNumber: string, ratePerHour = ""): SheetRecordRow {
   return {
     sheetNumber,
     teamLeaderCount: "",
     teamMemberCount: "",
     totalHours: "",
-    ratePerHour: "",
+    ratePerHour,
     date: "",
     startTime: "",
     finishTime: "",
@@ -64,6 +67,7 @@ export function DayWorksSheetRecordReviewDialog({
   sheetId,
   initialRows,
   warning,
+  defaultRatePerHour,
   onClose,
   onSaved
 }: {
@@ -72,6 +76,11 @@ export function DayWorksSheetRecordReviewDialog({
   sheetId: string;
   initialRows: SheetRecordRow[];
   warning?: string | null;
+  // The project's configured Normal-hours Day Works rate (Project
+  // Settings), pre-filled on a manually-added row — most sheets are
+  // standard hours, so this saves re-typing the same rate on every sheet
+  // while staying a plain, freely-editable default (Task 1.2/1.4).
+  defaultRatePerHour?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -90,7 +99,7 @@ export function DayWorksSheetRecordReviewDialog({
   }
 
   function addRow() {
-    setRows((current) => [...current, emptySheetRecordRow(`Sheet ${current.length + 1}`)]);
+    setRows((current) => [...current, emptySheetRecordRow(`Sheet ${current.length + 1}`, defaultRatePerHour)]);
   }
 
   const grandTotal = rows.reduce((sum, row) => sum + (rowTotal(row) ?? 0), 0);

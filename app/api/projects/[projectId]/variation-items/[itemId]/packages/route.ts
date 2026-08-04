@@ -48,9 +48,16 @@ export async function POST(request: Request, context: { params: { projectId: str
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const [photos, correspondence, dayWorksSheets, contractTerms] = await Promise.all([
+  const [photos, correspondence, dayWorksSheets, updates, contractTerms] = await Promise.all([
     prisma.variationPhoto.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
-    prisma.correspondence.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
+    prisma.correspondence.findMany({
+      where: { variationItemId: itemId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        inboundEmail: true,
+        sourceUpdate: { include: { author: true, recipients: true } }
+      }
+    }),
     prisma.dayWorksSheet.findMany({
       where: { variationItemId: itemId },
       orderBy: { createdAt: "desc" },
@@ -59,6 +66,11 @@ export async function POST(request: Request, context: { params: { projectId: str
         plant: { orderBy: { createdAt: "asc" } },
         sheetRecords: { orderBy: { sortOrder: "asc" } }
       }
+    }),
+    prisma.update.findMany({
+      where: { variationItemId: itemId },
+      orderBy: { createdAt: "asc" },
+      include: { author: true, attachments: true }
     }),
     prisma.contractTerms.findUnique({ where: { projectId } })
   ]);
@@ -71,6 +83,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     photos,
     correspondence,
     dayWorksSheets,
+    updates,
     contractTerms,
     generatedByName
   });

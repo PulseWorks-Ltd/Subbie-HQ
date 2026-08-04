@@ -6,7 +6,7 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ["localhost:3000"]
     },
-    serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist", "tesseract.js"]
+    serverComponentsExternalPackages: ["pdf-parse", "pdfjs-dist", "tesseract.js", "@napi-rs/canvas"]
   },
   // This project has no ESLint config (no .eslintrc, no eslint dependency)
   // — without this, `next build`'s lint step launches an interactive

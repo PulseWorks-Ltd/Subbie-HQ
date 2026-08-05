@@ -53,7 +53,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       body: reply.body
     }))
   ];
-  const photoCount = update.attachments.length + update.replies.reduce((sum, reply) => sum + reply.attachments.length, 0);
+  const attachmentCount = update.attachments.length + update.replies.reduce((sum, reply) => sum + reply.attachments.length, 0);
 
   try {
     const drafted = await draftUpdateThreadSummaryEmail(
@@ -61,7 +61,7 @@ export async function POST(request: Request, context: { params: { projectId: str
         projectName: project?.name ?? "the project",
         authorName: (user ? formatUserName(user) : null) ?? user?.email ?? "The team",
         entries,
-        photoCount
+        attachmentCount
       },
       { organisationId: project?.organisationId ?? null, userId }
     );

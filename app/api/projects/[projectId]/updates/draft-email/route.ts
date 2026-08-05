@@ -8,7 +8,7 @@ import { formatUserName } from "@/lib/user-display";
 
 const requestSchema = z.object({
   body: z.string().min(1),
-  photoCount: z.number().int().min(0).default(0)
+  attachmentCount: z.number().int().min(0).default(0)
 });
 
 // Preview step before the real "Send" — drafts a subject/body from the
@@ -47,7 +47,7 @@ export async function POST(request: Request, context: { params: { projectId: str
         roughText: payload.body,
         projectName: project.name,
         authorName: (user ? formatUserName(user) : null) ?? user?.email ?? "The team",
-        photoCount: payload.photoCount
+        attachmentCount: payload.attachmentCount
       },
       { organisationId: project.organisationId, userId }
     );

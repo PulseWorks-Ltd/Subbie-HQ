@@ -26,8 +26,12 @@ export default async function PicturesPage({ params }: { params: Promise<{ proje
   ];
 
   const [updateAttachments, variationPhotos, taggableItems, contractTerms] = await Promise.all([
+    // Only IMAGE attachments flow into Pictures automatically (Task 4.1) —
+    // Pictures is specifically a photo record, so a PDF/DOCX attached to an
+    // Update (now possible — see lib/update-attachments.ts) shouldn't
+    // appear here even though it's still visible on the Update itself.
     prisma.updateAttachment.findMany({
-      where: { update: { projectId } },
+      where: { update: { projectId }, contentType: { startsWith: "image/" } },
       include: { update: { select: { id: true, createdAt: true, variationItemId: true } } },
       orderBy: { createdAt: "desc" }
     }),

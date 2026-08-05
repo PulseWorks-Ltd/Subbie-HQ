@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
+import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
 import { GenerateOutboundEmailPanel } from "@/components/updates/generate-outbound-email-panel";
 import { formatUserName } from "@/lib/user-display";
+import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -48,7 +50,41 @@ export function UpdateThread({
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const [replyFileError, setReplyFileError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Same validate-then-add/remove pattern as UpdateComposer (Task 2.1) —
+  // rejects an invalid selection with a message rather than silently
+  // dropping it or letting the server reject it after a full upload.
+  function addReplyFiles(selected: FileList | null) {
+    if (!selected || selected.length === 0) return;
+    setReplyFileError(null);
+    const incoming = Array.from(selected);
+
+    const invalidType = incoming.find((file) => !isAllowedAttachmentType(file.type));
+    if (invalidType) {
+      setReplyFileError(`"${invalidType.name}" isn't a supported file type. Attach images, PDFs, or DOCX files.`);
+      return;
+    }
+    const tooLarge = incoming.find((file) => file.size > MAX_ATTACHMENT_SIZE_BYTES);
+    if (tooLarge) {
+      setReplyFileError(`"${tooLarge.name}" is over the ${MAX_ATTACHMENT_SIZE_BYTES / (1024 * 1024)}MB limit per attachment.`);
+      return;
+    }
+
+    setReplyFiles((current) => {
+      const combined = [...current, ...incoming];
+      if (combined.length > MAX_ATTACHMENTS) {
+        setReplyFileError(`You can attach up to ${MAX_ATTACHMENTS} files per update.`);
+        return current;
+      }
+      return combined;
+    });
+  }
+
+  function removeReplyFile(index: number) {
+    setReplyFiles((current) => current.filter((_, i) => i !== index));
+  }
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [sentMessage, setSentMessage] = useState<string | null>(null);
   const [isEditingTag, setIsEditingTag] = useState(false);
@@ -82,10 +118,10 @@ export function UpdateThread({
     router.refresh();
   }
 
-  // Every photo across the whole thread (the top-level update plus every
-  // reply), so the outbound-email panel can offer them all for selection —
-  // not just the ones on the most recent entry.
-  const photoOptions = [
+  // Every attachment across the whole thread (the top-level update plus
+  // every reply, any file type) so the outbound-email panel can offer
+  // them all for selection — not just the ones on the most recent entry.
+  const attachmentOptions = [
     ...update.attachments.map((attachment) => ({
       id: attachment.id,
       fileName: attachment.fileName,
@@ -115,6 +151,7 @@ export function UpdateThread({
     setIsSubmitting(false);
     setReplyBody("");
     setReplyFiles([]);
+    setReplyFileError(null);
     setIsReplying(false);
     router.refresh();
   }
@@ -237,17 +274,24 @@ export function UpdateThread({
               placeholder="Write a reply..."
               className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
-            <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400">
-              <span className="material-symbols-outlined text-base">photo_camera</span>
-              {replyFiles.length > 0 ? `${replyFiles.length} photo${replyFiles.length > 1 ? "s" : ""} attached` : "Attach photos"}
+            <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400 cursor-pointer">
+              <span className="material-symbols-outlined text-base">attach_file</span>
+              {replyFiles.length > 0
+                ? `${replyFiles.length} file${replyFiles.length > 1 ? "s" : ""} attached`
+                : "Attach photos, PDFs, or DOCX"}
               <input
                 type="file"
-                accept="image/*"
+                accept={ATTACHMENT_ACCEPT}
                 multiple
-                onChange={(event) => setReplyFiles(Array.from(event.target.files ?? []))}
+                onChange={(event) => {
+                  addReplyFiles(event.target.files);
+                  event.target.value = "";
+                }}
                 className="hidden"
               />
             </label>
+            <AttachmentPreviewList files={replyFiles} onRemove={removeReplyFile} />
+            {replyFileError && <p className="text-xs text-red-600 dark:text-red-400">{replyFileError}</p>}
             <div className="flex gap-2 justify-end">
               <button
                 type="button"
@@ -270,7 +314,7 @@ export function UpdateThread({
             projectId={projectId}
             updateId={update.id}
             contacts={contacts}
-            photoOptions={photoOptions}
+            attachmentOptions={attachmentOptions}
             onCancel={() => setIsGeneratingEmail(false)}
             onSent={() => {
               setIsGeneratingEmail(false);

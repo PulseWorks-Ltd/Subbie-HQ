@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VariationItem } from "@prisma/client";
+import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
+import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type Recipient = { contactId?: string; email: string; label: string };
@@ -44,6 +46,43 @@ export function UpdateComposer({
   const openItems = taggableItems.filter((item) => item.status !== "complete");
   const eligibleContacts = contacts.filter((contact) => contact.email);
 
+  // Two separate <input> elements can both feed this same list (mobile's
+  // camera capture and its file/document picker, Task 2.2) — selecting
+  // from either ADDS to whatever's already picked rather than replacing
+  // it, so using one doesn't wipe out a selection already made with the
+  // other. Invalid files (wrong type, or over MAX_ATTACHMENT_SIZE_BYTES)
+  // are rejected client-side with a message rather than silently dropped
+  // or left for the server to reject after a full upload attempt.
+  function addFiles(selected: FileList | null) {
+    if (!selected || selected.length === 0) return;
+    setError(null);
+    const incoming = Array.from(selected);
+
+    const invalidType = incoming.find((file) => !isAllowedAttachmentType(file.type));
+    if (invalidType) {
+      setError(`"${invalidType.name}" isn't a supported file type. Attach images, PDFs, or DOCX files.`);
+      return;
+    }
+    const tooLarge = incoming.find((file) => file.size > MAX_ATTACHMENT_SIZE_BYTES);
+    if (tooLarge) {
+      setError(`"${tooLarge.name}" is over the ${MAX_ATTACHMENT_SIZE_BYTES / (1024 * 1024)}MB limit per attachment.`);
+      return;
+    }
+
+    setFiles((current) => {
+      const combined = [...current, ...incoming];
+      if (combined.length > MAX_ATTACHMENTS) {
+        setError(`You can attach up to ${MAX_ATTACHMENTS} files per update.`);
+        return current;
+      }
+      return combined;
+    });
+  }
+
+  function removeFile(index: number) {
+    setFiles((current) => current.filter((_, i) => i !== index));
+  }
+
   function toggleContactRecipient(contact: ContactOption) {
     setRecipients((current) => {
       const exists = current.some((r) => r.contactId === contact.id);
@@ -83,7 +122,7 @@ export function UpdateComposer({
       const response = await fetch(`/api/projects/${projectId}/updates/draft-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body, photoCount: files.length })
+        body: JSON.stringify({ body, attachmentCount: files.length })
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -201,18 +240,44 @@ export function UpdateComposer({
       />
 
       <div className="flex items-center gap-3 flex-wrap">
+        {isMobile && (
+          <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400 cursor-pointer">
+            <span className="material-symbols-outlined text-lg">photo_camera</span>
+            Take photo
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              onChange={(event) => {
+                addFiles(event.target.files);
+                event.target.value = "";
+              }}
+              className="hidden"
+            />
+          </label>
+        )}
+
         <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400 cursor-pointer">
-          <span className="material-symbols-outlined text-lg">photo_camera</span>
-          {files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} attached` : isMobile ? "Add photo" : "Attach photos"}
+          <span className="material-symbols-outlined text-lg">attach_file</span>
+          {isMobile ? "Attach files" : "Attach photos, PDFs, or DOCX"}
           <input
             type="file"
-            accept="image/*"
-            capture={isMobile ? "environment" : undefined}
+            accept={ATTACHMENT_ACCEPT}
             multiple
-            onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+            onChange={(event) => {
+              addFiles(event.target.files);
+              event.target.value = "";
+            }}
             className="hidden"
           />
         </label>
+
+        {files.length > 0 && (
+          <span className="text-xs font-medium text-[#4c739a] dark:text-slate-400">
+            {files.length} file{files.length > 1 ? "s" : ""} attached
+          </span>
+        )}
 
         <button
           type="button"
@@ -226,6 +291,9 @@ export function UpdateComposer({
           {isTranscribing ? "Transcribing..." : isRecording ? "Stop recording" : "Record voice note"}
         </button>
       </div>
+
+      <AttachmentPreviewList files={files} onRemove={removeFile} />
+
       {transcribeError && <p className="text-xs text-red-600 dark:text-red-400">{transcribeError}</p>}
 
       {openItems.length > 0 && (

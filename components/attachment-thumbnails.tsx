@@ -1,6 +1,7 @@
 import { UseAsDayWorksSheetAction, type TaggableItem } from "@/components/day-works/use-as-day-works-sheet-action";
+import { attachmentKind, canUseAsDayWorksSheet } from "@/lib/update-attachments";
 
-type AttachmentRef = { id: string; fileName: string };
+type AttachmentRef = { id: string; fileName: string; contentType: string };
 
 export function AttachmentThumbnails({
   projectId,
@@ -12,7 +13,7 @@ export function AttachmentThumbnails({
   projectId: string;
   attachments: AttachmentRef[];
   // Optional: only Update-thread callers pass these, to offer "Use as Day
-  // Works Sheet" per photo (Task 1.1a). Omitted entirely elsewhere (e.g.
+  // Works Sheet" per attachment (Task 1.1a). Omitted entirely elsewhere (e.g.
   // any other reuse of this component) just hides that action.
   taggableItems?: TaggableItem[];
   defaultVariationItemId?: string | null;
@@ -24,17 +25,29 @@ export function AttachmentThumbnails({
     <div className="flex gap-2 flex-wrap mt-2 mb-1">
       {attachments.map((attachment) => {
         const href = `/api/projects/${projectId}/attachments/${attachment.id}/file`;
+        const kind = attachmentKind(attachment.contentType);
         return (
           <div key={attachment.id} className="relative">
             <a href={href} target="_blank" rel="noreferrer" className="block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={href}
-                alt={attachment.fileName}
-                className="size-16 rounded-lg object-cover border border-[#e7edf3] dark:border-slate-800"
-              />
+              {kind === "image" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={href}
+                  alt={attachment.fileName}
+                  className="size-16 rounded-lg object-cover border border-[#e7edf3] dark:border-slate-800"
+                />
+              ) : (
+                <div className="size-16 rounded-lg border border-[#e7edf3] dark:border-slate-800 bg-[#f6f7f8] dark:bg-slate-800 flex flex-col items-center justify-center gap-0.5 p-1">
+                  <span className="material-symbols-outlined text-lg text-[#4c739a] dark:text-slate-400">
+                    {kind === "pdf" ? "picture_as_pdf" : "description"}
+                  </span>
+                  <span className="text-[8px] leading-tight text-center text-[#4c739a] dark:text-slate-400 truncate w-full">
+                    {attachment.fileName}
+                  </span>
+                </div>
+              )}
             </a>
-            {taggableItems && (
+            {taggableItems && canUseAsDayWorksSheet(attachment.contentType) && (
               <div className="absolute -bottom-1 -right-1 size-6 flex items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-700 shadow-sm">
                 <UseAsDayWorksSheetAction
                   projectId={projectId}

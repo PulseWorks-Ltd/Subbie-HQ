@@ -7,8 +7,7 @@ import { sendReplyNotificationEmail } from "@/lib/email";
 import { uploadToS3 } from "@/lib/s3";
 import { sendExternalUpdateAndLog } from "@/lib/external-update";
 import { formatUserName } from "@/lib/user-display";
-
-const MAX_ATTACHMENTS = 4;
+import { MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
 const recipientSchema = z
   .object({
@@ -97,10 +96,19 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const files = formData.getAll("files").filter((entry): entry is File => entry instanceof File && entry.size > 0);
   if (files.length > MAX_ATTACHMENTS) {
-    return NextResponse.json({ error: `You can attach up to ${MAX_ATTACHMENTS} photos.` }, { status: 400 });
+    return NextResponse.json({ error: `You can attach up to ${MAX_ATTACHMENTS} files.` }, { status: 400 });
   }
-  if (files.some((file) => !file.type.startsWith("image/"))) {
-    return NextResponse.json({ error: "Only image files can be attached." }, { status: 400 });
+  if (files.some((file) => !isAllowedAttachmentType(file.type))) {
+    return NextResponse.json(
+      { error: "Attachments must be an image, PDF, or DOCX file." },
+      { status: 400 }
+    );
+  }
+  if (files.some((file) => file.size > MAX_ATTACHMENT_SIZE_BYTES)) {
+    return NextResponse.json(
+      { error: `Each attachment must be under ${Math.floor(MAX_ATTACHMENT_SIZE_BYTES / (1024 * 1024))}MB.` },
+      { status: 400 }
+    );
   }
 
   let parent = null;

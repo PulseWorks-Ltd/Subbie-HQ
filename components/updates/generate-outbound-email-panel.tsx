@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
-type PhotoOption = { id: string; fileName: string; authorLabel: string };
+type AttachmentOption = { id: string; fileName: string; authorLabel: string };
 type Recipient = { contactId?: string; email: string; label: string };
 
 // Recipient picker + AI-draft-then-edit-then-send flow for generating an
@@ -15,20 +15,20 @@ export function GenerateOutboundEmailPanel({
   projectId,
   updateId,
   contacts,
-  photoOptions,
+  attachmentOptions,
   onCancel,
   onSent
 }: {
   projectId: string;
   updateId: string;
   contacts: ContactOption[];
-  photoOptions: PhotoOption[];
+  attachmentOptions: AttachmentOption[];
   onCancel: () => void;
   onSent: () => void;
 }) {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [oneOffEmail, setOneOffEmail] = useState("");
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+  const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
   const [drafted, setDrafted] = useState<{ subject: string; body: string } | null>(null);
   const [isDrafting, setIsDrafting] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
@@ -60,8 +60,8 @@ export function GenerateOutboundEmailPanel({
     setRecipients((current) => current.filter((r) => r.email !== email));
   }
 
-  function togglePhoto(id: string) {
-    setSelectedPhotoIds((current) => (current.includes(id) ? current.filter((photoId) => photoId !== id) : [...current, id]));
+  function toggleAttachment(id: string) {
+    setSelectedAttachmentIds((current) => (current.includes(id) ? current.filter((attachmentId) => attachmentId !== id) : [...current, id]));
   }
 
   async function handleDraft() {
@@ -95,7 +95,7 @@ export function GenerateOutboundEmailPanel({
           subject: drafted.subject,
           body: drafted.body,
           recipients: recipients.map((r) => ({ contactId: r.contactId, email: r.email })),
-          attachmentIds: selectedPhotoIds
+          attachmentIds: selectedAttachmentIds
         })
       });
       const data = await response.json().catch(() => ({}));
@@ -167,14 +167,18 @@ export function GenerateOutboundEmailPanel({
         )}
       </div>
 
-      {photoOptions.length > 0 && (
+      {attachmentOptions.length > 0 && (
         <div>
-          <p className="text-xs font-bold mb-1">Include photos</p>
+          <p className="text-xs font-bold mb-1">Include attachments</p>
           <div className="flex flex-col gap-1">
-            {photoOptions.map((photo) => (
-              <label key={photo.id} className="flex items-center gap-2 text-xs">
-                <input type="checkbox" checked={selectedPhotoIds.includes(photo.id)} onChange={() => togglePhoto(photo.id)} />
-                {photo.fileName} <span className="text-[#4c739a] dark:text-slate-400">— {photo.authorLabel}</span>
+            {attachmentOptions.map((attachment) => (
+              <label key={attachment.id} className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={selectedAttachmentIds.includes(attachment.id)}
+                  onChange={() => toggleAttachment(attachment.id)}
+                />
+                {attachment.fileName} <span className="text-[#4c739a] dark:text-slate-400">— {attachment.authorLabel}</span>
               </label>
             ))}
           </div>

@@ -1144,7 +1144,10 @@ export async function draftExternalUpdateEmail(
     roughText: string;
     projectName: string;
     authorName: string;
-    photoCount: number;
+    // Total count across all attachment types (image/PDF/DOCX) — never
+    // assume "photo" in the drafted wording, since an attachment might be
+    // a PDF or DOCX (see lib/update-attachments.ts).
+    attachmentCount: number;
   },
   usageContext: Omit<AiUsageContext, "feature">
 ): Promise<DraftedUpdateEmail> {
@@ -1160,8 +1163,8 @@ export async function draftExternalUpdateEmail(
           '{"subject": string, "body": string}. ' +
           "subject: a short, clear subject line referencing the project and that this is a progress update. " +
           "body: a complete, ready-to-send email — an appropriate greeting, a clearly-written summary of the work/progress described in the rough notes (do not invent details not present in the notes), " +
-          (params.photoCount > 0
-            ? `a brief mention that ${params.photoCount} photo${params.photoCount === 1 ? " is" : "s are"} attached, `
+          (params.attachmentCount > 0
+            ? `a brief mention that ${params.attachmentCount} attachment${params.attachmentCount === 1 ? " is" : "s are"} included, `
             : "") +
           "a professional sign-off. " +
           "Do not include placeholder brackets like [Your Name] — sign off with the author's name given below. " +
@@ -1193,7 +1196,7 @@ export async function draftUpdateThreadSummaryEmail(
     projectName: string;
     authorName: string;
     entries: { authorName: string; createdAt: Date; body: string }[];
-    photoCount: number;
+    attachmentCount: number;
   },
   usageContext: Omit<AiUsageContext, "feature">
 ): Promise<DraftedUpdateEmail> {
@@ -1213,8 +1216,8 @@ export async function draftUpdateThreadSummaryEmail(
           '{"subject": string, "body": string}. ' +
           "subject: a short, clear subject line referencing the project and that this is a progress update. " +
           "body: a complete, ready-to-send email that summarises the WHOLE thread — cover every distinct point raised across all entries below, not just the most recent one, written as one coherent narrative rather than a list of separate messages. Do not invent details not present in the thread. " +
-          (params.photoCount > 0
-            ? `a brief mention that ${params.photoCount} photo${params.photoCount === 1 ? " is" : "s are"} attached, `
+          (params.attachmentCount > 0
+            ? `a brief mention that ${params.attachmentCount} attachment${params.attachmentCount === 1 ? " is" : "s are"} included, `
             : "") +
           "a professional sign-off. " +
           "Do not include placeholder brackets like [Your Name] — sign off with the author's name given below (the person sending this summary, not necessarily every author quoted in the thread). " +

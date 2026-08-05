@@ -33,6 +33,9 @@ export async function DELETE(
   const photo = await prisma.variationPhoto.findFirst({ where: { id: photoId, variationItemId: itemId } });
   if (photo) {
     await deleteFromS3(photo.storageKey).catch(() => {});
+    if (photo.thumbnailStorageKey) {
+      await deleteFromS3(photo.thumbnailStorageKey).catch(() => {});
+    }
     await prisma.variationPhoto.delete({ where: { id: photoId } });
   }
 

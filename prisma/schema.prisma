@@ -1227,6 +1227,9 @@ model VariationPhoto {
   fileName        String
   storageKey      String
   contentType     String
+  // Same "small generated display copy, original untouched" pattern as
+  // UpdateAttachment.thumbnailStorageKey — see lib/image-thumbnails.ts.
+  thumbnailStorageKey String?
   createdAt       DateTime @default(now())
 
   variationItem VariationItem @relation(fields: [variationItemId], references: [id])
@@ -1358,6 +1361,14 @@ model UpdateAttachment {
   fileName    String
   storageKey  String
   contentType String
+  // A small (~800px, JPEG) display copy generated at upload time for
+  // image attachments only — see lib/image-thumbnails.ts. Null for non-
+  // image attachments (PDF/DOCX never get one) and for any attachment
+  // uploaded before this field existed; the file route falls back to
+  // serving the original itself whenever this is unset, so nothing ever
+  // breaks, it just isn't lightweight yet. The original storageKey above
+  // is never touched by this — full quality, always.
+  thumbnailStorageKey String?
   createdAt   DateTime @default(now())
 
   update Update @relation(fields: [updateId], references: [id])

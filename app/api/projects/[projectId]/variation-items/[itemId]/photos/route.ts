@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
+import { generateThumbnail } from "@/lib/image-thumbnails";
 
 const MAX_PHOTOS = 10;
 
@@ -77,8 +78,22 @@ export async function POST(request: Request, context: { params: { projectId: str
     const buffer = new Uint8Array(await file.arrayBuffer());
     const uploadKey = `projects/${projectId}/variation-items/${itemId}/photos/${Date.now()}-${file.name}`;
     const { storageKey } = await uploadToS3({ key: uploadKey, body: buffer, contentType: file.type });
+
+    // Best-effort, same as the Update-attachment upload path — a
+    // thumbnail failing to generate must never block the actual photo
+    // upload; the file route falls back to the original when unset.
+    let thumbnailStorageKey: string | null = null;
+    try {
+      const thumbnailBuffer = await generateThumbnail(buffer);
+      const thumbnailKey = `projects/${projectId}/variation-items/${itemId}/photos/thumb-${Date.now()}-${file.name}.jpg`;
+      const thumbnailUpload = await uploadToS3({ key: thumbnailKey, body: thumbnailBuffer, contentType: "image/jpeg" });
+      thumbnailStorageKey = thumbnailUpload.storageKey;
+    } catch {
+      // fall through with thumbnailStorageKey left null
+    }
+
     const photo = await prisma.variationPhoto.create({
-      data: { variationItemId: itemId, fileName: file.name, storageKey, contentType: file.type }
+      data: { variationItemId: itemId, fileName: file.name, storageKey, contentType: file.type, thumbnailStorageKey }
     });
     photos.push(photo);
   }

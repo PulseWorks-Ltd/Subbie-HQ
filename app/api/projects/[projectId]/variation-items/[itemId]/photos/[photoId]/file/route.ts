@@ -39,6 +39,12 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const signedUrl = await getSignedDownloadUrl(photo.storageKey);
+  // ?variant=thumbnail serves the small generated display copy when one
+  // exists (see lib/image-thumbnails.ts) — falls back to the original for
+  // pre-thumbnail-feature rows or a generation failure at upload time.
+  const wantsThumbnail = new URL(request.url).searchParams.get("variant") === "thumbnail";
+  const key = wantsThumbnail && photo.thumbnailStorageKey ? photo.thumbnailStorageKey : photo.storageKey;
+
+  const signedUrl = await getSignedDownloadUrl(key);
   return NextResponse.redirect(signedUrl);
 }

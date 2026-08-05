@@ -30,9 +30,16 @@ export function AttachmentThumbnails({
           <div key={attachment.id} className="relative">
             <a href={href} target="_blank" rel="noreferrer" className="block">
               {kind === "image" ? (
+                // Stored derivative (~800px, generated at upload time — see
+                // lib/image-thumbnails.ts), not the full original — the
+                // click-through above still opens the full-quality original
+                // untouched (Task 2.3). Falls back to the original itself
+                // for any attachment uploaded before this feature existed
+                // (thumbnailStorageKey null — the file route serves the
+                // original when no derivative is on file).
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={href}
+                  src={`${href}?variant=thumbnail`}
                   alt={attachment.fileName}
                   className="size-16 rounded-lg object-cover border border-[#e7edf3] dark:border-slate-800"
                 />

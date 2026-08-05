@@ -71,9 +71,12 @@ export function PicturesView({
           {filteredItems.map((item) => (
             <div key={item.id} className="flex flex-col gap-1">
               <a href={item.href} target="_blank" rel="noreferrer">
+                {/* Stored derivative, not the full original (Task 2.2) —
+                    click-through still opens the full-quality original
+                    untouched (Task 2.3). */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.href}
+                  src={`${item.href}?variant=thumbnail`}
                   alt={item.linkedLabel}
                   className="aspect-square w-full rounded-lg object-cover border border-[#e7edf3] dark:border-slate-800"
                 />

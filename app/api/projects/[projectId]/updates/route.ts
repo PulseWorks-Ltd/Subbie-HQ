@@ -7,7 +7,8 @@ import { sendReplyNotificationEmail } from "@/lib/email";
 import { uploadToS3 } from "@/lib/s3";
 import { sendExternalUpdateAndLog } from "@/lib/external-update";
 import { formatUserName } from "@/lib/user-display";
-import { MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
+import { MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType, attachmentKind } from "@/lib/update-attachments";
+import { generateThumbnail } from "@/lib/image-thumbnails";
 
 const recipientSchema = z
   .object({
@@ -224,8 +225,25 @@ export async function POST(request: Request, context: { params: { projectId: str
     const buffer = new Uint8Array(await file.arrayBuffer());
     const uploadKey = `projects/${projectId}/updates/${update.id}/${Date.now()}-${file.name}`;
     const { storageKey } = await uploadToS3({ key: uploadKey, body: buffer, contentType: file.type });
+
+    // Best-effort — a thumbnail failing to generate (e.g. a genuinely
+    // corrupt image sharp can't decode) must never block the actual
+    // attachment upload. thumbnailStorageKey just stays null and the file
+    // route falls back to serving the original for display too.
+    let thumbnailStorageKey: string | null = null;
+    if (attachmentKind(file.type) === "image") {
+      try {
+        const thumbnailBuffer = await generateThumbnail(buffer);
+        const thumbnailKey = `projects/${projectId}/updates/${update.id}/thumb-${Date.now()}-${file.name}.jpg`;
+        const thumbnailUpload = await uploadToS3({ key: thumbnailKey, body: thumbnailBuffer, contentType: "image/jpeg" });
+        thumbnailStorageKey = thumbnailUpload.storageKey;
+      } catch {
+        // fall through with thumbnailStorageKey left null
+      }
+    }
+
     await prisma.updateAttachment.create({
-      data: { updateId: update.id, fileName: file.name, storageKey, contentType: file.type }
+      data: { updateId: update.id, fileName: file.name, storageKey, contentType: file.type, thumbnailStorageKey }
     });
   }
 

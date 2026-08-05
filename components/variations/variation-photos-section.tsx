@@ -54,9 +54,12 @@ export function VariationPhotosSection({
             return (
               <div key={photo.id} className="relative group">
                 <a href={href} target="_blank" rel="noreferrer">
+                  {/* Stored derivative, not the full original (Task 2.2) —
+                      click-through still opens the full-quality original
+                      untouched (Task 2.3). */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={href}
+                    src={`${href}?variant=thumbnail`}
                     alt={photo.fileName}
                     className="aspect-square w-full rounded-lg object-cover border border-[#e7edf3] dark:border-slate-800"
                   />

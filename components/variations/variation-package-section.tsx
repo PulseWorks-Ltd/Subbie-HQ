@@ -178,10 +178,14 @@ function GeneratePackageReviewDialog({
             </p>
             {included.photos && photos.length > 0 && (
               <div className="flex flex-wrap gap-2">
+                {/* Stored derivative, not the full original (Task 2.2) —
+                    this is a read-only preview strip with no click-through,
+                    so there's no separate "view full original" link here. */}
                 {photos.slice(0, 8).map((photo) => (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     key={photo.id}
-                    src={`/api/projects/${projectId}/variation-items/${itemId}/photos/${photo.id}/file`}
+                    src={`/api/projects/${projectId}/variation-items/${itemId}/photos/${photo.id}/file?variant=thumbnail`}
                     alt={photo.fileName}
                     className="size-14 rounded object-cover border border-[#e7edf3] dark:border-slate-700"
                   />

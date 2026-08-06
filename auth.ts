@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { formatUserName } from "@/lib/user-display";
+import { isLoginRateLimited, recordFailedLoginAttempt } from "@/lib/login-rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -21,11 +22,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = typeof credentials?.password === "string" ? credentials.password : null;
         if (!email || !password) return null;
 
+        // Same generic null-return either way as the checks below, so a
+        // rate-limited request is indistinguishable from a wrong password —
+        // it never leaks whether the email exists or that a limit was hit.
+        if (await isLoginRateLimited(email)) return null;
+
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
+        if (!user) {
+          await recordFailedLoginAttempt(email);
+          return null;
+        }
 
         const passwordMatches = await bcrypt.compare(password, user.passwordHash);
-        if (!passwordMatches) return null;
+        if (!passwordMatches) {
+          await recordFailedLoginAttempt(email);
+          return null;
+        }
 
         return { id: user.id, email: user.email, name: formatUserName(user) };
       }

@@ -267,6 +267,20 @@ model PasswordResetToken {
   @@index([userId, createdAt])
 }
 
+// Same per-email, DB-row-count-in-a-sliding-window throttle as
+// PasswordResetToken above (see lib/login-rate-limit.ts) — one row per
+// failed login attempt, no relation to User since a rate-limited email
+// might not even match a real account. Keyed by raw email string (not
+// userId) so an attacker probing a non-existent address is throttled the
+// same as one probing a real one.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
 model Organisation {
   id                      String                  @id @default(cuid())
   name                    String

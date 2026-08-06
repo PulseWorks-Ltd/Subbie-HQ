@@ -4,10 +4,12 @@ import { requireUserId } from "@/lib/auth";
 import { requireOrganisationAdmin } from "@/lib/organisation";
 import { INSURANCE_TYPE_LABELS } from "@/lib/insurance-labels";
 
-// "Send to all active projects" — idempotent: only distributes to projects
-// that don't already have a distribution record for this certificate, so
-// clicking it again doesn't spam duplicate Correspondence entries into
-// projects that already received it.
+// "Distribute to active projects" — creates an internal distribution record
+// per project for tracking purposes only; no email is sent to the Main
+// Contractor. Idempotent: only distributes to projects that don't already
+// have a distribution record for this certificate, so clicking it again
+// doesn't spam duplicate Correspondence entries into projects that already
+// received it.
 export async function POST(request: Request, context: { params: { certificateId: string } }) {
   const userId = await requireUserId(request);
   const { certificateId } = context.params;
@@ -49,7 +51,7 @@ export async function POST(request: Request, context: { params: { certificateId:
     await prisma.correspondence.create({
       data: {
         projectId,
-        title: `Insurance certificate — ${typeLabel} — sent ${dateLabel}`,
+        title: `Insurance certificate — ${typeLabel} — distributed ${dateLabel}`,
         source: "upload",
         sourceInsuranceCertificateId: certificateId
       }

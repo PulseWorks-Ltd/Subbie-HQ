@@ -33,7 +33,7 @@ export function InsuranceCertificateCard({
   const sentToCount = certificate.distributions.length;
   const notYetSentCount = Math.max(activeProjectCount - sentToCount, 0);
 
-  async function handleSendToAll() {
+  async function handleDistributeToAll() {
     setIsSending(true);
     await fetch(`/api/organisation/insurance-certificates/${certificate.id}/send`, { method: "POST" });
     setIsSending(false);
@@ -94,21 +94,27 @@ export function InsuranceCertificateCard({
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-bold">
                 Distributed to {sentToCount} project{sentToCount === 1 ? "" : "s"}
-                {notYetSentCount > 0 ? ` · ${notYetSentCount} active project${notYetSentCount === 1 ? "" : "s"} not yet sent` : ""}
+                {notYetSentCount > 0
+                  ? ` · ${notYetSentCount} active project${notYetSentCount === 1 ? "" : "s"} not yet distributed`
+                  : ""}
               </h4>
               {isAdmin && (
                 <button
-                  onClick={handleSendToAll}
+                  onClick={handleDistributeToAll}
                   disabled={isSending || notYetSentCount === 0}
                   className="h-8 px-3 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 disabled:opacity-50"
                 >
-                  {isSending ? "Sending..." : "Send to all active projects"}
+                  {isSending ? "Distributing..." : "Distribute to active projects"}
                 </button>
               )}
             </div>
+            <p className="text-xs text-[#4c739a] dark:text-slate-400 -mt-1 mb-2">
+              Creates an internal record against each project for tracking purposes — this does not email the
+              certificate to your Main Contractor.
+            </p>
 
             {certificate.distributions.length === 0 ? (
-              <p className="text-sm text-[#4c739a] dark:text-slate-400">Not yet sent to any project.</p>
+              <p className="text-sm text-[#4c739a] dark:text-slate-400">Not yet distributed to any project.</p>
             ) : (
               <div className="flex flex-col gap-1">
                 {certificate.distributions.map((distribution) => (

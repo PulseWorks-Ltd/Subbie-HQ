@@ -15,8 +15,8 @@ export function HomepageView() {
             Know What Your Contract Requires. Capture the Evidence. Get Paid.
           </h1>
           <p className="text-lg text-[#4c739a] dark:text-slate-400 max-w-2xl">
-            Manage contracts, Site Instructions, Dayworks, Variations and payment claims from one place — so
-            nothing gets missed, and nothing gets left unpaid.
+            Manage contracts, Site Instructions, Dayworks and Variations from one place, and build the evidence
+            base every payment claim needs — so nothing gets missed, and nothing gets left unpaid.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
@@ -75,8 +75,8 @@ export function HomepageView() {
                 <h3 className="font-bold mb-2">When It&apos;s Time to Claim</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Build a complete Variation package — instruction, dayworks, materials, photos, correspondence —
-                  ready to hand to the Main Contractor. Prepare payment claims with confidence, backed by evidence
-                  you didn&apos;t have to go digging for.
+                  ready to hand to the Main Contractor. It&apos;s the evidence base you need to prepare a payment
+                  claim with confidence, without digging for anything after the fact.
                 </p>
               </div>
               <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">

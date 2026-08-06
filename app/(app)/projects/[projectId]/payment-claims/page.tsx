@@ -15,7 +15,7 @@ export default async function PaymentClaimsPage({ params }: { params: Promise<{ 
   return (
     <PlaceholderSection
       title="Payment Claims"
-      description="Payment claim generation and history are coming in the next build phase."
+      description="Payment Claims is currently under development and will be launching in a future update. In the meantime, Variation Packages and Correspondence give you a complete evidence record to support claims prepared outside the app."
     />
   );
 }

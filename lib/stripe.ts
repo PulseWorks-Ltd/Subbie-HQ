@@ -24,7 +24,7 @@ export const PLAN_DISPLAY: Record<PlanTier, { label: string; priceUsd: number; d
   starter: {
     label: "Starter",
     priceUsd: 49,
-    description: "For a single project or two — core contract review and payment claim tools."
+    description: "For a single project or two — core contract review and variation tools."
   },
   professional: {
     label: "Professional",

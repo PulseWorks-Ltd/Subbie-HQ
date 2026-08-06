@@ -20,6 +20,8 @@ const MARKETING_PATHS = [
   "/features/dayworks",
   "/industries/scaffolding",
   "/industries/painting",
+  "/industries/masonry",
+  "/industries/residential-builders",
   "/compare/spreadsheets-and-paper"
 ];
 

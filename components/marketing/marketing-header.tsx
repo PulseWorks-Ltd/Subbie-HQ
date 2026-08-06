@@ -11,7 +11,9 @@ const FEATURE_LINKS = [
 
 const INDUSTRY_LINKS = [
   { href: "/industries/scaffolding", label: "Scaffolding Contractors" },
-  { href: "/industries/painting", label: "Painting Contractors" }
+  { href: "/industries/painting", label: "Painting Contractors" },
+  { href: "/industries/masonry", label: "Masonry Contractors" },
+  { href: "/industries/residential-builders", label: "Residential Builders" }
 ];
 
 type NavLink = { href: string; label: string; disabled?: boolean };

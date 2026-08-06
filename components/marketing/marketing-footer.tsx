@@ -50,9 +50,10 @@ export function MarketingFooter() {
           </p>
           <FooterLink href="/industries/scaffolding" label="Scaffolding Contractors" />
           <FooterLink href="/industries/painting" label="Painting Contractors" />
+          <FooterLink href="/industries/masonry" label="Masonry Contractors" />
+          <FooterLink href="/industries/residential-builders" label="Residential Builders" />
           <FooterPlaceholder label="Electricians" />
           <FooterPlaceholder label="Plumbers" />
-          <FooterPlaceholder label="Builders" />
         </div>
 
         <div className="flex flex-col gap-2">

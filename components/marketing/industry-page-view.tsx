@@ -45,7 +45,7 @@ export function IndustryPageView({
 
       <section className="mb-10">
         <h2 className="text-lg font-bold mb-3">The Reality</h2>
-        <p className="text-[#4c739a] dark:text-slate-400">{reality}</p>
+        <p className="text-[#4c739a] dark:text-slate-400 whitespace-pre-line">{reality}</p>
       </section>
 
       <section className="mb-10">

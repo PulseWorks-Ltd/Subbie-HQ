@@ -53,10 +53,12 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 mb-6 dark:hidden" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 mb-6 hidden dark:block" />
+        <Link href="/" className="inline-block mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 hidden dark:block" />
+        </Link>
         <h1 className="text-xl font-bold mb-1">Choose a new password</h1>
         <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-6">Must be at least 8 characters.</p>
 
@@ -104,10 +106,12 @@ function InvalidLinkNotice({ message }: { message: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 mb-6 dark:hidden" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 mb-6 hidden dark:block" />
+        <Link href="/" className="inline-block mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 hidden dark:block" />
+        </Link>
         <h1 className="text-xl font-bold mb-1">Link no longer valid</h1>
         <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-6">{message}</p>
         <Link

@@ -27,10 +27,12 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 mb-6 dark:hidden" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 mb-6 hidden dark:block" />
+        <Link href="/" className="inline-block mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 hidden dark:block" />
+        </Link>
 
         {submitted ? (
           <>

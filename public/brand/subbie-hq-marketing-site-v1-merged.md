@@ -303,50 +303,302 @@ day, not reconstructed from memory weeks later.
 ---
 ---
 
-## PAGE 6 — Industry: Scaffolding Contractors
+## PAGE 6 (REVISED) — Industry: Scaffolding Contractors
 
 **SEO Title:** Contract & Commercial Management for Scaffolding Contractors | Subbie HQ
-**Meta Description:** Subbie HQ helps scaffolding subcontractors track access instructions, dayworks, and variations for extra scope.
+**Meta Description:** Subbie HQ helps scaffolding subcontractors capture verbal instructions, hire extensions, and variations before they become disputed invoices.
 
-### H1: Built for the Way Scaffolding Contractors Actually Work
+### HERO
 
-Scaffold scope changes constantly — extra lifts, extended hire periods,
-access changes nobody put in writing. Subbie HQ captures the instruction
-the moment it's given, tracks every day the scaffold stays up longer
-than quoted, and turns extended hire or additional scope into a properly
-evidenced variation instead of a conversation nobody remembers the same
-way.
+**H1: "Leave It Up Another Week."**
 
-**Common scaffolding-specific risks Subbie HQ helps you watch for:**
-- Contracts that delete standard scaffold-provision clauses, shifting
-  supply cost onto you
-- Hire period extensions that were never formally instructed
-- Access/hoisting obligations added without a corresponding cost
-  allowance
+One verbal instruction on site, and three weeks later you're arguing over
+an invoice nobody remembers agreeing to.
+
+### THE REALITY
+
+The builder asks to leave the scaffold up "for another week." Three
+weeks later it's still there. Nobody's issued a hire extension. Nobody's
+approved the extra cost. When the invoice arrives, everyone suddenly
+remembers the conversation differently — and you're the one carrying the
+gear, and the cost, in the meantime.
+
+### WHERE SUBCONTRACTORS LOSE MONEY
+
+- Hire periods extended verbally, with no written approval ever issued
+- Additional lifts or loading platforms requested on site, never formally
+  instructed
+- Site access restrictions increasing labour, with no variation raised
+- Weather or crane delays creating extra visits that never get claimed
+- Components damaged or gone missing, with no photo evidence to back a
+  claim
+- Dismantling delayed by another trade, with no record of who caused it
+
+### WHAT THE CONTRACT ACTUALLY REQUIRES
+
+Many scaffold subcontracts require written notice before a hire period is
+extended, or a formal instruction before additional scope like extra
+lifts or platforms is priced and carried out. Exactly what's required —
+and by when — depends on your specific contract, so this isn't a
+substitute for reading yours. What's consistent across almost every
+contract: the earlier something is written down, the stronger your
+position when it's disputed later.
+
+### HOW SUBBIE HQ HELPS
+
+- Log the instruction the moment it's given, from your phone, on site
+- Photograph damaged, lost, or extended equipment as evidence
+- Record additional labour and hire time via Day Works Sheets
+- Keep every email and site conversation in one Correspondence trail
+
+### FROM SITE EVENT → EVIDENCE
+
+Instruction given on site → logged as an Update → tagged to the relevant
+Site Instruction or Variation → photos and Day Works attached as the work
+happens → bundled into a Variation Package when it's time to claim.
+
+### WHY THIS MATTERS
+
+A missed hire extension or an unclaimed extra lift doesn't feel like much
+on its own. Across a year of jobs, it's real, recoverable money you're
+quietly writing off.
+
+### CTA
+
+**Construction doesn't have to be perfect. Your paperwork does.**
+
+Stop letting missing paperwork become lost revenue.
 
 [Start Free Trial] [See Pricing]
 
 ---
 ---
 
-## PAGE 7 — Industry: Painting Contractors
+## PAGE 7 (REVISED) — Industry: Painting Contractors
 
 **SEO Title:** Contract & Commercial Management for Painting Contractors | Subbie HQ
-**Meta Description:** Subbie HQ helps painting subcontractors track variations, coating changes, and materials cost.
+**Meta Description:** Subbie HQ helps painting subcontractors track spec changes, extra coats, and rework caused by other trades.
 
-### H1: Built for the Way Painting Contractors Actually Work
+### HERO
 
-A coating spec change, an extra coat instructed on site, additional
-prep work on a surface that wasn't supposed to need it — small changes
-that add up, and are easy to lose track of across a busy job. Subbie HQ
-logs the instruction and the extra materials as they happen, so a
-five-minute site conversation doesn't quietly become unpaid work.
+**H1: "Can You Give That Another Coat?"**
 
-**Common risks Subbie HQ helps you watch for:**
-- Materials markup and cost recovery on instructed spec changes
-- Extra coats or surface prep instructed verbally, with no written
-  record
-- Warranty-related obligations tied to specific coating systems
+A five-second question on site can quietly become hours of unpaid work.
+
+### THE REALITY
+
+The colour schedule changes after you've already painted three rooms.
+Extra prep work somehow becomes "part of the original quote." Another
+trade damages a wall you finished last week, and you're expected to
+repaint it for free. The architect upgrades the paint system after you
+priced the job, and nobody mentions it until you've already started.
+Every painter recognises at least one of these.
+
+### WHERE SUBCONTRACTORS LOSE MONEY
+
+- Additional coats instructed verbally, with no note of who asked or when
+- Substrate preparation beyond what was quoted, absorbed into the
+  original price
+- Colour or specification changes made after work has already started
+- Rework caused by another trade's damage, with no photo record of the
+  original finished work
+- Material upgrades (a better paint system, a different finish) priced
+  after the job was already quoted
+- Access delays caused by other trades, extending time on site
+
+### WHAT THE CONTRACT ACTUALLY REQUIRES
+
+Many painting subcontracts treat a specification change as a variation
+requiring written instruction and agreed pricing before the changed work
+proceeds — but what actually counts as "in scope" versus "extra" varies
+contract to contract, so it's worth knowing your own. What's consistent:
+a photo of the finished work before another trade gets near it is worth
+far more after the fact than a memory of how it looked.
+
+### HOW SUBBIE HQ HELPS
+
+- Photograph completed work before another trade can damage it — and the
+  damage itself, if it happens
+- Log a spec or colour change as an Update the moment it's given
+- Record extra coats and materials against the job via Day Works
+- Keep the full trail of who asked for what, and when
+
+### FROM SITE EVENT → EVIDENCE
+
+Change instructed on site → logged as an Update → photo evidence attached
+→ extra materials/coats recorded via Day Works → bundled into a
+Variation Package when it's time to claim.
+
+### WHY THIS MATTERS
+
+An extra coat here, a redo there — none of it looks like much in the
+moment. By the end of a job, it's the difference between the margin you
+quoted and the margin you actually made.
+
+### CTA
+
+**Construction doesn't have to be perfect. Your paperwork does.**
+
+Stop letting missing paperwork become lost revenue.
+
+[Start Free Trial] [See Pricing]
+
+---
+---
+
+## PAGE 11 (REVISED) — Industry: Masonry Contractors
+
+**SEO Title:** Contract & Commercial Management for Masonry Contractors | Subbie HQ
+**Meta Description:** Subbie HQ helps masonry and blocklaying subcontractors track ground-condition variations, engineering changes, and weather delays.
+
+### HERO
+
+**H1: "The Ground Wasn't What We Expected."**
+
+A quote priced against a drawing rarely survives first contact with real
+ground.
+
+### THE REALITY
+
+Footings go in and the ground turns out softer, rockier, or just
+different from what was assumed at quoting stage. The engineer revises
+the reinforcing. A retaining wall's design gets adjusted for a compliance
+reason that has nothing to do with your workmanship. None of that is
+unusual for the trade — but if it isn't written down when it happens,
+it's very hard to claim for once the job's finished and everyone's moved
+on to the next site.
+
+### WHERE SUBCONTRACTORS LOSE MONEY
+
+- Unexpected ground conditions at footings (rock, soft fill, unsuitable
+  material) absorbed as part of the original price
+- Engineer-directed reinforcing or foundation changes with no
+  corresponding cost adjustment
+- Additional concrete or blockwork instructed on site, never formally
+  varied
+- Retaining wall redesigns for compliance reasons, changing scope after
+  work has started
+- Weather-dependent laying and curing delays with no extension of time
+  claimed
+- Delayed inspections or access issues extending time on site at your
+  cost
+
+### WHAT THE CONTRACT ACTUALLY REQUIRES
+
+Many masonry subcontracts require a formal instruction before ground-
+condition or design changes are priced and carried out, and a documented
+extension of time claim for weather-dependent delays rather than just
+absorbing the lost days. What exactly counts as a "differing condition"
+under your contract is worth checking directly, since this varies. What's
+consistent: the moment ground conditions turn out different from the
+drawings is the moment to start documenting, not after the wall's built.
+
+### HOW SUBBIE HQ HELPS
+
+- Log ground condition and design changes as an Update, with photos, the
+  moment they're found
+- Record additional concrete, blockwork, and labour via Day Works Sheets
+- Track weather-affected days against the job as they happen
+- Keep engineer correspondence and revised drawings in one place
+
+### FROM SITE EVENT → EVIDENCE
+
+Condition or design change found → logged as an Update with photos →
+tagged to a Site Instruction or Variation → Day Works and materials
+recorded → bundled into a Variation Package when it's time to claim.
+
+### WHY THIS MATTERS
+
+Ground conditions and engineering changes are often the single largest
+source of unclaimed cost on a masonry job — and they're also the easiest
+to prove, if you document them the day they happen instead of trying to
+reconstruct them weeks later.
+
+### CTA
+
+**Construction doesn't have to be perfect. Your paperwork does.**
+
+Stop letting missing paperwork become lost revenue.
+
+[Start Free Trial] [See Pricing]
+
+---
+---
+
+## PAGE 12 (REVISED) — Industry: Residential Builders
+
+**SEO Title:** Contract & Commercial Management for Residential Builders | Subbie HQ
+**Meta Description:** Subbie HQ helps residential building subcontractors track client-requested changes, staged progress claims, and undocumented instructions.
+
+### HERO
+
+**H1: "The Client Wants to Change This."**
+
+Said once, on site, in passing — and somehow it's your problem to prove
+three months later.
+
+### THE REALITY
+
+You finish a stage, submit your progress claim, and the response comes
+back: "the stage isn't complete." Or the client's asked for "just a few
+small changes" throughout the build that were never formally documented.
+Months later, at final account, you're arguing over thousands of dollars
+of work because everyone remembers the conversations differently.
+Residential building moves fast — instructions get given on site,
+decisions get made in minutes, and the paperwork gets left for later, if
+it happens at all.
+
+### WHERE SUBCONTRACTORS LOSE MONEY
+
+- Progress claims disputed because a contract stage was interpreted
+  differently than you understood it on site
+- Client-requested changes agreed verbally, never documented as a
+  variation
+- Provisional sum items and selections finalised without a clear written
+  record of what was actually chosen
+- Design or specification changes arriving via a council RFI response,
+  with no clear record of who actually asked for the change
+- Scope creep absorbed a little at a time until it adds up to real,
+  unclaimed cost
+- Programme impacts from client-driven changes, with no extension of time
+  ever raised
+
+### WHAT THE CONTRACT ACTUALLY REQUIRES
+
+Many residential subcontracts define each payment stage precisely — what
+"complete" actually means for that stage — and require a formal
+instruction before a client-requested change is priced and carried out.
+What counts as "complete," and how a variation needs to be raised, is
+worth checking against your own contract rather than assumed. What's
+consistent: a stage argued over at claim time is far easier to defend
+with contemporaneous photos and records than with memory alone.
+
+### HOW SUBBIE HQ HELPS
+
+- Log client-requested changes as an Update the moment they're raised
+- Photograph each stage as it's completed, before the next one starts
+- Record selections, provisional sum decisions, and instructions in
+  writing as they happen
+- Keep a full correspondence trail linking every change back to who
+  requested it
+
+### FROM SITE EVENT → EVIDENCE
+
+Change or instruction given → logged as an Update with photos → tagged
+to a Site Instruction or Variation → Day Works and materials recorded →
+bundled into a Variation Package to support your claim or final account.
+
+### WHY THIS MATTERS
+
+A dispute over "was the stage actually complete" or "who asked for this
+change" is won or lost on the evidence you have on the day — not on what
+anyone remembers three months later.
+
+### CTA
+
+**Construction doesn't have to be perfect. Your paperwork does.**
+
+Stop letting missing paperwork become lost revenue.
 
 [Start Free Trial] [See Pricing]
 
@@ -405,74 +657,6 @@ mistakes → how evidence strengthens a claim (natural link to Subbie HQ)
 Suggested structure: what an SI is → what turns it into a Variation →
 why the distinction matters for payment → what good evidence looks like
 → a worked example.
-
----
----
-
-## PAGE 11 — Industry: Masonry Contractors
-
-**SEO Title:** Contract & Commercial Management for Masonry Contractors | Subbie HQ
-**Meta Description:** Subbie HQ helps masonry and blocklaying subcontractors track ground-condition variations, engineering changes, and weather delays.
-
-### H1: Built for the Way Masonry Contractors Actually Work
-
-A masonry quote is priced against a set of drawings and assumed ground
-conditions — and both routinely change once footings are opened up.
-Reinforcing gets revised by the engineer, ground turns out softer or
-rockier than expected, and a retaining wall's design gets adjusted for
-compliance reasons that have nothing to do with your workmanship. None
-of that is unusual for the trade — but if it isn't captured in writing
-when it happens, it's very hard to claim for later. Add in that masonry
-is genuinely weather-dependent (laying and curing both stop in the wrong
-conditions), and a job that looked straightforward on the quote can
-quietly become a lot of unpaid extra work.
-
-**Common risks Subbie HQ helps you watch for:**
-- Contracts that shift responsibility for unexpected ground conditions at
-  footings (rock, soft fill, unsuitable material) onto the subcontractor
-- Engineer-directed reinforcing, starter bar, or foundation design changes
-  with no corresponding cost adjustment
-- Retaining wall compliance changes (structural sign-off, surcharge/
-  boundary conditions) altering scope after work has started
-- Weather-dependent laying and curing delays with no extension of time
-  protection in the contract
-
-[Start Free Trial] [See Pricing]
-
----
----
-
-## PAGE 12 — Industry: Residential Builders
-
-**SEO Title:** Contract & Commercial Management for Residential Builders | Subbie HQ
-**Meta Description:** Subbie HQ helps residential building subcontractors track staged progress claims, site-instructed changes, and variations on multi-unit and developer-led builds.
-
-### H1: Built for the Way Residential Builders Actually Work
-
-When you're engaged as a subcontractor on a development or multi-unit
-build — building out one or more dwellings under a head contractor or
-developer — the commercial risk looks different from a standalone home
-build. Progress claims need to line up exactly with how the contract
-defines each stage, not just how the work actually happened on site.
-Council RFIs and client-requested finishing changes get relayed verbally
-on site more often than they get issued in writing. And when a dispute
-happens, it usually comes down to one question: was a stage actually
-"complete" under the contract's own definition, or just complete enough
-to move on to the next one.
-
-**Common risks Subbie HQ helps you watch for:**
-- Progress claim stage definitions (e.g. "lock-up," "fixing," "practical
-  completion") that don't match how the work was actually staged and
-  recorded on site
-- Client- or developer-requested variations agreed verbally, with no
-  formal instruction ever issued
-- Retention and defects liability terms that differ from the standard
-  form, easy to miss in a longer contract
-- Design or specification changes arriving via council RFI response
-  rather than a direct instruction, with no clear paper trail back to who
-  actually asked for the change
-
-[Start Free Trial] [See Pricing]
 
 ---
 ---

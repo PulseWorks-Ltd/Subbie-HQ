@@ -5,10 +5,10 @@ import { getSignedDownloadUrl } from "@/lib/s3";
 
 export async function GET(
   request: Request,
-  context: { params: { projectId: string; itemId: string; sheetId: string; materialId: string } }
+  context: { params: { projectId: string; itemId: string; materialId: string } }
 ) {
   const userId = await requireUserId(request);
-  const { projectId, itemId, sheetId, materialId } = context.params;
+  const { projectId, itemId, materialId } = context.params;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -31,7 +31,7 @@ export async function GET(
   }
 
   const material = await prisma.dayWorksMaterial.findFirst({
-    where: { id: materialId, dayWorksSheetId: sheetId, dayWorksSheet: { variationItemId: itemId } }
+    where: { id: materialId, variationItemId: itemId }
   });
   if (!material || !material.photoStorageKey) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -5,10 +5,15 @@ import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheet, Day
 // matches the order these sections actually appear in the generated PDF
 // (see lib/variation-package-pdf.ts). Shared between the review dialog,
 // the generation API route, and the stored-package display so the set of
-// valid keys only ever lives in one place.
+// valid keys only ever lives in one place. Materials/Plant split out of
+// the old single "day_works_sheets" category (Labour, Plant & Material AI
+// Extraction) — they're independent of any specific sheet now, so they
+// need to be independently toggleable, not bundled with labour.
 export const PACKAGE_CATEGORIES = [
   "quote",
   "day_works_sheets",
+  "materials",
+  "plant",
   "si_source_document",
   "correspondence",
   "linked_updates",
@@ -18,16 +23,21 @@ export type PackageCategory = (typeof PACKAGE_CATEGORIES)[number];
 
 export const PACKAGE_CATEGORY_LABELS: Record<PackageCategory, string> = {
   quote: "Quote",
-  day_works_sheets: "Day Works Sheets",
+  day_works_sheets: "Day Works Sheets (Labour)",
+  materials: "Materials",
+  plant: "Plant",
   si_source_document: "SI Source Document",
   correspondence: "Correspondence",
   linked_updates: "Linked Updates",
   photos: "Photos"
 };
 
-export type DayWorksSheetWithLineItems = DayWorksSheet & {
-  materials: DayWorksMaterial[];
-  plant: DayWorksPlant[];
+// Labour-only now — materials/plant are no longer nested under a sheet
+// (Labour, Plant & Material AI Extraction). sheet.materials/sheet.plant
+// still exist as a historical back-reference at the DB level (see
+// prisma/schema.prisma), but nothing in business logic or the UI reads
+// them through the sheet anymore; materials/plant are always item-level.
+export type DayWorksSheetWithRecords = DayWorksSheet & {
   sheetRecords: DayWorksSheetRecord[];
 };
 
@@ -44,6 +54,20 @@ export function computeMaterialsCost(materials: DayWorksMaterial[]): number {
 // helper that a future edit could accidentally apply markup to.
 export function computePlantCost(plant: DayWorksPlant[]): number {
   return plant.reduce((sum, p) => sum + Number(p.quantity) * Number(p.unitCost), 0);
+}
+
+export type MaterialsSummary = {
+  materialsCost: number;
+  materialsMarkupAmount: number;
+};
+
+// Markup applied ONCE to the item-level materials sum (Task 1.3) — not
+// per-sheet, not per-line-item, since materials are no longer sheet-scoped.
+export function computeMaterialsSummary(materials: DayWorksMaterial[], contractTerms: RateFields | null): MaterialsSummary {
+  const materialsCost = computeMaterialsCost(materials);
+  const markupPercent = contractTerms?.materialsMarkupPercent ?? null;
+  const materialsMarkupAmount = markupPercent != null ? materialsCost * (markupPercent / 100) : 0;
+  return { materialsCost, materialsMarkupAmount };
 }
 
 export type LabourSummary = {
@@ -100,28 +124,11 @@ export function computeLabourSummary(sheetRecords: DayWorksSheetRecord[]): Labou
   return { total, totalHours, hoursMissingRate };
 }
 
-export type SheetTotals = {
-  labour: LabourSummary;
-  materialsCost: number;
-  materialsMarkupAmount: number;
-  plantCost: number;
-  combinedTotal: number;
-};
-
-// Single source of truth for "what does one Day Works Sheet cost" — used
-// by the sheet's own display, the Variation Package review screen, PDF
-// generation, and the totals frozen onto a generated VariationPackage.
-// Combined total = labour (priced records only) + materials + materials
-// markup + plant (unmarked-up).
-export function computeSheetTotals(sheet: DayWorksSheetWithLineItems, contractTerms: RateFields | null): SheetTotals {
-  const labour = computeLabourSummary(sheet.sheetRecords);
-  const materialsCost = computeMaterialsCost(sheet.materials);
-  const markupPercent = contractTerms?.materialsMarkupPercent ?? null;
-  const materialsMarkupAmount = markupPercent != null ? materialsCost * (markupPercent / 100) : 0;
-  const plantCost = computePlantCost(sheet.plant);
-  const combinedTotal = labour.total + materialsCost + materialsMarkupAmount + plantCost;
-
-  return { labour, materialsCost, materialsMarkupAmount, plantCost, combinedTotal };
+// Labour summed across EVERY sheet attached to the item — sheets
+// themselves no longer carry materials/plant, so this is purely a
+// flatten-and-reuse of computeLabourSummary across every sheet's records.
+export function computeCombinedLabourSummary(sheets: DayWorksSheetWithRecords[]): LabourSummary {
+  return computeLabourSummary(sheets.flatMap((sheet) => sheet.sheetRecords));
 }
 
 export type PackageTotals = {
@@ -132,29 +139,27 @@ export type PackageTotals = {
   grandTotal: number;
 };
 
-// Sums computeSheetTotals across every Day Works Sheet attached to a
-// Variation/SI — this is exactly what gets frozen onto a generated
-// VariationPackage's totals columns, and what a future Payment Claims
-// module aggregates across many variations.
-export function computePackageTotals(sheets: DayWorksSheetWithLineItems[], contractTerms: RateFields | null): PackageTotals {
-  let labourTotal = 0;
-  let materialsTotal = 0;
-  let materialsMarkupTotal = 0;
-  let plantTotal = 0;
-
-  for (const sheet of sheets) {
-    const totals = computeSheetTotals(sheet, contractTerms);
-    labourTotal += totals.labour.total;
-    materialsTotal += totals.materialsCost;
-    materialsMarkupTotal += totals.materialsMarkupAmount;
-    plantTotal += totals.plantCost;
-  }
+// Single source of truth for "what does this Variation/SI's Labour,
+// Materials & Plant cost, combined" (Task 1.3) — labour summed across
+// every Day Works Sheet, materials/plant summed independently at the
+// item level (no longer derived from within each sheet). Used by the
+// section's live display, the Generate Variation Package review screen,
+// PDF generation, and the totals frozen onto a generated VariationPackage.
+export function computePackageTotals(
+  sheets: DayWorksSheetWithRecords[],
+  materials: DayWorksMaterial[],
+  plant: DayWorksPlant[],
+  contractTerms: RateFields | null
+): PackageTotals {
+  const labour = computeCombinedLabourSummary(sheets);
+  const { materialsCost, materialsMarkupAmount } = computeMaterialsSummary(materials, contractTerms);
+  const plantTotal = computePlantCost(plant);
 
   return {
-    labourTotal,
-    materialsTotal,
-    materialsMarkupTotal,
+    labourTotal: labour.total,
+    materialsTotal: materialsCost,
+    materialsMarkupTotal: materialsMarkupAmount,
     plantTotal,
-    grandTotal: labourTotal + materialsTotal + materialsMarkupTotal + plantTotal
+    grandTotal: labour.total + materialsCost + materialsMarkupAmount + plantTotal
   };
 }

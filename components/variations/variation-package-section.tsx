@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms, Correspondence, VariationItem, VariationPackage, VariationPhoto } from "@prisma/client";
+import type { ContractTerms, Correspondence, DayWorksMaterial, DayWorksPlant, VariationItem, VariationPackage, VariationPhoto } from "@prisma/client";
 import {
   computePackageTotals,
-  computeSheetTotals,
+  computeSheetRecordTotal,
   PACKAGE_CATEGORIES,
   PACKAGE_CATEGORY_LABELS,
-  type DayWorksSheetWithLineItems,
+  type DayWorksSheetWithRecords,
   type PackageCategory
 } from "@/lib/variation-package";
 
@@ -27,17 +27,20 @@ function formatDateTime(date: Date) {
 
 // Confirm-before-generate screen (Task 2.2) — deliberately read-only. Every
 // number here is computed from the exact same props (dayWorksSheets,
-// contractTerms) already passed down to VariationDayWorksSection, via the
-// same shared helper (lib/variation-package.ts), so this screen can never
-// show a different total than what the sheets themselves display. If a
-// rate looks wrong, the fix is at the source (Day Works Sheet or Project
-// Settings) — no inline editing here, this is a preview of what generation
-// will freeze, not a new place to change data.
+// materials, plant, contractTerms) already passed down to
+// LabourPlantMaterialSection, via the same shared helper
+// (lib/variation-package.ts), so this screen can never show a different
+// total than what that section displays. If a rate or figure looks
+// wrong, the fix is at the source (a Day Works Sheet, a Materials/Plant
+// line item, or Project Settings) — no inline editing here, this is a
+// preview of what generation will freeze, not a new place to change data.
 function GeneratePackageReviewDialog({
   projectId,
   itemId,
   item,
   dayWorksSheets,
+  materials,
+  plant,
   photos,
   correspondence,
   updates,
@@ -48,7 +51,9 @@ function GeneratePackageReviewDialog({
   projectId: string;
   itemId: string;
   item: VariationItem;
-  dayWorksSheets: DayWorksSheetWithLineItems[];
+  dayWorksSheets: DayWorksSheetWithRecords[];
+  materials: DayWorksMaterial[];
+  plant: DayWorksPlant[];
   photos: VariationPhoto[];
   correspondence: Correspondence[];
   updates: { id: string }[];
@@ -66,6 +71,8 @@ function GeneratePackageReviewDialog({
   const [included, setIncluded] = useState<Record<PackageCategory, boolean>>({
     quote: true,
     day_works_sheets: true,
+    materials: true,
+    plant: true,
     si_source_document: true,
     correspondence: true,
     linked_updates: true,
@@ -75,6 +82,8 @@ function GeneratePackageReviewDialog({
   const categoryCounts: Record<PackageCategory, number> = {
     quote: item.quoteFileName && item.quoteStorageKey ? 1 : 0,
     day_works_sheets: dayWorksSheets.length,
+    materials: materials.length,
+    plant: plant.length,
     si_source_document: item.fileName && item.storageKey ? 1 : 0,
     correspondence: correspondence.length,
     linked_updates: updates.length,
@@ -85,12 +94,18 @@ function GeneratePackageReviewDialog({
     setIncluded((current) => ({ ...current, [category]: !current[category] }));
   }
 
-  // Grand Total (Task 2.1/2.2) — Day Works Sheets is the only category
-  // that contributes a dollar figure, so excluding it means computing the
-  // exact same shared helper (computePackageTotals) against an empty
-  // array rather than duplicating its maths — an empty array already
-  // naturally sums to all-zero.
-  const packageTotals = computePackageTotals(included.day_works_sheets ? dayWorksSheets : [], contractTerms);
+  // Grand Total (Task 2.1/2.2/1.3) — labour, materials, and plant are each
+  // independently excludable now that they're independent categories, so
+  // this computes the exact same shared helper (computePackageTotals)
+  // against whichever of the three arrays are currently checked, rather
+  // than duplicating its maths — an excluded category's empty array
+  // naturally sums to zero for its part of the total.
+  const packageTotals = computePackageTotals(
+    included.day_works_sheets ? dayWorksSheets : [],
+    included.materials ? materials : [],
+    included.plant ? plant : [],
+    contractTerms
+  );
 
   async function handleGenerate() {
     setError(null);
@@ -125,8 +140,8 @@ function GeneratePackageReviewDialog({
         <h2 className="text-lg font-bold mb-1">Generate Variation Package</h2>
         <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5">
           Review everything that will be included below. Nothing is generated until you confirm — if a rate or
-          figure looks wrong, close this and fix it at the source (the relevant Day Works Sheet or Project
-          Settings), then come back.
+          figure looks wrong, close this and fix it at the source (the relevant Day Works Sheet, Materials/Plant
+          line item, or Project Settings), then come back.
         </p>
 
         <div className="flex flex-col gap-4 text-sm">
@@ -202,7 +217,10 @@ function GeneratePackageReviewDialog({
           {included.day_works_sheets && dayWorksSheets.length > 0 && (
             <div className="flex flex-col gap-2">
               {dayWorksSheets.map((sheet) => {
-                const totals = computeSheetTotals(sheet, contractTerms);
+                const labourTotal = sheet.sheetRecords.reduce(
+                  (sum, record) => sum + (computeSheetRecordTotal(record.totalHours, record.ratePerHour) ?? 0),
+                  0
+                );
                 const rateSummaries = sheet.sheetRecords
                   .filter((record) => record.totalHours != null)
                   .map((record) => {
@@ -217,21 +235,36 @@ function GeneratePackageReviewDialog({
                     {rateSummaries.length > 0 && (
                       <p className="text-[#4c739a] dark:text-slate-400 mb-1">Rates applied: {rateSummaries.join(", ")}</p>
                     )}
-                    <div className="flex flex-wrap gap-x-4">
-                      <span>Labour: {formatCurrency(totals.labour.total)}</span>
-                      <span>Materials: {formatCurrency(totals.materialsCost)}</span>
-                      <span>Markup: {formatCurrency(totals.materialsMarkupAmount)}</span>
-                      <span>Plant: {formatCurrency(totals.plantCost)}</span>
-                      <span className="font-bold">Sheet total: {formatCurrency(totals.combinedTotal)}</span>
-                    </div>
+                    <span className="font-bold">Labour total: {formatCurrency(labourTotal)}</span>
                   </div>
                 );
               })}
             </div>
           )}
 
+          {included.materials && materials.length > 0 && (
+            <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 text-xs">
+              <p className="font-bold mb-1">Materials ({materials.length})</p>
+              <p className="text-[#4c739a] dark:text-slate-400">
+                {materials.map((m) => `${m.description} (${formatCurrency(Number(m.quantity) * Number(m.unitCost))})`).join(", ")}
+              </p>
+            </div>
+          )}
+
+          {included.plant && plant.length > 0 && (
+            <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 text-xs">
+              <p className="font-bold mb-1">Plant ({plant.length})</p>
+              <p className="text-[#4c739a] dark:text-slate-400">
+                {plant.map((p) => `${p.description} (${formatCurrency(Number(p.quantity) * Number(p.unitCost))})`).join(", ")}
+              </p>
+            </div>
+          )}
+
           <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
-            <p className="text-xs text-[#4c739a] dark:text-slate-400">Labour {formatCurrency(packageTotals.labourTotal)} · Materials {formatCurrency(packageTotals.materialsTotal)} · Markup {formatCurrency(packageTotals.materialsMarkupTotal)} · Plant {formatCurrency(packageTotals.plantTotal)}</p>
+            <p className="text-xs text-[#4c739a] dark:text-slate-400">
+              Labour {formatCurrency(packageTotals.labourTotal)} · Materials {formatCurrency(packageTotals.materialsTotal)} · Markup{" "}
+              {formatCurrency(packageTotals.materialsMarkupTotal)} · Plant {formatCurrency(packageTotals.plantTotal)}
+            </p>
             <p className="text-lg font-bold mt-1">Grand total: {formatCurrency(packageTotals.grandTotal)}</p>
           </div>
         </div>
@@ -263,6 +296,8 @@ export function VariationPackageSection({
   itemId,
   item,
   dayWorksSheets,
+  materials,
+  plant,
   photos,
   correspondence,
   updates,
@@ -272,7 +307,9 @@ export function VariationPackageSection({
   projectId: string;
   itemId: string;
   item: VariationItem;
-  dayWorksSheets: DayWorksSheetWithLineItems[];
+  dayWorksSheets: DayWorksSheetWithRecords[];
+  materials: DayWorksMaterial[];
+  plant: DayWorksPlant[];
   photos: VariationPhoto[];
   correspondence: Correspondence[];
   updates: { id: string }[];
@@ -344,6 +381,8 @@ export function VariationPackageSection({
           itemId={itemId}
           item={item}
           dayWorksSheets={dayWorksSheets}
+          materials={materials}
+          plant={plant}
           photos={photos}
           correspondence={correspondence}
           updates={updates}

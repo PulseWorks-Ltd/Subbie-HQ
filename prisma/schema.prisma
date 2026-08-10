@@ -1116,6 +1116,11 @@ model VariationItem {
   project                   Project             @relation(fields: [projectId], references: [id])
   updates                   Update[]
   dayWorksSheets            DayWorksSheet[]
+  // Direct, sheet-independent relations (Labour, Plant & Material AI
+  // Extraction feature) — the primary way materials/plant attach to an
+  // item going forward; see DayWorksMaterial/DayWorksPlant's own comments.
+  materials                 DayWorksMaterial[]
+  plant                     DayWorksPlant[]
   photos                    VariationPhoto[]
   correspondence            Correspondence[]
   packages                  VariationPackage[]
@@ -1129,13 +1134,17 @@ model VariationItem {
 // the physical day works sheet(s). contentType is additive (nullable —
 // older rows uploaded before this field existed won't have it) and drives
 // which OCR path extraction uses (PDF page-render-and-OCR vs direct image
-// OCR — see lib/pdf-text-extraction.ts). materials is structured line
-// items for materials bought for the day's work; sheetRecords is the
-// AI-extracted-then-user-confirmed per-physical-sheet summary derived
-// from the uploaded file (see DayWorksSheetRecord) — the file itself
-// remains the supporting evidence, sheetRecords is derived from it, never
-// replaces it. One uploaded file can bundle several physical sheets, so
-// this is one-to-many.
+// OCR — see lib/pdf-text-extraction.ts). sheetRecords is the
+// AI-extracted-then-user-confirmed per-physical-sheet LABOUR summary
+// derived from the uploaded file (see DayWorksSheetRecord) — the file
+// itself remains the supporting evidence, sheetRecords is derived from
+// it, never replaces it. One uploaded file can bundle several physical
+// sheets, so this is one-to-many. materials/plant below are the
+// HISTORICAL back-reference only (Labour, Plant & Material AI Extraction
+// feature) — rows created before that change, or a user's deliberate
+// choice to still log against a specific sheet; the primary, current
+// relation for materials/plant is VariationItem.materials/plant directly
+// (see DayWorksMaterial/DayWorksPlant), independent of any sheet.
 model DayWorksSheet {
   id              String   @id @default(cuid())
   variationItemId String
@@ -1190,11 +1199,20 @@ model DayWorksSheetRecord {
 
 // One line item = one material bought for the day's work. No markup
 // field — deliberately out of scope, this records raw cost only (see
-// task rules). Deleting the parent DayWorksSheet cascades here since a
-// material line item has no meaning without its sheet.
+// task rules). Relates directly to the VariationItem (Labour, Plant &
+// Material AI Extraction feature) — a materials invoice usually isn't
+// tied to one particular labour sheet, so this is independent of any
+// specific DayWorksSheet. dayWorksSheetId is kept as a NULLABLE
+// historical reference only, for rows that predate this change (backfilled
+// from their original sheet) or that a user still chooses to log against
+// a specific sheet — never required, never read by cost/total logic
+// (see lib/variation-package.ts). onDelete: SetNull, not Cascade — a
+// material line item is no longer scoped to its sheet's lifecycle, so
+// deleting the sheet must not delete it.
 model DayWorksMaterial {
   id              String  @id @default(cuid())
-  dayWorksSheetId String
+  variationItemId String
+  dayWorksSheetId String?
   description     String
   quantity        Decimal @db.Decimal(10, 2)
   unit            String
@@ -1209,12 +1227,16 @@ model DayWorksMaterial {
   photoContentType String?
   createdAt        DateTime @default(now())
 
-  dayWorksSheet DayWorksSheet @relation(fields: [dayWorksSheetId], references: [id], onDelete: Cascade)
+  variationItem VariationItem  @relation(fields: [variationItemId], references: [id])
+  dayWorksSheet DayWorksSheet? @relation(fields: [dayWorksSheetId], references: [id], onDelete: SetNull)
+
+  @@index([variationItemId])
 }
 
 // Structurally identical to DayWorksMaterial (description/quantity/unit/
-// unitCost/optional photo) — deliberately its own model rather than a
-// "kind" discriminator on DayWorksMaterial, since Plant does NOT receive
+// unitCost/optional photo, same VariationItem-direct + nullable-sheet-
+// reference shape) — deliberately its own model rather than a "kind"
+// discriminator on DayWorksMaterial, since Plant does NOT receive
 // materialsMarkupPercent (Task 1.1: markup stays scoped to Materials only
 // — flagged in this session's report as a deliberate assumption the app
 // owner may want to revisit with a separate configurable plant markup
@@ -1222,7 +1244,8 @@ model DayWorksMaterial {
 // impossible to blur by accident in the total-calculation code.
 model DayWorksPlant {
   id              String  @id @default(cuid())
-  dayWorksSheetId String
+  variationItemId String
+  dayWorksSheetId String?
   description     String
   quantity        Decimal @db.Decimal(10, 2)
   unit            String
@@ -1232,7 +1255,10 @@ model DayWorksPlant {
   photoContentType String?
   createdAt        DateTime @default(now())
 
-  dayWorksSheet DayWorksSheet @relation(fields: [dayWorksSheetId], references: [id], onDelete: Cascade)
+  variationItem VariationItem  @relation(fields: [variationItemId], references: [id])
+  dayWorksSheet DayWorksSheet? @relation(fields: [dayWorksSheetId], references: [id], onDelete: SetNull)
+
+  @@index([variationItemId])
 }
 
 model VariationPhoto {

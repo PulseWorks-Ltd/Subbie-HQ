@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   DayWorksSheetRecordReviewDialog,
+  draftRecordsToRows,
   type SheetRecordRow
 } from "@/components/variations/day-works-sheet-record-review-dialog";
-import { draftRecordsToRows } from "@/components/variations/variation-day-works-section";
 
 export type DayWorksSheetSource = { type: "update-attachment" | "variation-photo"; id: string };
 export type TaggableItem = { id: string; reference: string; title: string };
@@ -18,7 +18,7 @@ type Step =
   | { name: "review"; itemId: string; sheetId: string; rows: SheetRecordRow[]; warning: string | null }
   // Sheet was created but the automatic read failed — mirrors the existing
   // "+Upload" flow's own graceful degradation (see
-  // VariationDayWorksSection.handleUpload), which also leaves a bare,
+  // LabourPlantMaterialSection's own extraction flow), which also leaves a bare,
   // record-less sheet behind rather than blocking. The only difference
   // here is telling the user where to go finish it, since — unlike the
   // "+Upload" button — this action isn't already on the item's own page.

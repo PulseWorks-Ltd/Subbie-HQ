@@ -1,7 +1,9 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import type { DayWorksSheetRecord } from "@prisma/client";
 import { computeSheetRecordTotal } from "@/lib/variation-package";
+import type { DraftSheetRecord } from "@/app/api/projects/[projectId]/variation-items/[itemId]/day-works-sheets/[sheetId]/sheet-records/extract/route";
 
 // Reasonable-uncertainty threshold below which a row gets flagged for
 // extra scrutiny in the review UI (Task 4) — rows are never blocked from
@@ -46,6 +48,52 @@ export function emptySheetRecordRow(sheetNumber: string, ratePerHour = ""): Shee
     location: "",
     confidence: null
   };
+}
+
+// Relocated here from the old variation-day-works-section.tsx (Labour,
+// Plant & Material AI Extraction) so both the per-sheet re-extract flow
+// on this dialog's own callers AND components/day-works/use-as-day-works-sheet-action.tsx
+// share one implementation, not two copies.
+export function draftRecordsToRows(records: DraftSheetRecord[], defaultRatePerHour: string): SheetRecordRow[] {
+  if (records.length === 0) return [emptySheetRecordRow("Sheet 1", defaultRatePerHour)];
+  return records.map((record) => ({
+    sheetNumber: record.sheetNumber,
+    teamLeaderCount: String(record.teamLeaderCount),
+    teamMemberCount: String(record.teamMemberCount),
+    totalHours: record.totalHours != null ? String(record.totalHours) : "",
+    ratePerHour: defaultRatePerHour,
+    date: record.date ?? "",
+    startTime: record.startTime ?? "",
+    finishTime: record.finishTime ?? "",
+    task: record.task ?? "",
+    notes: record.notes ?? "",
+    weather: record.weather ?? "",
+    location: record.location ?? "",
+    confidence: record.confidence
+  }));
+}
+
+// Also relocated here from the old variation-day-works-section.tsx —
+// reopening an already-saved (and therefore already human-reviewed)
+// sheet via "Edit summary" carries no AI confidence signal, so
+// confidence: null throughout means the review dialog never flags these
+// rows as low-confidence.
+export function savedRecordsToRows(records: DayWorksSheetRecord[]): SheetRecordRow[] {
+  return records.map((record) => ({
+    sheetNumber: record.sheetNumber,
+    teamLeaderCount: String(record.teamLeaderCount),
+    teamMemberCount: String(record.teamMemberCount),
+    totalHours: record.totalHours != null ? String(Number(record.totalHours)) : "",
+    ratePerHour: record.ratePerHour != null ? String(Number(record.ratePerHour)) : "",
+    date: record.date ? new Date(record.date).toISOString().slice(0, 10) : "",
+    startTime: record.startTime ?? "",
+    finishTime: record.finishTime ?? "",
+    task: record.task ?? "",
+    notes: record.notes ?? "",
+    weather: record.weather ?? "",
+    location: record.location ?? "",
+    confidence: null
+  }));
 }
 
 function formatCurrency(amount: number) {

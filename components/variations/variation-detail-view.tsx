@@ -6,18 +6,21 @@ import Link from "next/link";
 import type {
   ContractTerms,
   Correspondence,
+  DayWorksMaterial,
+  DayWorksPlant,
+  DayWorksSheetRecord,
   Update,
   UpdateAttachment,
   VariationItem,
   VariationPackage,
   VariationPhoto
 } from "@prisma/client";
-import type { DayWorksSheetWithLineItems } from "@/lib/variation-package";
+import type { DayWorksSheetWithRecords } from "@/lib/variation-package";
 import { StatusBadge } from "@/components/badges/status-badge";
 import { CountdownBadge } from "@/components/badges/countdown-badge";
 import { VariationItemFormDialog } from "@/components/variations/variation-item-form-dialog";
 import { VariationQuoteSection } from "@/components/variations/variation-quote-section";
-import { VariationDayWorksSection } from "@/components/variations/variation-day-works-section";
+import { LabourPlantMaterialSection } from "@/components/variations/labour-plant-material-section";
 import { VariationPhotosSection } from "@/components/variations/variation-photos-section";
 import { VariationCorrespondenceSection } from "@/components/variations/variation-correspondence-section";
 import { VariationLinkedUpdatesSection } from "@/components/variations/variation-linked-updates-section";
@@ -43,6 +46,8 @@ export function VariationDetailView({
   projectId,
   item,
   dayWorksSheets,
+  materials,
+  plant,
   photos,
   correspondence,
   updates,
@@ -53,7 +58,9 @@ export function VariationDetailView({
 }: {
   projectId: string;
   item: VariationItem;
-  dayWorksSheets: DayWorksSheetWithLineItems[];
+  dayWorksSheets: (DayWorksSheetWithRecords & { sheetRecords: DayWorksSheetRecord[] })[];
+  materials: DayWorksMaterial[];
+  plant: DayWorksPlant[];
   photos: VariationPhoto[];
   correspondence: Correspondence[];
   updates: UpdateWithReplies[];
@@ -69,7 +76,7 @@ export function VariationDetailView({
   const isSiteInstruction = item.type === "site_instruction";
   const hasVariation = item.variationCreatedAt != null;
 
-  // Mirrors VariationDayWorksSection's own defaultRatePerHour derivation —
+  // Mirrors LabourPlantMaterialSection's own defaultRatePerHour derivation —
   // ContractTerms is one row per project (not per item), so this same
   // value applies regardless of which item a "Use as Day Works Sheet"
   // action ends up targeting from the Linked Updates section below.
@@ -182,10 +189,12 @@ export function VariationDetailView({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {hasVariation && <VariationQuoteSection projectId={projectId} item={item} />}
-        <VariationDayWorksSection
+        <LabourPlantMaterialSection
           projectId={projectId}
           itemId={item.id}
           dayWorksSheets={dayWorksSheets}
+          materials={materials}
+          plant={plant}
           contractTerms={contractTerms}
         />
         <VariationPhotosSection projectId={projectId} itemId={item.id} photos={photos} />
@@ -210,6 +219,8 @@ export function VariationDetailView({
         itemId={item.id}
         item={item}
         dayWorksSheets={dayWorksSheets}
+        materials={materials}
+        plant={plant}
         photos={photos}
         correspondence={correspondence}
         updates={updates}

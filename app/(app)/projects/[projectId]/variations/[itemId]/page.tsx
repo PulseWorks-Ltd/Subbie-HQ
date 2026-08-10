@@ -38,16 +38,19 @@ export default async function VariationItemPage({
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [dayWorksSheets, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages] = await Promise.all([
+  const [dayWorksSheets, materials, plant, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages] = await Promise.all([
+    // Labour only — materials/plant are independent of any sheet now
+    // (Labour, Plant & Material AI Extraction), fetched at the item
+    // level below instead.
     prisma.dayWorksSheet.findMany({
       where: { variationItemId: itemId },
       orderBy: { createdAt: "desc" },
       include: {
-        materials: { orderBy: { createdAt: "asc" } },
-        plant: { orderBy: { createdAt: "asc" } },
         sheetRecords: { orderBy: { sortOrder: "asc" } }
       }
     }),
+    prisma.dayWorksMaterial.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "asc" } }),
+    prisma.dayWorksPlant.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "asc" } }),
     prisma.variationPhoto.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.correspondence.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.update.findMany({
@@ -88,6 +91,8 @@ export default async function VariationItemPage({
       projectId={projectId}
       item={item}
       dayWorksSheets={dayWorksSheets}
+      materials={materials}
+      plant={plant}
       photos={photos}
       correspondence={correspondence}
       updates={updates}

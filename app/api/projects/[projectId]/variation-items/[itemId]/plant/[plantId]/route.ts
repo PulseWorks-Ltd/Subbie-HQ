@@ -5,10 +5,10 @@ import { deleteFromS3 } from "@/lib/s3";
 
 export async function DELETE(
   request: Request,
-  context: { params: { projectId: string; itemId: string; sheetId: string; plantId: string } }
+  context: { params: { projectId: string; itemId: string; plantId: string } }
 ) {
   const userId = await requireUserId(request);
-  const { projectId, itemId, sheetId, plantId } = context.params;
+  const { projectId, itemId, plantId } = context.params;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -30,12 +30,21 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const plant = await prisma.dayWorksPlant.findFirst({
-    where: { id: plantId, dayWorksSheetId: sheetId, dayWorksSheet: { variationItemId: itemId } }
+  const plantItem = await prisma.dayWorksPlant.findFirst({
+    where: { id: plantId, variationItemId: itemId }
   });
-  if (plant) {
-    if (plant.photoStorageKey) {
-      await deleteFromS3(plant.photoStorageKey).catch(() => {});
+  if (plantItem) {
+    // Same shared-photo guard as materials/[materialId]/route.ts — a
+    // single uploaded plant docket can extract into several line items
+    // that all reference the same photoStorageKey.
+    if (plantItem.photoStorageKey) {
+      const stillReferenced = await prisma.dayWorksPlant.findFirst({
+        where: { photoStorageKey: plantItem.photoStorageKey, id: { not: plantId } },
+        select: { id: true }
+      });
+      if (!stillReferenced) {
+        await deleteFromS3(plantItem.photoStorageKey).catch(() => {});
+      }
     }
     await prisma.dayWorksPlant.delete({ where: { id: plantId } });
   }

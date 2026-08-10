@@ -1,28 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
+import { toNullableString, toNullableNumber, toNullableDate } from "@/lib/day-works-form-parsing";
 
 async function moduleForItem(projectId: string, itemId: string) {
   const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
   if (!item) return null;
   return item.type === "variation" ? ("variations" as const) : ("site_instructions" as const);
-}
-
-function toNullableString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function toNullableNumber(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const num = Number(value);
-  return Number.isFinite(num) ? num : null;
-}
-
-function toNullableDate(value: unknown): Date | null {
-  const str = toNullableString(value);
-  if (!str) return null;
-  const date = new Date(str);
-  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 // Full delete+recreate on every save, same as before — matches the review

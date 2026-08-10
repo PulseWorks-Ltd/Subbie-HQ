@@ -30,23 +30,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const sheet = await prisma.dayWorksSheet.findFirst({
-    where: { id: sheetId, variationItemId: itemId },
-    include: { materials: true, plant: true }
-  });
+  // Materials/plant are independent of any sheet now (Labour, Plant &
+  // Material AI Extraction) — dayWorksSheetId is only a nullable
+  // historical reference (onDelete: SetNull), so deleting a sheet no
+  // longer deletes them, only clears that reference. Only the sheet's
+  // own file and labour records (sheetRecords, onDelete: Cascade) go.
+  const sheet = await prisma.dayWorksSheet.findFirst({ where: { id: sheetId, variationItemId: itemId } });
   if (sheet) {
     await deleteFromS3(sheet.storageKey).catch(() => {});
-    // Materials/plant cascade at the DB level (onDelete: Cascade), but
-    // their S3 receipt/docket photos don't clean up themselves — deleted
-    // here first.
-    await Promise.all([
-      ...sheet.materials
-        .filter((material) => material.photoStorageKey)
-        .map((material) => deleteFromS3(material.photoStorageKey as string).catch(() => {})),
-      ...sheet.plant
-        .filter((plantItem) => plantItem.photoStorageKey)
-        .map((plantItem) => deleteFromS3(plantItem.photoStorageKey as string).catch(() => {}))
-    ]);
     await prisma.dayWorksSheet.delete({ where: { id: sheetId } });
   }
 

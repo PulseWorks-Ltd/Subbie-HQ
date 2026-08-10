@@ -9,17 +9,12 @@ async function moduleForItem(projectId: string, itemId: string) {
   return item.type === "variation" ? ("variations" as const) : ("site_instructions" as const);
 }
 
-// One material line item per request — no markup applied, this records
-// raw cost only (see task rules). The optional "photo" file is uploaded
-// in the same request as the line item's own fields, matching the
-// day-works-sheets upload's single-step pattern rather than a separate
-// follow-up call.
-export async function POST(
-  request: Request,
-  context: { params: { projectId: string; itemId: string; sheetId: string } }
-) {
+// Mirrors materials/route.ts exactly (same fields, same S3 photo-
+// attachment pattern) — the only difference is which model it writes to
+// and that this line item never receives materials markup (Task 1.1).
+export async function POST(request: Request, context: { params: { projectId: string; itemId: string } }) {
   const userId = await requireUserId(request);
-  const { projectId, itemId, sheetId } = context.params;
+  const { projectId, itemId } = context.params;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -35,11 +30,6 @@ export async function POST(
   const canAccessModule = await requireModuleAccess(projectId, userId, module_);
   if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const sheet = await prisma.dayWorksSheet.findFirst({ where: { id: sheetId, variationItemId: itemId } });
-  if (!sheet) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const formData = await request.formData();
@@ -58,19 +48,19 @@ export async function POST(
   const photo = formData.get("photo");
   if (photo instanceof File && photo.size > 0) {
     if (!photo.type.startsWith("image/")) {
-      return NextResponse.json({ error: "The receipt attachment must be an image." }, { status: 400 });
+      return NextResponse.json({ error: "The docket attachment must be an image." }, { status: 400 });
     }
     const buffer = new Uint8Array(await photo.arrayBuffer());
-    const uploadKey = `projects/${projectId}/variation-items/${itemId}/day-works/${sheetId}/materials/${Date.now()}-${photo.name}`;
+    const uploadKey = `projects/${projectId}/variation-items/${itemId}/plant/${Date.now()}-${photo.name}`;
     const { storageKey } = await uploadToS3({ key: uploadKey, body: buffer, contentType: photo.type });
     photoFileName = photo.name;
     photoStorageKey = storageKey;
     photoContentType = photo.type;
   }
 
-  const material = await prisma.dayWorksMaterial.create({
+  const plantItem = await prisma.dayWorksPlant.create({
     data: {
-      dayWorksSheetId: sheetId,
+      variationItemId: itemId,
       description,
       quantity,
       unit,
@@ -81,5 +71,5 @@ export async function POST(
     }
   });
 
-  return NextResponse.json({ material }, { status: 201 });
+  return NextResponse.json({ plant: plantItem }, { status: 201 });
 }

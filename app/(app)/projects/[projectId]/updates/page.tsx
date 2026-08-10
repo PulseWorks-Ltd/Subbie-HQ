@@ -66,7 +66,7 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
   ]);
 
   // Same "Use as Day Works Sheet" pre-fill as the item's own "+Upload"
-  // flow (VariationDayWorksSection) — ContractTerms is one row per
+  // flow (LabourPlantMaterialSection) — ContractTerms is one row per
   // project, so the same value applies to whichever item ends up selected.
   const defaultRatePerHour =
     contractTerms?.dayWorksRateNormal != null ? String(Number(contractTerms.dayWorksRateNormal)) : "";

@@ -2,6 +2,8 @@ import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf
 import { loadImage, createCanvas } from "@napi-rs/canvas";
 import type {
   Correspondence,
+  DayWorksMaterial,
+  DayWorksPlant,
   InboundEmail,
   Update,
   UpdateAttachment,
@@ -14,9 +16,11 @@ import { downloadFromS3 } from "./s3";
 import { formatUserName } from "./user-display";
 import {
   computeSheetRecordTotal,
-  computeSheetTotals,
+  computeCombinedLabourSummary,
+  computeMaterialsSummary,
+  computePlantCost,
   computePackageTotals,
-  type DayWorksSheetWithLineItems
+  type DayWorksSheetWithRecords
 } from "./variation-package";
 
 const PAGE_WIDTH = 595.28;
@@ -415,19 +419,21 @@ export async function generateVariationPackagePdf(params: {
   item: VariationItem;
   photos: VariationPhoto[];
   correspondence: CorrespondenceWithRelations[];
-  dayWorksSheets: DayWorksSheetWithLineItems[];
+  dayWorksSheets: DayWorksSheetWithRecords[];
+  materials: DayWorksMaterial[];
+  plant: DayWorksPlant[];
   updates: UpdateWithRelations[];
   contractTerms: { materialsMarkupPercent: number | null } | null;
   generatedByName: string;
 }): Promise<Uint8Array> {
-  const { item, photos, correspondence, dayWorksSheets, updates, contractTerms, generatedByName } = params;
+  const { item, photos, correspondence, dayWorksSheets, materials, plant, updates, contractTerms, generatedByName } = params;
 
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
   const w = new PdfWriter(doc, font, boldFont);
 
-  const packageTotals = computePackageTotals(dayWorksSheets, contractTerms);
+  const packageTotals = computePackageTotals(dayWorksSheets, materials, plant, contractTerms);
 
   // --- Header (Task 1.1 — unchanged from before this feature) ---
   w.heading(`Variation Package — ${item.reference}`);
@@ -446,7 +452,7 @@ export async function generateVariationPackagePdf(params: {
   // --- Evidence checklist (literal counts only — no AI sufficiency judgement) ---
   w.subheading("Evidence included");
   w.text(
-    `Photos (${photos.length}), Correspondence (${correspondence.length}), Day Works Sheets (${dayWorksSheets.length})`
+    `Photos (${photos.length}), Correspondence (${correspondence.length}), Day Works Sheets (${dayWorksSheets.length}), Materials (${materials.length}), Plant (${plant.length})`
   );
   w.spacer(10);
   w.divider();
@@ -521,13 +527,15 @@ export async function generateVariationPackagePdf(params: {
   w.spacer(10);
   w.divider();
 
-  // --- Day Works Sheets computed breakdown (unchanged; real source files follow later, Task 1.3) ---
+  // --- Day Works Sheets computed breakdown — labour only now (Materials/
+  // Plant are independent of any sheet, see their own sections below;
+  // Labour, Plant & Material AI Extraction) ---
   w.subheading(`Day Works Sheets (${dayWorksSheets.length})`);
   if (dayWorksSheets.length === 0) {
     w.text("No Day Works Sheets attached.");
   }
   for (const sheet of dayWorksSheets) {
-    const totals = computeSheetTotals(sheet, contractTerms);
+    const sheetLabour = computeCombinedLabourSummary([sheet]);
     w.spacer(4);
     w.text(sheet.fileName, { bold: true });
 
@@ -546,40 +554,50 @@ export async function generateVariationPackagePdf(params: {
         ].join(" · ");
         w.row(description, total != null ? formatCurrency(total) : "—", { indent: 16 });
       }
-      w.row("Labour total", formatCurrency(totals.labour.total), { bold: true, indent: 10 });
+      w.row("Labour total", formatCurrency(sheetLabour.total), { bold: true, indent: 10 });
+    } else {
+      w.text("No labour summary recorded.", { indent: 10 });
     }
-
-    if (sheet.materials.length > 0) {
-      w.text("Materials:", { bold: true, indent: 10 });
-      for (const material of sheet.materials) {
-        w.row(
-          `${material.description} — ${Number(material.quantity)} ${material.unit} @ ${formatCurrency(Number(material.unitCost))}`,
-          formatCurrency(Number(material.quantity) * Number(material.unitCost)),
-          { indent: 16 }
-        );
-      }
-      w.row("Materials total", formatCurrency(totals.materialsCost), { indent: 10 });
-      if (totals.materialsMarkupAmount > 0) {
-        w.row("Materials markup", formatCurrency(totals.materialsMarkupAmount), { indent: 10 });
-      }
-    }
-
-    if (sheet.plant.length > 0) {
-      w.text("Plant:", { bold: true, indent: 10 });
-      for (const plantItem of sheet.plant) {
-        w.row(
-          `${plantItem.description} — ${Number(plantItem.quantity)} ${plantItem.unit} @ ${formatCurrency(Number(plantItem.unitCost))}`,
-          formatCurrency(Number(plantItem.quantity) * Number(plantItem.unitCost)),
-          { indent: 16 }
-        );
-      }
-      w.row("Plant total", formatCurrency(totals.plantCost), { indent: 10 });
-    }
-
-    w.row("Sheet total", formatCurrency(totals.combinedTotal), { bold: true });
     w.spacer(6);
   }
+  w.divider();
 
+  // --- Materials — independent of any sheet (Labour, Plant & Material AI
+  // Extraction) ---
+  w.subheading(`Materials (${materials.length})`);
+  if (materials.length === 0) {
+    w.text("No materials attached.");
+  } else {
+    for (const material of materials) {
+      w.row(
+        `${material.description} — ${Number(material.quantity)} ${material.unit} @ ${formatCurrency(Number(material.unitCost))}`,
+        formatCurrency(Number(material.quantity) * Number(material.unitCost))
+      );
+    }
+    const { materialsCost, materialsMarkupAmount } = computeMaterialsSummary(materials, contractTerms);
+    w.row("Materials total", formatCurrency(materialsCost), { bold: true });
+    if (materialsMarkupAmount > 0) {
+      w.row("Materials markup", formatCurrency(materialsMarkupAmount), { bold: true });
+    }
+  }
+  w.spacer(10);
+  w.divider();
+
+  // --- Plant — independent of any sheet, no markup (Labour, Plant &
+  // Material AI Extraction / Task 1.1) ---
+  w.subheading(`Plant (${plant.length})`);
+  if (plant.length === 0) {
+    w.text("No plant attached.");
+  } else {
+    for (const plantItem of plant) {
+      w.row(
+        `${plantItem.description} — ${Number(plantItem.quantity)} ${plantItem.unit} @ ${formatCurrency(Number(plantItem.unitCost))}`,
+        formatCurrency(Number(plantItem.quantity) * Number(plantItem.unitCost))
+      );
+    }
+    w.row("Plant total", formatCurrency(computePlantCost(plant)), { bold: true });
+  }
+  w.spacer(10);
   w.divider();
 
   // --- Grand total (Task 1.1 — unchanged) ---
@@ -604,33 +622,41 @@ export async function generateVariationPackagePdf(params: {
     await embedSourceFile(w, { fileName: item.quoteFileName, storageKey: item.quoteStorageKey }, `Quote — ${item.quoteFileName}`);
   }
 
-  // --- 1.3 Day Works Sheets: real source file, then each material/plant
-  // line item's receipt/docket photo, immediately after that sheet ---
+  // --- 1.3 Day Works Sheets: real source file for each sheet (labour
+  // only now — materials/plant are independent, see below) ---
   for (const sheet of dayWorksSheets) {
     await embedSourceFile(
       w,
       { fileName: sheet.fileName, storageKey: sheet.storageKey, contentType: sheet.contentType },
       `Day Works Sheet — ${sheet.fileName}`
     );
+  }
 
-    for (const material of sheet.materials) {
-      if (material.photoFileName && material.photoStorageKey) {
-        await embedSourceFile(
-          w,
-          { fileName: material.photoFileName, storageKey: material.photoStorageKey, contentType: material.photoContentType },
-          `Receipt — ${material.description}`
-        );
-      }
+  // --- Materials/Plant receipt/docket photos — independent of any sheet
+  // (Labour, Plant & Material AI Extraction). A single uploaded invoice
+  // or docket can produce several line items that all reference the SAME
+  // photoStorageKey (see the labour-plant-material save route) — embed
+  // each distinct source image once, not once per line item that shares
+  // it, so a 5-line invoice doesn't repeat the same page 5 times.
+  const embeddedPhotoKeys = new Set<string>();
+  for (const material of materials) {
+    if (material.photoFileName && material.photoStorageKey && !embeddedPhotoKeys.has(material.photoStorageKey)) {
+      embeddedPhotoKeys.add(material.photoStorageKey);
+      await embedSourceFile(
+        w,
+        { fileName: material.photoFileName, storageKey: material.photoStorageKey, contentType: material.photoContentType },
+        `Materials receipt — ${material.photoFileName}`
+      );
     }
-
-    for (const plantItem of sheet.plant) {
-      if (plantItem.photoFileName && plantItem.photoStorageKey) {
-        await embedSourceFile(
-          w,
-          { fileName: plantItem.photoFileName, storageKey: plantItem.photoStorageKey, contentType: plantItem.photoContentType },
-          `Docket — ${plantItem.description}`
-        );
-      }
+  }
+  for (const plantItem of plant) {
+    if (plantItem.photoFileName && plantItem.photoStorageKey && !embeddedPhotoKeys.has(plantItem.photoStorageKey)) {
+      embeddedPhotoKeys.add(plantItem.photoStorageKey);
+      await embedSourceFile(
+        w,
+        { fileName: plantItem.photoFileName, storageKey: plantItem.photoStorageKey, contentType: plantItem.photoContentType },
+        `Plant docket — ${plantItem.photoFileName}`
+      );
     }
   }
 

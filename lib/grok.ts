@@ -274,51 +274,177 @@ export async function extractDayWorksSheetSummariesFromImages(
   }
 
   const sheets = ExtractedDayWorksSheetsVisionSchema.parse(JSON.parse(raw)).sheets;
+  return sheets.map(resolveDayWorksSheetSummary);
+}
 
-  // Self-verification (deterministic, in code — never trust the model's
-  // own arithmetic): cross-check crewSize × hoursPerPerson against the
-  // model's stated totalLabourHours when both are present, and fall back
-  // to computing the total from crewSize × hoursPerPerson when the sheet
-  // never stated one directly (Task 3.1's graceful-degradation rule).
-  return sheets.map((sheet) => {
-    const crewSize =
-      sheet.teamLeaderCount != null && sheet.teamMemberCount != null
-        ? sheet.teamLeaderCount + sheet.teamMemberCount
-        : null;
+// Self-verification (deterministic, in code — never trust the model's own
+// arithmetic): cross-checks crewSize × hoursPerPerson against the model's
+// stated totalLabourHours when both are present, and falls back to
+// computing the total from crewSize × hoursPerPerson when the sheet never
+// stated one directly (Task 3.1's graceful-degradation rule). Extracted
+// as its own function so classifyAndExtractDayWorksDocument (Labour,
+// Plant & Material AI Extraction's unified per-file classify+extract
+// call) reuses this exact verification logic rather than re-implementing
+// it — the vision call/prompt that PRODUCES the raw sheet differs between
+// the two callers, but the deterministic maths applied to the result
+// never should.
+function resolveDayWorksSheetSummary(
+  sheet: z.infer<typeof ExtractedDayWorksSheetVisionSchema>
+): ExtractedDayWorksSheetSummary {
+  const crewSize =
+    sheet.teamLeaderCount != null && sheet.teamMemberCount != null
+      ? sheet.teamLeaderCount + sheet.teamMemberCount
+      : null;
 
-    let totalHours = sheet.totalLabourHours;
-    let confidence = sheet.confidence;
-    let notes = sheet.notes;
+  let totalHours = sheet.totalLabourHours;
+  let confidence = sheet.confidence;
+  let notes = sheet.notes;
 
-    if (totalHours == null) {
-      if (crewSize != null && sheet.hoursPerPerson != null) {
-        totalHours = crewSize * sheet.hoursPerPerson;
-      }
-    } else if (crewSize != null && sheet.hoursPerPerson != null) {
-      const expected = crewSize * sheet.hoursPerPerson;
-      const tolerance = Math.max(LABOUR_TOTAL_MISMATCH_TOLERANCE_HOURS, expected * 0.1);
-      if (Math.abs(expected - totalHours) > tolerance) {
-        confidence = Math.min(confidence, LABOUR_TOTAL_MISMATCH_CONFIDENCE_CAP);
-        const mismatchNote = `Crew size × hours per person (${crewSize} × ${sheet.hoursPerPerson} = ${expected}) doesn't match the sheet's stated total (${totalHours}) — please verify.`;
-        notes = notes ? `${notes} ${mismatchNote}` : mismatchNote;
-      }
+  if (totalHours == null) {
+    if (crewSize != null && sheet.hoursPerPerson != null) {
+      totalHours = crewSize * sheet.hoursPerPerson;
     }
+  } else if (crewSize != null && sheet.hoursPerPerson != null) {
+    const expected = crewSize * sheet.hoursPerPerson;
+    const tolerance = Math.max(LABOUR_TOTAL_MISMATCH_TOLERANCE_HOURS, expected * 0.1);
+    if (Math.abs(expected - totalHours) > tolerance) {
+      confidence = Math.min(confidence, LABOUR_TOTAL_MISMATCH_CONFIDENCE_CAP);
+      const mismatchNote = `Crew size × hours per person (${crewSize} × ${sheet.hoursPerPerson} = ${expected}) doesn't match the sheet's stated total (${totalHours}) — please verify.`;
+      notes = notes ? `${notes} ${mismatchNote}` : mismatchNote;
+    }
+  }
 
-    return {
-      sheetNumber: sheet.sheetNumber,
-      teamLeaderCount: sheet.teamLeaderCount,
-      teamMemberCount: sheet.teamMemberCount,
-      totalHours,
-      date: sheet.date,
-      startTime: sheet.startTime,
-      finishTime: sheet.finishTime,
-      task: sheet.task,
-      notes,
-      weather: sheet.weather,
-      location: sheet.location,
-      confidence
-    };
-  });
+  return {
+    sheetNumber: sheet.sheetNumber,
+    teamLeaderCount: sheet.teamLeaderCount,
+    teamMemberCount: sheet.teamMemberCount,
+    totalHours,
+    date: sheet.date,
+    startTime: sheet.startTime,
+    finishTime: sheet.finishTime,
+    task: sheet.task,
+    notes,
+    weather: sheet.weather,
+    location: sheet.location,
+    confidence
+  };
+}
+
+// --- Labour, Plant & Material AI Extraction: unified per-file classify
+// + extract (Task 4.1) ---
+
+const DocumentTypeSchema = z.enum(["day_works_sheet", "materials_invoice", "plant_docket", "unknown"]);
+export type ClassifiedDocumentType = z.infer<typeof DocumentTypeSchema>;
+
+// Below this confidence, the caller treats the file as needing manual type
+// assignment (Task 5) rather than trusting whatever the model extracted —
+// same "don't blindly trust a low-confidence AI call" discipline as
+// LOW_CONFIDENCE_THRESHOLD in the review dialogs, just gating "do we even
+// show extracted data" rather than "do we visually flag a row."
+export const DOCUMENT_CLASSIFICATION_CONFIDENCE_THRESHOLD = 0.6;
+
+const ExtractedLineItemVisionSchema = z.object({
+  description: z.string(),
+  quantity: z.number().nullable(),
+  unit: z.string().nullable(),
+  unitCost: z.number().nullable()
+});
+export type ExtractedLineItem = z.infer<typeof ExtractedLineItemVisionSchema>;
+
+const ClassifyAndExtractSchema = z.object({
+  documentType: DocumentTypeSchema,
+  classificationConfidence: z.number().min(0).max(1),
+  // Always all three arrays in the response (empty where not applicable)
+  // rather than a discriminated shape — simpler, more reliable JSON mode
+  // output than asking the model to omit whole keys conditionally.
+  dayWorksSheets: z.array(ExtractedDayWorksSheetVisionSchema),
+  materialsLineItems: z.array(ExtractedLineItemVisionSchema),
+  plantLineItems: z.array(ExtractedLineItemVisionSchema)
+});
+
+export type ClassifyAndExtractResult = {
+  documentType: ClassifiedDocumentType;
+  classificationConfidence: number;
+  dayWorksSheets: ExtractedDayWorksSheetSummary[];
+  materialsLineItems: ExtractedLineItem[];
+  plantLineItems: ExtractedLineItem[];
+};
+
+// One vision call per uploaded file (Task 4.1) — classifies the document,
+// then extracts using whichever type-specific shape applies, all in a
+// single round trip (never a separate classify-then-extract pair of
+// calls). The day_works_sheet branch asks for exactly the same fields,
+// with exactly the same wording, as extractDayWorksSheetSummariesFromImages'
+// own prompt above — genuinely reused, not reinvented — and its result
+// goes through the same resolveDayWorksSheetSummary self-verification
+// step, so a file that resolves to day_works_sheet here behaves
+// identically to one uploaded through the original single-purpose flow.
+// materials_invoice/plant_docket are new extraction logic (Task 4.1) —
+// simple line-item lists matching DayWorksMaterial/DayWorksPlant's own
+// shape, deliberately with nullable quantity/unit/unitCost (never guess a
+// number that isn't legible) since this always feeds a mandatory
+// review-before-save step, never a direct save.
+export async function classifyAndExtractDayWorksDocument(
+  images: { dataUrl: string }[],
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ClassifyAndExtractResult> {
+  const response = await callGrok(
+    {
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You classify one uploaded construction site document (photo or scan) as exactly one of: \"day_works_sheet\" (a labour timesheet recording crew/hours worked, often handwritten), \"materials_invoice\" (a supplier invoice/receipt for materials purchased), \"plant_docket\" (a hire docket/invoice for plant or equipment hire), or \"unknown\" (doesn't clearly match any of those, or is too unclear to classify confidently). " +
+            "Respond with only a JSON object matching this exact shape: " +
+            '{"documentType": "day_works_sheet" | "materials_invoice" | "plant_docket" | "unknown", "classificationConfidence": number, "dayWorksSheets": [...], "materialsLineItems": [...], "plantLineItems": [...]}. ' +
+            "classificationConfidence: your honest 0-1 confidence in the documentType classification itself. " +
+            "Populate ONLY the array matching your classification; leave the other two as empty arrays. If documentType is \"unknown\" or your classificationConfidence is low, leave ALL THREE arrays empty — do not guess at extraction for a document you can't confidently identify. " +
+            "\n\nIf documentType is \"day_works_sheet\", populate dayWorksSheets — one or more photos may contain multiple distinct physical day works sheets bundled together (e.g. several pages, or several sheets photographed on one page); first determine how many separate sheets are present, then produce exactly one summary object per sheet, in the order they appear. Do NOT extract a per-worker or per-time-entry breakdown; that level of detail is deliberately not wanted. Each entry: " +
+            '{"sheetNumber": string | null, "teamLeaderCount": number | null, "teamMemberCount": number | null, "startTime": string | null, "finishTime": string | null, "hoursPerPerson": number | null, "totalLabourHours": number | null, "date": string | null, "task": string | null, "weather": string | null, "location": string | null, "confidence": number, "notes": string | null}. ' +
+            "sheetNumber: the sheet's own reference/number exactly as printed or written (e.g. 'DW001', 'DW-15', 'Sheet 7', '23542'), or null if genuinely not shown — read every digit carefully, handwritten numbers are easy to misread. " +
+            "teamLeaderCount: the number of foremen/leading hands/supervisors recorded on this sheet (usually 1), or null if not determinable. " +
+            "teamMemberCount: the number of everyone else (regular workers) recorded on this sheet, or null if not determinable. " +
+            "hoursPerPerson: the number of hours each individual worked, if stated or clearly consistent across the crew (e.g. '8' from '3 MEN X 8 HRS'), or null if not shown or not consistent. " +
+            "totalLabourHours: the TOTAL labour hours across the whole crew for this sheet, ONLY if the sheet states its own total directly (e.g. '3 MEN X 8 = 24 HOURS' means 24) — never calculate this total yourself; if no such total is actually written on the sheet, leave this null and let hoursPerPerson carry the information instead. " +
+            "startTime/finishTime/date/task/weather/location: extract only if clearly legible on the sheet; null if not shown — their absence is normal and never blocks extraction. " +
+            "confidence: your own honest 0-1 confidence in the accuracy of THIS sheet's extraction as a whole — lower it for anything genuinely hard to read (poor handwriting, smudged ink, ambiguous digits); a field being genuinely blank on the sheet is normal and should NOT by itself lower confidence. " +
+            "notes: a brief plain-English note on anything uncertain or unreadable on this sheet, so a human reviewer knows exactly what to double-check — null if nothing is uncertain. " +
+            "\n\nIf documentType is \"materials_invoice\" or \"plant_docket\", populate materialsLineItems or plantLineItems respectively — one entry per distinct line item on the invoice/docket. Each entry: " +
+            '{"description": string, "quantity": number | null, "unit": string | null, "unitCost": number | null}. ' +
+            "description: the item/material or plant/equipment description exactly as printed. " +
+            "quantity: the quantity/count for this line, or null if not clearly stated. " +
+            "unit: the unit the quantity is measured in (e.g. 'each', 'm2', 'kg', 'day', 'hour'), or null if not clearly stated. " +
+            "unitCost: the cost PER UNIT for this line (not the line's extended total) as a plain number with no currency symbols or commas, or null if only a total is shown and a per-unit rate can't be reliably derived. " +
+            "Never guess or invent a number, description, or classification you can't reasonably support from what's visible — use null (or \"unknown\"/low confidence for the classification itself) instead."
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Classify the following document image(s) and extract the structured data described." },
+            ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image.dataUrl } }))
+          ]
+        }
+      ]
+    },
+    { ...usageContext, feature: "labour_plant_material_document_extraction" }
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  const parsed = ClassifyAndExtractSchema.parse(JSON.parse(raw));
+
+  return {
+    documentType: parsed.documentType,
+    classificationConfidence: parsed.classificationConfidence,
+    dayWorksSheets: parsed.dayWorksSheets.map(resolveDayWorksSheetSummary),
+    materialsLineItems: parsed.materialsLineItems,
+    plantLineItems: parsed.plantLineItems
+  };
 }
 
 const ExtractedProgrammeItemSchema = z.object({

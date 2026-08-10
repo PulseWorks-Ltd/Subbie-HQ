@@ -5,10 +5,10 @@ import { getSignedDownloadUrl } from "@/lib/s3";
 
 export async function GET(
   request: Request,
-  context: { params: { projectId: string; itemId: string; sheetId: string; plantId: string } }
+  context: { params: { projectId: string; itemId: string; plantId: string } }
 ) {
   const userId = await requireUserId(request);
-  const { projectId, itemId, sheetId, plantId } = context.params;
+  const { projectId, itemId, plantId } = context.params;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -30,13 +30,13 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const plant = await prisma.dayWorksPlant.findFirst({
-    where: { id: plantId, dayWorksSheetId: sheetId, dayWorksSheet: { variationItemId: itemId } }
+  const plantItem = await prisma.dayWorksPlant.findFirst({
+    where: { id: plantId, variationItemId: itemId }
   });
-  if (!plant || !plant.photoStorageKey) {
+  if (!plantItem || !plantItem.photoStorageKey) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const signedUrl = await getSignedDownloadUrl(plant.photoStorageKey);
+  const signedUrl = await getSignedDownloadUrl(plantItem.photoStorageKey);
   return NextResponse.redirect(signedUrl);
 }

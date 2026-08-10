@@ -64,7 +64,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const [photos, correspondence, dayWorksSheets, materials, plant, updates, contractTerms] = await Promise.all([
+  const [photos, correspondence, dayWorksSheets, sheetRecords, materials, plant, updates, contractTerms] = await Promise.all([
     prisma.variationPhoto.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.correspondence.findMany({
       where: { variationItemId: itemId },
@@ -74,16 +74,11 @@ export async function POST(request: Request, context: { params: { projectId: str
         sourceUpdate: { include: { author: true, recipients: true } }
       }
     }),
-    // Labour only — materials/plant are independent of any sheet now
-    // (Labour, Plant & Material AI Extraction), fetched at the item
-    // level below instead.
-    prisma.dayWorksSheet.findMany({
-      where: { variationItemId: itemId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        sheetRecords: { orderBy: { sortOrder: "asc" } }
-      }
-    }),
+    // Just the uploaded files — labour records are independent of any
+    // sheet now too (Labour, Plant & Material AI Extraction, extended to
+    // Labour), fetched at the item level below instead.
+    prisma.dayWorksSheet.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
+    prisma.dayWorksSheetRecord.findMany({ where: { variationItemId: itemId }, orderBy: { sortOrder: "asc" } }),
     prisma.dayWorksMaterial.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "asc" } }),
     prisma.dayWorksPlant.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "asc" } }),
     prisma.update.findMany({
@@ -106,6 +101,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   const filteredPhotos = isIncluded("photos") ? photos : [];
   const filteredCorrespondence = isIncluded("correspondence") ? correspondence : [];
   const filteredDayWorksSheets = isIncluded("day_works_sheets") ? dayWorksSheets : [];
+  const filteredSheetRecords = isIncluded("day_works_sheets") ? sheetRecords : [];
   const filteredMaterials = isIncluded("materials") ? materials : [];
   const filteredPlant = isIncluded("plant") ? plant : [];
   const filteredUpdates = isIncluded("linked_updates") ? updates : [];
@@ -122,6 +118,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     photos: filteredPhotos,
     correspondence: filteredCorrespondence,
     dayWorksSheets: filteredDayWorksSheets,
+    sheetRecords: filteredSheetRecords,
     materials: filteredMaterials,
     plant: filteredPlant,
     updates: filteredUpdates,
@@ -132,7 +129,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   const uploadKey = `projects/${projectId}/variation-items/${itemId}/packages/${Date.now()}-variation-package-${item.reference}.pdf`;
   const { storageKey } = await uploadToS3({ key: uploadKey, body: pdfBytes, contentType: "application/pdf" });
 
-  const totals = computePackageTotals(filteredDayWorksSheets, filteredMaterials, filteredPlant, contractTerms);
+  const totals = computePackageTotals(filteredSheetRecords, filteredMaterials, filteredPlant, contractTerms);
 
   const variationPackage = await prisma.variationPackage.create({
     data: {
@@ -147,7 +144,10 @@ export async function POST(request: Request, context: { params: { projectId: str
       grandTotal: totals.grandTotal,
       photoCount: filteredPhotos.length,
       correspondenceCount: filteredCorrespondence.length,
-      dayWorksSheetCount: filteredDayWorksSheets.length,
+      // Records, not files — matches Materials/Plant counting line items
+      // (Task: visual/functional consistency, now that Labour is
+      // independent of any sheet too).
+      dayWorksSheetCount: filteredSheetRecords.length,
       includedCategories
     }
   });

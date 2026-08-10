@@ -8,6 +8,7 @@ import type {
   Correspondence,
   DayWorksMaterial,
   DayWorksPlant,
+  DayWorksSheet,
   DayWorksSheetRecord,
   Update,
   UpdateAttachment,
@@ -15,7 +16,6 @@ import type {
   VariationPackage,
   VariationPhoto
 } from "@prisma/client";
-import type { DayWorksSheetWithRecords } from "@/lib/variation-package";
 import { StatusBadge } from "@/components/badges/status-badge";
 import { CountdownBadge } from "@/components/badges/countdown-badge";
 import { VariationItemFormDialog } from "@/components/variations/variation-item-form-dialog";
@@ -46,6 +46,7 @@ export function VariationDetailView({
   projectId,
   item,
   dayWorksSheets,
+  sheetRecords,
   materials,
   plant,
   photos,
@@ -58,7 +59,8 @@ export function VariationDetailView({
 }: {
   projectId: string;
   item: VariationItem;
-  dayWorksSheets: (DayWorksSheetWithRecords & { sheetRecords: DayWorksSheetRecord[] })[];
+  dayWorksSheets: DayWorksSheet[];
+  sheetRecords: DayWorksSheetRecord[];
   materials: DayWorksMaterial[];
   plant: DayWorksPlant[];
   photos: VariationPhoto[];
@@ -193,6 +195,7 @@ export function VariationDetailView({
           projectId={projectId}
           itemId={item.id}
           dayWorksSheets={dayWorksSheets}
+          sheetRecords={sheetRecords}
           materials={materials}
           plant={plant}
           contractTerms={contractTerms}
@@ -219,6 +222,7 @@ export function VariationDetailView({
         itemId={item.id}
         item={item}
         dayWorksSheets={dayWorksSheets}
+        sheetRecords={sheetRecords}
         materials={materials}
         plant={plant}
         photos={photos}

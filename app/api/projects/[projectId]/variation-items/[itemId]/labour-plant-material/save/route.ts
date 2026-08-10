@@ -92,6 +92,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       if (rawRecords.length > 0) {
         await tx.dayWorksSheetRecord.createMany({
           data: rawRecords.map((raw, index) => ({
+            variationItemId: itemId,
             dayWorksSheetId: sheet.id,
             sheetNumber: toNullableString(raw?.sheetNumber) ?? `Sheet ${index + 1}`,
             teamLeaderCount: Math.max(0, Math.trunc(toNullableNumber(raw?.teamLeaderCount) ?? 0)),

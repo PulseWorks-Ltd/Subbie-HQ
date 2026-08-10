@@ -1117,10 +1117,12 @@ model VariationItem {
   updates                   Update[]
   dayWorksSheets            DayWorksSheet[]
   // Direct, sheet-independent relations (Labour, Plant & Material AI
-  // Extraction feature) — the primary way materials/plant attach to an
-  // item going forward; see DayWorksMaterial/DayWorksPlant's own comments.
+  // Extraction feature) — the primary way materials/plant/labour records
+  // attach to an item going forward; see DayWorksMaterial/DayWorksPlant/
+  // DayWorksSheetRecord's own comments.
   materials                 DayWorksMaterial[]
   plant                     DayWorksPlant[]
+  sheetRecords              DayWorksSheetRecord[]
   photos                    VariationPhoto[]
   correspondence            Correspondence[]
   packages                  VariationPackage[]
@@ -1134,17 +1136,15 @@ model VariationItem {
 // the physical day works sheet(s). contentType is additive (nullable —
 // older rows uploaded before this field existed won't have it) and drives
 // which OCR path extraction uses (PDF page-render-and-OCR vs direct image
-// OCR — see lib/pdf-text-extraction.ts). sheetRecords is the
-// AI-extracted-then-user-confirmed per-physical-sheet LABOUR summary
-// derived from the uploaded file (see DayWorksSheetRecord) — the file
-// itself remains the supporting evidence, sheetRecords is derived from
-// it, never replaces it. One uploaded file can bundle several physical
-// sheets, so this is one-to-many. materials/plant below are the
-// HISTORICAL back-reference only (Labour, Plant & Material AI Extraction
-// feature) — rows created before that change, or a user's deliberate
-// choice to still log against a specific sheet; the primary, current
-// relation for materials/plant is VariationItem.materials/plant directly
-// (see DayWorksMaterial/DayWorksPlant), independent of any sheet.
+// OCR — see lib/pdf-text-extraction.ts). materials/plant/sheetRecords
+// below are all the HISTORICAL back-reference only — rows created via AI
+// extraction from this file (or, for materials/plant, a user's
+// deliberate choice to still log against a specific sheet) retain this
+// link for traceability, but the primary, current relation for all three
+// is VariationItem.materials/plant/sheetRecords directly (see
+// DayWorksMaterial/DayWorksPlant/DayWorksSheetRecord), independent of
+// any sheet. One uploaded file can still bundle several physical sheets'
+// worth of labour records, so this stays one-to-many.
 model DayWorksSheet {
   id              String   @id @default(cuid())
   variationItemId String
@@ -1173,12 +1173,23 @@ model DayWorksSheet {
 // pattern — and simply isn't shown when either is blank, never a false
 // $0. Every field below sheetNumber/teamLeaderCount/teamMemberCount is
 // optional — this is a deliberately low-friction review step (see this
-// model's task notes), not a form with required fields. Rows are fully
-// replaced (delete+recreate) on every save from the review UI, matching
-// the previous per-worker model's same "editable draft list" pattern.
+// model's task notes), not a form with required fields.
+//
+// Relates directly to VariationItem (variationItemId, required) — same
+// independence pattern as DayWorksMaterial/DayWorksPlant (Labour, Plant &
+// Material AI Extraction, then extended to Labour itself once the same
+// upload-required asymmetry showed up here too). dayWorksSheetId is a
+// NULLABLE historical/traceability reference: set for AI-extracted
+// records (so they keep their link back to the source file for the
+// existing "Re-extract"/"Edit summary" actions, and are fully replaced
+// on every re-save from that review UI, matching the previous per-worker
+// model's "editable draft list" pattern), null for manually-entered
+// records with no file behind them. onDelete: SetNull, not Cascade —
+// deleting the sheet must not delete a record that's independent of it.
 model DayWorksSheetRecord {
   id              String   @id @default(cuid())
-  dayWorksSheetId String
+  variationItemId String
+  dayWorksSheetId String?
   sheetNumber     String
   teamLeaderCount Int
   teamMemberCount Int
@@ -1194,7 +1205,10 @@ model DayWorksSheetRecord {
   sortOrder       Int      @default(0)
   createdAt       DateTime @default(now())
 
-  dayWorksSheet DayWorksSheet @relation(fields: [dayWorksSheetId], references: [id], onDelete: Cascade)
+  variationItem VariationItem  @relation(fields: [variationItemId], references: [id])
+  dayWorksSheet DayWorksSheet? @relation(fields: [dayWorksSheetId], references: [id], onDelete: SetNull)
+
+  @@index([variationItemId])
 }
 
 // One line item = one material bought for the day's work. No markup

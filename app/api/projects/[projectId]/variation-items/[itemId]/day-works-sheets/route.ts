@@ -29,15 +29,13 @@ export async function GET(request: Request, context: { params: { projectId: stri
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Labour only (sheetRecords) — materials/plant are independent of any
-  // sheet now (Labour, Plant & Material AI Extraction), fetched at the
-  // item level instead (see variation-items/[itemId]/materials and .../plant).
+  // Just the uploaded files — labour records are independent of any
+  // sheet now too (Labour, Plant & Material AI Extraction, extended to
+  // Labour), fetched at the item level instead (see
+  // variation-items/[itemId]/labour-records, .../materials, .../plant).
   const dayWorksSheets = await prisma.dayWorksSheet.findMany({
     where: { variationItemId: itemId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      sheetRecords: { orderBy: { sortOrder: "asc" } }
-    }
+    orderBy: { createdAt: "desc" }
   });
 
   return NextResponse.json({ dayWorksSheets });

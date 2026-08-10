@@ -1,4 +1,4 @@
-import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheet, DayWorksSheetRecord } from "@prisma/client";
+import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheetRecord } from "@prisma/client";
 
 // The 6 categories a Variation Package generation can include/exclude
 // (per-generation only — see VariationPackage.includedCategories). Order
@@ -30,15 +30,6 @@ export const PACKAGE_CATEGORY_LABELS: Record<PackageCategory, string> = {
   correspondence: "Correspondence",
   linked_updates: "Linked Updates",
   photos: "Photos"
-};
-
-// Labour-only now — materials/plant are no longer nested under a sheet
-// (Labour, Plant & Material AI Extraction). sheet.materials/sheet.plant
-// still exist as a historical back-reference at the DB level (see
-// prisma/schema.prisma), but nothing in business logic or the UI reads
-// them through the sheet anymore; materials/plant are always item-level.
-export type DayWorksSheetWithRecords = DayWorksSheet & {
-  sheetRecords: DayWorksSheetRecord[];
 };
 
 type RateFields = Pick<ContractTerms, "materialsMarkupPercent">;
@@ -124,13 +115,6 @@ export function computeLabourSummary(sheetRecords: DayWorksSheetRecord[]): Labou
   return { total, totalHours, hoursMissingRate };
 }
 
-// Labour summed across EVERY sheet attached to the item — sheets
-// themselves no longer carry materials/plant, so this is purely a
-// flatten-and-reuse of computeLabourSummary across every sheet's records.
-export function computeCombinedLabourSummary(sheets: DayWorksSheetWithRecords[]): LabourSummary {
-  return computeLabourSummary(sheets.flatMap((sheet) => sheet.sheetRecords));
-}
-
 export type PackageTotals = {
   labourTotal: number;
   materialsTotal: number;
@@ -140,18 +124,20 @@ export type PackageTotals = {
 };
 
 // Single source of truth for "what does this Variation/SI's Labour,
-// Materials & Plant cost, combined" (Task 1.3) — labour summed across
-// every Day Works Sheet, materials/plant summed independently at the
-// item level (no longer derived from within each sheet). Used by the
-// section's live display, the Generate Variation Package review screen,
-// PDF generation, and the totals frozen onto a generated VariationPackage.
+// Materials & Plant cost, combined" (Task 1.3) — labour, materials, and
+// plant are each summed independently at the item level now (Labour
+// joined Materials/Plant in becoming independent of any specific Day
+// Works Sheet — see DayWorksSheetRecord's schema comment), never derived
+// from records nested under a sheet. Used by the section's live display,
+// the Generate Variation Package review screen, PDF generation, and the
+// totals frozen onto a generated VariationPackage.
 export function computePackageTotals(
-  sheets: DayWorksSheetWithRecords[],
+  sheetRecords: DayWorksSheetRecord[],
   materials: DayWorksMaterial[],
   plant: DayWorksPlant[],
   contractTerms: RateFields | null
 ): PackageTotals {
-  const labour = computeCombinedLabourSummary(sheets);
+  const labour = computeLabourSummary(sheetRecords);
   const { materialsCost, materialsMarkupAmount } = computeMaterialsSummary(materials, contractTerms);
   const plantTotal = computePlantCost(plant);
 

@@ -50,6 +50,7 @@ export async function POST(
   }
 
   const records = rawRecords.map((raw: Record<string, unknown>, index: number) => ({
+    variationItemId: itemId,
     dayWorksSheetId: sheetId,
     sheetNumber: toNullableString(raw?.sheetNumber) ?? `Sheet ${index + 1}`,
     teamLeaderCount: Math.max(0, Math.trunc(toNullableNumber(raw?.teamLeaderCount) ?? 0)),

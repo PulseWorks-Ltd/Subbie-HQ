@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
-import { deleteFromS3 } from "@/lib/s3";
 
 export async function DELETE(
   request: Request,
-  context: { params: { projectId: string; itemId: string; sheetId: string } }
+  context: { params: { projectId: string; itemId: string; recordId: string } }
 ) {
   const userId = await requireUserId(request);
-  const { projectId, itemId, sheetId } = context.params;
+  const { projectId, itemId, recordId } = context.params;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -30,16 +29,10 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Materials/plant/labour records are all independent of any sheet now
-  // (Labour, Plant & Material AI Extraction) — dayWorksSheetId is only a
-  // nullable historical reference on all three (onDelete: SetNull), so
-  // deleting a sheet no longer deletes any of them, only clears that
-  // reference. Only the sheet's own uploaded file goes.
-  const sheet = await prisma.dayWorksSheet.findFirst({ where: { id: sheetId, variationItemId: itemId } });
-  if (sheet) {
-    await deleteFromS3(sheet.storageKey).catch(() => {});
-    await prisma.dayWorksSheet.delete({ where: { id: sheetId } });
-  }
+  // Works regardless of whether this record came from AI extraction (has
+  // a dayWorksSheetId) or manual entry (doesn't) — deleting a labour
+  // record here never touches its source sheet/file, if it has one.
+  await prisma.dayWorksSheetRecord.deleteMany({ where: { id: recordId, variationItemId: itemId } });
 
   return NextResponse.json({ ok: true });
 }

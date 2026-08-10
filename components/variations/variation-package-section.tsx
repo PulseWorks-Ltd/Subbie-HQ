@@ -2,13 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms, Correspondence, DayWorksMaterial, DayWorksPlant, VariationItem, VariationPackage, VariationPhoto } from "@prisma/client";
+import type {
+  ContractTerms,
+  Correspondence,
+  DayWorksMaterial,
+  DayWorksPlant,
+  DayWorksSheet,
+  DayWorksSheetRecord,
+  VariationItem,
+  VariationPackage,
+  VariationPhoto
+} from "@prisma/client";
 import {
   computePackageTotals,
   computeSheetRecordTotal,
   PACKAGE_CATEGORIES,
   PACKAGE_CATEGORY_LABELS,
-  type DayWorksSheetWithRecords,
   type PackageCategory
 } from "@/lib/variation-package";
 
@@ -39,6 +48,7 @@ function GeneratePackageReviewDialog({
   itemId,
   item,
   dayWorksSheets,
+  sheetRecords,
   materials,
   plant,
   photos,
@@ -51,7 +61,8 @@ function GeneratePackageReviewDialog({
   projectId: string;
   itemId: string;
   item: VariationItem;
-  dayWorksSheets: DayWorksSheetWithRecords[];
+  dayWorksSheets: DayWorksSheet[];
+  sheetRecords: DayWorksSheetRecord[];
   materials: DayWorksMaterial[];
   plant: DayWorksPlant[];
   photos: VariationPhoto[];
@@ -81,7 +92,10 @@ function GeneratePackageReviewDialog({
 
   const categoryCounts: Record<PackageCategory, number> = {
     quote: item.quoteFileName && item.quoteStorageKey ? 1 : 0,
-    day_works_sheets: dayWorksSheets.length,
+    // Records, not files — matches Materials/Plant counting line items
+    // rather than distinct source documents (Task: visual/functional
+    // consistency across all three, now that Labour is independent too).
+    day_works_sheets: sheetRecords.length,
     materials: materials.length,
     plant: plant.length,
     si_source_document: item.fileName && item.storageKey ? 1 : 0,
@@ -101,7 +115,7 @@ function GeneratePackageReviewDialog({
   // than duplicating its maths — an excluded category's empty array
   // naturally sums to zero for its part of the total.
   const packageTotals = computePackageTotals(
-    included.day_works_sheets ? dayWorksSheets : [],
+    included.day_works_sheets ? sheetRecords : [],
     included.materials ? materials : [],
     included.plant ? plant : [],
     contractTerms
@@ -189,7 +203,7 @@ function GeneratePackageReviewDialog({
             <p className="font-bold mb-2">
               Photos ({included.photos ? photos.length : 0}), Correspondence (
               {included.correspondence ? correspondence.length : 0}), Day Works Sheets (
-              {included.day_works_sheets ? dayWorksSheets.length : 0})
+              {included.day_works_sheets ? sheetRecords.length : 0})
             </p>
             {included.photos && photos.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -214,31 +228,18 @@ function GeneratePackageReviewDialog({
             )}
           </div>
 
-          {included.day_works_sheets && dayWorksSheets.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {dayWorksSheets.map((sheet) => {
-                const labourTotal = sheet.sheetRecords.reduce(
-                  (sum, record) => sum + (computeSheetRecordTotal(record.totalHours, record.ratePerHour) ?? 0),
-                  0
-                );
-                const rateSummaries = sheet.sheetRecords
-                  .filter((record) => record.totalHours != null)
+          {included.day_works_sheets && sheetRecords.length > 0 && (
+            <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 text-xs">
+              <p className="font-bold mb-1">Day Works Sheets — Labour ({sheetRecords.length})</p>
+              <p className="text-[#4c739a] dark:text-slate-400">
+                {sheetRecords
                   .map((record) => {
-                    const hours = Number(record.totalHours);
+                    const hours = record.totalHours != null ? Number(record.totalHours) : null;
                     const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
-                    return `${record.sheetNumber}: ${hours}h${rate != null ? ` @ ${formatCurrency(rate)}/hr` : " (rate not entered)"}`;
-                  });
-
-                return (
-                  <div key={sheet.id} className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 text-xs">
-                    <p className="font-bold mb-1">{sheet.fileName}</p>
-                    {rateSummaries.length > 0 && (
-                      <p className="text-[#4c739a] dark:text-slate-400 mb-1">Rates applied: {rateSummaries.join(", ")}</p>
-                    )}
-                    <span className="font-bold">Labour total: {formatCurrency(labourTotal)}</span>
-                  </div>
-                );
-              })}
+                    return `${record.sheetNumber}: ${hours != null ? `${hours}h` : "hours not entered"}${rate != null ? ` @ ${formatCurrency(rate)}/hr` : " (rate not entered)"}`;
+                  })
+                  .join(", ")}
+              </p>
             </div>
           )}
 
@@ -296,6 +297,7 @@ export function VariationPackageSection({
   itemId,
   item,
   dayWorksSheets,
+  sheetRecords,
   materials,
   plant,
   photos,
@@ -307,7 +309,8 @@ export function VariationPackageSection({
   projectId: string;
   itemId: string;
   item: VariationItem;
-  dayWorksSheets: DayWorksSheetWithRecords[];
+  dayWorksSheets: DayWorksSheet[];
+  sheetRecords: DayWorksSheetRecord[];
   materials: DayWorksMaterial[];
   plant: DayWorksPlant[];
   photos: VariationPhoto[];
@@ -381,6 +384,7 @@ export function VariationPackageSection({
           itemId={itemId}
           item={item}
           dayWorksSheets={dayWorksSheets}
+          sheetRecords={sheetRecords}
           materials={materials}
           plant={plant}
           photos={photos}

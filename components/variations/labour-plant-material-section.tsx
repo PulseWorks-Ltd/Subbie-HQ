@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheetRecord } from "@prisma/client";
-import { computeSheetRecordTotal, computePackageTotals, type DayWorksSheetWithRecords } from "@/lib/variation-package";
+import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheet, DayWorksSheetRecord } from "@prisma/client";
+import { computeSheetRecordTotal, computePackageTotals } from "@/lib/variation-package";
 import {
   DayWorksSheetRecordReviewDialog,
   draftRecordsToRows,
@@ -178,15 +178,173 @@ function ManualLineItemForm({
   );
 }
 
+// Matches LineItemList's visual pattern exactly (Task 2: "same visual
+// weight and position") but for labour's own field set (Sheet No/crew/
+// hours/rate rather than description/qty/unit/cost). Shows every labour
+// record for the item regardless of source — both manually-entered rows
+// and any AI-extracted row whose source sheet has since been deleted
+// (dayWorksSheetId cleared to null via SetNull) land here too, same as
+// materials/plant already behave.
+function LabourRecordList({ records, onDelete }: { records: DayWorksSheetRecord[]; onDelete: (id: string) => void }) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-1.5">Labour</p>
+      {records.length === 0 ? (
+        <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-2">None recorded yet.</p>
+      ) : (
+        <div className="flex flex-col gap-1.5 mb-2">
+          {records.map((record) => {
+            const hours = record.totalHours != null ? Number(record.totalHours) : null;
+            const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
+            const total = computeSheetRecordTotal(record.totalHours, record.ratePerHour);
+            return (
+              <div key={record.id} className="flex items-center justify-between gap-2 text-xs">
+                <span className="truncate">
+                  {record.sheetNumber} — {record.teamLeaderCount} leader{record.teamLeaderCount === 1 ? "" : "s"},{" "}
+                  {record.teamMemberCount} member{record.teamMemberCount === 1 ? "" : "s"}
+                  {hours != null ? ` · ${hours}h` : ""}
+                  {rate != null ? ` @ ${formatCurrency(rate)}/hr` : ""}
+                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-bold">{total != null ? formatCurrency(total) : "—"}</span>
+                  <button onClick={() => onDelete(record.id)} className="text-red-600 hover:underline">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Matches ManualLineItemForm's visual pattern exactly (Task 2.1) — an
+// immediate "+Add", no review-dialog step, same as Materials/Plant's
+// manual entry point. Fields match the existing review dialog's column
+// set (Task 2.1): Sheet No, Team Leader, Team Members, Hours, Rate.
+function ManualLabourForm({ endpoint, onSaved }: { endpoint: string; onSaved: () => void }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [sheetNumber, setSheetNumber] = useState("");
+  const [teamLeaderCount, setTeamLeaderCount] = useState("");
+  const [teamMemberCount, setTeamMemberCount] = useState("");
+  const [totalHours, setTotalHours] = useState("");
+  const [ratePerHour, setRatePerHour] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setIsSaving(true);
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sheetNumber, teamLeaderCount, teamMemberCount, totalHours, ratePerHour })
+    });
+    setIsSaving(false);
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(typeof body?.error === "string" ? body.error : "Could not add this labour record.");
+      return;
+    }
+
+    setSheetNumber("");
+    setTeamLeaderCount("");
+    setTeamMemberCount("");
+    setTotalHours("");
+    setRatePerHour("");
+    onSaved();
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+      <label className="flex flex-col gap-1 text-[11px] font-medium w-24">
+        Sheet No
+        <input
+          type="text"
+          required
+          value={sheetNumber}
+          onChange={(event) => setSheetNumber(event.target.value)}
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-[11px] font-medium w-20">
+        Team Leader
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={teamLeaderCount}
+          onChange={(event) => setTeamLeaderCount(event.target.value)}
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-[11px] font-medium w-24">
+        Team Members
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={teamMemberCount}
+          onChange={(event) => setTeamMemberCount(event.target.value)}
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-[11px] font-medium w-20">
+        Hours
+        <input
+          type="number"
+          min="0"
+          step="0.25"
+          value={totalHours}
+          onChange={(event) => setTotalHours(event.target.value)}
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-[11px] font-medium w-24">
+        Rate ($/hr)
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={ratePerHour}
+          onChange={(event) => setRatePerHour(event.target.value)}
+          className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={isSaving}
+        className="h-8 px-3 rounded-lg bg-primary text-white text-[11px] font-bold hover:bg-primary/90 disabled:opacity-60 whitespace-nowrap"
+      >
+        {isSaving ? "Adding..." : "+ Add"}
+      </button>
+      {error && <p className="text-xs text-red-600 w-full">{error}</p>}
+    </form>
+  );
+}
+
+// One uploaded Day Works Sheet FILE — records is the subset of the
+// item's flat sheetRecords list whose dayWorksSheetId points at this
+// sheet (passed by the parent, since records are fetched at the item
+// level now, not nested under the sheet — Labour joined Materials/Plant
+// in becoming independent of any specific sheet). Extract/Re-extract/
+// Edit summary behave exactly as before this change — only where their
+// data comes from is different.
 function SheetCard({
   projectId,
   itemId,
   sheet,
+  records,
   defaultRatePerHour
 }: {
   projectId: string;
   itemId: string;
-  sheet: DayWorksSheetWithRecords;
+  sheet: DayWorksSheet;
+  records: DayWorksSheetRecord[];
   defaultRatePerHour: string;
 }) {
   const router = useRouter();
@@ -216,20 +374,20 @@ function SheetCard({
   }
 
   function openManualEdit() {
-    setReviewState({ rows: savedRecordsToRows(sheet.sheetRecords), warning: null });
+    setReviewState({ rows: savedRecordsToRows(records), warning: null });
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this Day Works Sheet? This removes its labour summary — any Materials/Plant logged from it are unaffected.")) return;
+    if (!confirm("Delete this Day Works Sheet? Its labour summary, and any Materials/Plant logged from it, are unaffected.")) return;
     await fetch(`/api/projects/${projectId}/variation-items/${itemId}/day-works-sheets/${sheet.id}`, { method: "DELETE" });
     router.refresh();
   }
 
-  const hoursMissingRate = sheet.sheetRecords.reduce((sum, record) => {
+  const hoursMissingRate = records.reduce((sum, record) => {
     if (record.totalHours != null && record.ratePerHour == null) return sum + Number(record.totalHours);
     return sum;
   }, 0);
-  const labourTotal = sheet.sheetRecords.reduce((sum, record) => sum + (computeSheetRecordTotal(record.totalHours, record.ratePerHour) ?? 0), 0);
+  const labourTotal = records.reduce((sum, record) => sum + (computeSheetRecordTotal(record.totalHours, record.ratePerHour) ?? 0), 0);
 
   return (
     <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 p-3 flex flex-col gap-2">
@@ -244,13 +402,13 @@ function SheetCard({
           <span className="truncate">{sheet.fileName}</span>
         </a>
         <div className="flex items-center gap-3 shrink-0">
-          {sheet.sheetRecords.length > 0 && (
+          {records.length > 0 && (
             <button onClick={openManualEdit} className="text-xs font-bold text-primary hover:underline">
               Edit summary
             </button>
           )}
           <button onClick={runExtraction} disabled={isExtracting} className="text-xs font-bold text-primary hover:underline disabled:opacity-60">
-            {isExtracting ? "Reading..." : sheet.sheetRecords.length > 0 ? "Re-extract" : "Extract summary"}
+            {isExtracting ? "Reading..." : records.length > 0 ? "Re-extract" : "Extract summary"}
           </button>
           <button onClick={handleDelete} className="text-xs font-bold text-red-600 hover:underline">
             Delete
@@ -260,11 +418,11 @@ function SheetCard({
 
       {extractError && <p className="text-xs text-red-600">{extractError}</p>}
 
-      {sheet.sheetRecords.length === 0 ? (
+      {records.length === 0 ? (
         <p className="text-xs text-[#4c739a] dark:text-slate-400">No labour summary yet.</p>
       ) : (
         <div className="flex flex-col gap-1 text-xs">
-          {sheet.sheetRecords.map((record) => {
+          {records.map((record) => {
             const hours = record.totalHours != null ? Number(record.totalHours) : null;
             const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
             const cost = computeSheetRecordTotal(record.totalHours, record.ratePerHour);
@@ -310,13 +468,15 @@ export function LabourPlantMaterialSection({
   projectId,
   itemId,
   dayWorksSheets,
+  sheetRecords,
   materials,
   plant,
   contractTerms
 }: {
   projectId: string;
   itemId: string;
-  dayWorksSheets: (DayWorksSheetWithRecords & { sheetRecords: DayWorksSheetRecord[] })[];
+  dayWorksSheets: DayWorksSheet[];
+  sheetRecords: DayWorksSheetRecord[];
   materials: DayWorksMaterial[];
   plant: DayWorksPlant[];
   contractTerms: ContractTerms | null;
@@ -366,6 +526,12 @@ export function LabourPlantMaterialSection({
     setReviewFiles(body.results);
   }
 
+  async function handleDeleteLabourRecord(recordId: string) {
+    if (!confirm("Delete this labour record?")) return;
+    await fetch(`/api/projects/${projectId}/variation-items/${itemId}/labour-records/${recordId}`, { method: "DELETE" });
+    router.refresh();
+  }
+
   async function handleDeleteMaterial(materialId: string) {
     if (!confirm("Delete this material line item?")) return;
     await fetch(`/api/projects/${projectId}/variation-items/${itemId}/materials/${materialId}`, { method: "DELETE" });
@@ -378,7 +544,18 @@ export function LabourPlantMaterialSection({
     router.refresh();
   }
 
-  const totals = computePackageTotals(dayWorksSheets, materials, plant, contractTerms);
+  // Every record still linked to a sheet displays grouped under that
+  // sheet's own card (Extract/Re-extract/Edit summary context); anything
+  // with no dayWorksSheetId — genuinely manual entries, or an
+  // AI-extracted record whose sheet was since deleted (SetNull) — shows
+  // in the flat Labour list below instead. Never both, so nothing is
+  // ever displayed twice.
+  const manualLabourRecords = sheetRecords.filter((record) => record.dayWorksSheetId == null);
+
+  // Combined total (Task 1.3) — the FULL flat sheetRecords array, not
+  // just the manual ones, so labour rolls into the total the same way
+  // regardless of whether it came from a file or manual entry.
+  const totals = computePackageTotals(sheetRecords, materials, plant, contractTerms);
   const markupPercent = contractTerms?.materialsMarkupPercent ?? null;
 
   return (
@@ -423,10 +600,25 @@ export function LabourPlantMaterialSection({
           ) : (
             <div className="flex flex-col gap-3">
               {dayWorksSheets.map((sheet) => (
-                <SheetCard key={sheet.id} projectId={projectId} itemId={itemId} sheet={sheet} defaultRatePerHour={defaultRatePerHour} />
+                <SheetCard
+                  key={sheet.id}
+                  projectId={projectId}
+                  itemId={itemId}
+                  sheet={sheet}
+                  records={sheetRecords.filter((record) => record.dayWorksSheetId === sheet.id)}
+                  defaultRatePerHour={defaultRatePerHour}
+                />
               ))}
             </div>
           )}
+        </div>
+
+        <div className="pt-2 border-t border-[#e7edf3] dark:border-slate-800">
+          <LabourRecordList records={manualLabourRecords} onDelete={handleDeleteLabourRecord} />
+          <ManualLabourForm
+            endpoint={`/api/projects/${projectId}/variation-items/${itemId}/labour-records`}
+            onSaved={() => router.refresh()}
+          />
         </div>
 
         <div className="pt-2 border-t border-[#e7edf3] dark:border-slate-800">

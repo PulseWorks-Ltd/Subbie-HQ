@@ -4,6 +4,8 @@ import type {
   Correspondence,
   DayWorksMaterial,
   DayWorksPlant,
+  DayWorksSheet,
+  DayWorksSheetRecord,
   InboundEmail,
   Update,
   UpdateAttachment,
@@ -16,11 +18,10 @@ import { downloadFromS3 } from "./s3";
 import { formatUserName } from "./user-display";
 import {
   computeSheetRecordTotal,
-  computeCombinedLabourSummary,
+  computeLabourSummary,
   computeMaterialsSummary,
   computePlantCost,
-  computePackageTotals,
-  type DayWorksSheetWithRecords
+  computePackageTotals
 } from "./variation-package";
 
 const PAGE_WIDTH = 595.28;
@@ -419,21 +420,22 @@ export async function generateVariationPackagePdf(params: {
   item: VariationItem;
   photos: VariationPhoto[];
   correspondence: CorrespondenceWithRelations[];
-  dayWorksSheets: DayWorksSheetWithRecords[];
+  dayWorksSheets: DayWorksSheet[];
+  sheetRecords: DayWorksSheetRecord[];
   materials: DayWorksMaterial[];
   plant: DayWorksPlant[];
   updates: UpdateWithRelations[];
   contractTerms: { materialsMarkupPercent: number | null } | null;
   generatedByName: string;
 }): Promise<Uint8Array> {
-  const { item, photos, correspondence, dayWorksSheets, materials, plant, updates, contractTerms, generatedByName } = params;
+  const { item, photos, correspondence, dayWorksSheets, sheetRecords, materials, plant, updates, contractTerms, generatedByName } = params;
 
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
   const w = new PdfWriter(doc, font, boldFont);
 
-  const packageTotals = computePackageTotals(dayWorksSheets, materials, plant, contractTerms);
+  const packageTotals = computePackageTotals(sheetRecords, materials, plant, contractTerms);
 
   // --- Header (Task 1.1 — unchanged from before this feature) ---
   w.heading(`Variation Package — ${item.reference}`);
@@ -452,7 +454,7 @@ export async function generateVariationPackagePdf(params: {
   // --- Evidence checklist (literal counts only — no AI sufficiency judgement) ---
   w.subheading("Evidence included");
   w.text(
-    `Photos (${photos.length}), Correspondence (${correspondence.length}), Day Works Sheets (${dayWorksSheets.length}), Materials (${materials.length}), Plant (${plant.length})`
+    `Photos (${photos.length}), Correspondence (${correspondence.length}), Day Works Sheets (${sheetRecords.length}), Materials (${materials.length}), Plant (${plant.length})`
   );
   w.spacer(10);
   w.divider();
@@ -527,39 +529,33 @@ export async function generateVariationPackagePdf(params: {
   w.spacer(10);
   w.divider();
 
-  // --- Day Works Sheets computed breakdown — labour only now (Materials/
-  // Plant are independent of any sheet, see their own sections below;
-  // Labour, Plant & Material AI Extraction) ---
-  w.subheading(`Day Works Sheets (${dayWorksSheets.length})`);
-  if (dayWorksSheets.length === 0) {
-    w.text("No Day Works Sheets attached.");
-  }
-  for (const sheet of dayWorksSheets) {
-    const sheetLabour = computeCombinedLabourSummary([sheet]);
-    w.spacer(4);
-    w.text(sheet.fileName, { bold: true });
-
-    if (sheet.sheetRecords.length > 0) {
-      w.text("Dayworks Summary:", { bold: true, indent: 10 });
-      for (const record of sheet.sheetRecords) {
-        const hours = record.totalHours != null ? Number(record.totalHours) : null;
-        const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
-        const total = computeSheetRecordTotal(record.totalHours, record.ratePerHour);
-        const description = [
-          record.sheetNumber,
-          `${record.teamLeaderCount} leader${record.teamLeaderCount === 1 ? "" : "s"}`,
-          `${record.teamMemberCount} member${record.teamMemberCount === 1 ? "" : "s"}`,
-          hours != null ? `${hours}h` : "hours not recorded",
-          rate != null ? `@ ${formatCurrency(rate)}/hr` : "rate not entered"
-        ].join(" · ");
-        w.row(description, total != null ? formatCurrency(total) : "—", { indent: 16 });
-      }
-      w.row("Labour total", formatCurrency(sheetLabour.total), { bold: true, indent: 10 });
-    } else {
-      w.text("No labour summary recorded.", { indent: 10 });
+  // --- Day Works Sheets computed breakdown — a flat labour record list
+  // now (Labour joined Materials/Plant in becoming independent of any
+  // specific sheet — see DayWorksSheetRecord's schema comment), not
+  // grouped by source file; each uploaded file's real content still
+  // embeds separately below (Task 1.3). Matches how Materials/Plant list
+  // their own line items flatly rather than grouped by source document. ---
+  w.subheading(`Day Works Sheets — Labour (${sheetRecords.length})`);
+  if (sheetRecords.length === 0) {
+    w.text("No labour records attached.");
+  } else {
+    for (const record of sheetRecords) {
+      const hours = record.totalHours != null ? Number(record.totalHours) : null;
+      const rate = record.ratePerHour != null ? Number(record.ratePerHour) : null;
+      const total = computeSheetRecordTotal(record.totalHours, record.ratePerHour);
+      const description = [
+        record.sheetNumber,
+        `${record.teamLeaderCount} leader${record.teamLeaderCount === 1 ? "" : "s"}`,
+        `${record.teamMemberCount} member${record.teamMemberCount === 1 ? "" : "s"}`,
+        hours != null ? `${hours}h` : "hours not recorded",
+        rate != null ? `@ ${formatCurrency(rate)}/hr` : "rate not entered"
+      ].join(" · ");
+      w.row(description, total != null ? formatCurrency(total) : "—");
     }
-    w.spacer(6);
+    const labour = computeLabourSummary(sheetRecords);
+    w.row("Labour total", formatCurrency(labour.total), { bold: true });
   }
+  w.spacer(10);
   w.divider();
 
   // --- Materials — independent of any sheet (Labour, Plant & Material AI

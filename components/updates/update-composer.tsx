@@ -4,7 +4,9 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VariationItem } from "@prisma/client";
 import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
+import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
+import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type Recipient = { contactId?: string; email: string; label: string };
@@ -42,6 +44,13 @@ export function UpdateComposer({
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  // Set right after posting, when "Assign QA" was chosen — opens the same
+  // dialog used for post-hoc "Assign QA" (components/quality-assurance/
+  // assign-update-as-qa-dialog.tsx), pre-filled with the update this
+  // composer just created (its id + body), since a QARecord needs a stage
+  // label the composer itself doesn't ask for inline.
+  const [pendingQaAssignment, setPendingQaAssignment] = useState<{ updateId: string; body: string } | null>(null);
 
   const openItems = taggableItems.filter((item) => item.status !== "complete");
   const eligibleContacts = contacts.filter((contact) => contact.email);
@@ -187,10 +196,12 @@ export function UpdateComposer({
     setIsSubmitting(true);
     setError(null);
 
+    const isAssigningQa = variationItemId === ASSIGN_QA_SENTINEL;
+
     const formData = new FormData();
     formData.set("body", body);
-    if (variationItemId) formData.set("variationItemId", variationItemId);
-    if (!isMobile && variationItemId && percentComplete) formData.set("percentComplete", percentComplete);
+    if (variationItemId && !isAssigningQa) formData.set("variationItemId", variationItemId);
+    if (!isMobile && variationItemId && !isAssigningQa && percentComplete) formData.set("percentComplete", percentComplete);
     files.forEach((file) => formData.append("files", file));
     if (isExternal && drafted) {
       formData.set("isExternal", "true");
@@ -209,6 +220,9 @@ export function UpdateComposer({
       if (data.sendError) {
         setError(`Update posted, but the email failed to send: ${data.sendError} You can retry from the update.`);
       }
+      if (isAssigningQa && data.update?.id) {
+        setPendingQaAssignment({ updateId: data.update.id, body: data.update.body ?? body });
+      }
       setBody("");
       setVariationItemId("");
       setPercentComplete("");
@@ -223,6 +237,7 @@ export function UpdateComposer({
   const canSubmit = body.trim().length > 0 && !isSubmitting && (!isExternal || (drafted !== null && recipients.length > 0));
 
   return (
+    <>
     <form
       onSubmit={handleSubmit}
       className={
@@ -303,14 +318,15 @@ export function UpdateComposer({
             onChange={(event) => setVariationItemId(event.target.value)}
             className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
-            <option value="">Not tied to a Variation/SI</option>
+            <option value="">Not Assigned</option>
+            <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
             {openItems.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.reference} · {item.title}
               </option>
             ))}
           </select>
-          {!isMobile && variationItemId && (
+          {!isMobile && variationItemId && variationItemId !== ASSIGN_QA_SENTINEL && (
             <input
               type="number"
               min={0}
@@ -436,5 +452,17 @@ export function UpdateComposer({
         {isSubmitting ? "Posting..." : isExternal ? "Send external update" : "Post Update"}
       </button>
     </form>
+    {pendingQaAssignment && (
+      <AssignUpdateAsQaDialog
+        projectId={projectId}
+        updateId={pendingQaAssignment.updateId}
+        updateBody={pendingQaAssignment.body}
+        taggableItems={openItems}
+        defaultVariationItemId={null}
+        onClose={() => setPendingQaAssignment(null)}
+        onAssigned={() => setPendingQaAssignment(null)}
+      />
+    )}
+    </>
   );
 }

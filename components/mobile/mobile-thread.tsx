@@ -8,9 +8,7 @@ import { AttachmentPreviewList } from "@/components/updates/attachment-preview-l
 import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
-
-// Same sentinel/semantics as desktop's UpdateThread — see its comment.
-const ASSIGN_QA_SENTINEL = "__qa__";
+import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };

@@ -10,11 +10,7 @@ import { GenerateOutboundEmailPanel } from "@/components/updates/generate-outbou
 import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
-
-// Sentinel used only in the tag <select>'s local state — never sent to the
-// server as-is (see handleSaveTag, which intercepts it and opens
-// AssignUpdateAsQaDialog instead of PATCHing).
-const ASSIGN_QA_SENTINEL = "__qa__";
+import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };

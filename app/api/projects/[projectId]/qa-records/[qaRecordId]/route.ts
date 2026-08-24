@@ -64,11 +64,15 @@ export async function DELETE(request: Request, context: { params: { projectId: s
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const qaRecord = await prisma.qARecord.findFirst({ where: { id: qaRecordId, projectId } });
-  if (qaRecord?.storageKey) {
-    await deleteFromS3(qaRecord.storageKey);
+  const qaRecord = await prisma.qARecord.findFirst({ where: { id: qaRecordId, projectId }, include: { attachments: true } });
+  for (const attachment of qaRecord?.attachments ?? []) {
+    await deleteFromS3(attachment.storageKey);
   }
 
+  // Update.qaRecordId is onDelete: SetNull (see migration) — any Update
+  // tagged to this record just reverts to "Not Assigned" rather than
+  // blocking the delete.
+  await prisma.qARecordAttachment.deleteMany({ where: { qaRecordId } });
   await prisma.qARecord.delete({ where: { id: qaRecordId, projectId } });
 
   return NextResponse.json({ ok: true });

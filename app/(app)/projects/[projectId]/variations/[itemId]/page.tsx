@@ -53,6 +53,7 @@ export default async function VariationItemPage({
       include: {
         author: { select: { id: true, firstName: true, lastName: true, email: true } },
         variationItem: { select: { id: true, reference: true, title: true } },
+        qaRecord: { select: { id: true, stage: true } },
         attachments: true,
         replies: {
           include: {
@@ -81,7 +82,7 @@ export default async function VariationItemPage({
     prisma.variationPackage.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
     prisma.qARecord.findMany({
       where: { variationItemId: itemId },
-      include: { variationItem: { select: { id: true, reference: true, title: true } } },
+      include: { variationItem: { select: { id: true, reference: true, title: true } }, attachments: true },
       orderBy: { date: "desc" }
     })
   ]);

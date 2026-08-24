@@ -121,6 +121,10 @@ export async function sendThreadSummaryEmailAndLog(params: {
     await prisma.correspondence.create({
       data: {
         projectId: topLevelUpdate.projectId,
+        // Links this sent email back to the update's QA record, if it's
+        // been "Assign QA"-tagged (Task: link the outbound-email flow to
+        // QA) — null on any ordinary (non-QA) thread, same as today.
+        qaRecordId: topLevelUpdate.qaRecordId,
         title: params.subject,
         source: "external_update",
         bodyText: params.body,

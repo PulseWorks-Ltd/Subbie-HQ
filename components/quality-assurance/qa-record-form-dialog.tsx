@@ -33,7 +33,7 @@ export function QaRecordFormDialog({
   const [notes, setNotes] = useState(record?.notes ?? "");
   const [date, setDate] = useState(toDateInputValue(record?.date ?? new Date()));
   const [variationItemId, setVariationItemId] = useState(record?.variationItemId ?? defaultVariationItemId ?? "");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -62,7 +62,7 @@ export function QaRecordFormDialog({
       if (notes) formData.set("notes", notes);
       if (date) formData.set("date", new Date(date).toISOString());
       if (variationItemId) formData.set("variationItemId", variationItemId);
-      if (file) formData.set("file", file);
+      files.forEach((file) => formData.append("files", file));
 
       response = await fetch(`/api/projects/${projectId}/qa-records`, { method: "POST", body: formData });
     }
@@ -149,12 +149,18 @@ export function QaRecordFormDialog({
 
           {!isEditing && (
             <label className="flex flex-col gap-1 text-sm font-medium">
-              File / evidence <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+              Files / evidence <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional, multiple allowed)</span>
               <input
                 type="file"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                multiple
+                onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
                 className="text-sm file:mr-2 file:h-9 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-bold file:text-xs"
               />
+              {files.length > 0 && (
+                <span className="text-xs text-[#4c739a] dark:text-slate-400">
+                  {files.length} file{files.length > 1 ? "s" : ""} selected
+                </span>
+              )}
             </label>
           )}
 

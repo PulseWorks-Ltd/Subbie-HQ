@@ -69,6 +69,7 @@ export default async function MobileProjectUpdatesPage({
       include: {
         author: { select: { id: true, firstName: true, lastName: true, email: true } },
         variationItem: { select: { id: true, reference: true, title: true } },
+        qaRecord: { select: { id: true, stage: true } },
         attachments: true,
         replies: {
           include: {

@@ -28,7 +28,7 @@ export default async function QualityAssurancePage({ params }: { params: Promise
   const [qaRecords, taggableItems] = await Promise.all([
     prisma.qARecord.findMany({
       where: { projectId },
-      include: { variationItem: { select: { id: true, reference: true, title: true } } },
+      include: { variationItem: { select: { id: true, reference: true, title: true } }, attachments: true },
       orderBy: { date: "desc" }
     }),
     taggableTypes.length > 0

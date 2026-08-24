@@ -109,17 +109,27 @@ export async function fileInboundEmail(params: {
     }
 
     if (params.createQaRecord) {
-      const sourceAttachment = email.attachments[0];
       const created = await tx.qARecord.create({
         data: {
           projectId: params.projectId,
           variationItemId: params.createQaRecord.variationItemId || null,
           stage: params.createQaRecord.stage,
-          notes: email.body,
-          fileName: sourceAttachment?.fileName,
-          storageKey: sourceAttachment?.storageKey
+          notes: email.body
         }
       });
+      // Every attachment (not just the first) becomes its own
+      // QARecordAttachment, reusing the existing S3 object by storageKey —
+      // not copied, same as createVariationItem above.
+      for (const attachment of email.attachments) {
+        await tx.qARecordAttachment.create({
+          data: {
+            qaRecordId: created.id,
+            fileName: attachment.fileName,
+            storageKey: attachment.storageKey,
+            contentType: attachment.contentType
+          }
+        });
+      }
       qaRecordId = created.id;
       variationItemId = params.createQaRecord.variationItemId || variationItemId;
     }

@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import type { QARecord } from "@prisma/client";
+import type { QARecord, QARecordAttachment } from "@prisma/client";
 
-type QaRecordWithItem = QARecord & { variationItem: { id: string; reference: string; title: string } | null };
+type QaRecordWithItem = QARecord & {
+  variationItem: { id: string; reference: string; title: string } | null;
+  attachments: QARecordAttachment[];
+};
 
 function formatDate(date: Date) {
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
@@ -38,7 +41,7 @@ export function QaRecordCard({
         <p className="text-sm text-[#4c739a] dark:text-slate-400 leading-relaxed mb-3">{qaRecord.notes}</p>
       )}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#4c739a] dark:text-slate-400 mb-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#4c739a] dark:text-slate-400 mb-2">
         {showLinkedItem && qaRecord.variationItem && (
           <Link
             href={`/projects/${projectId}/variations/${qaRecord.variationItem.id}`}
@@ -47,18 +50,37 @@ export function QaRecordCard({
             {qaRecord.variationItem.reference} · {qaRecord.variationItem.title}
           </Link>
         )}
-        {qaRecord.storageKey && (
-          <a
-            href={`/api/projects/${projectId}/qa-records/${qaRecord.id}/file`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 hover:text-primary"
-          >
-            <span className="material-symbols-outlined text-sm">description</span>
-            {qaRecord.fileName}
-          </a>
-        )}
       </div>
+
+      {qaRecord.attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {qaRecord.attachments.map((attachment) => {
+            const href = `/api/projects/${projectId}/qa-records/${qaRecord.id}/attachments/${attachment.id}/file`;
+            const isImage = attachment.contentType?.startsWith("image/");
+            return (
+              <a key={attachment.id} href={href} target="_blank" rel="noreferrer" className="block">
+                {isImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={href}
+                    alt={attachment.fileName}
+                    className="size-16 rounded-lg object-cover border border-[#e7edf3] dark:border-slate-800"
+                  />
+                ) : (
+                  <div className="size-16 rounded-lg border border-[#e7edf3] dark:border-slate-800 bg-[#f6f7f8] dark:bg-slate-800 flex flex-col items-center justify-center gap-0.5 p-1">
+                    <span className="material-symbols-outlined text-lg text-[#4c739a] dark:text-slate-400">
+                      description
+                    </span>
+                    <span className="text-[8px] leading-tight text-center text-[#4c739a] dark:text-slate-400 truncate w-full">
+                      {attachment.fileName}
+                    </span>
+                  </div>
+                )}
+              </a>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex gap-2 pt-3 border-t border-[#e7edf3] dark:border-slate-800">
         <button

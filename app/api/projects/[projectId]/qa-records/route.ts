@@ -20,11 +20,28 @@ export async function GET(request: Request, context: { params: { projectId: stri
 
   const qaRecords = await prisma.qARecord.findMany({
     where: { projectId },
-    include: { variationItem: { select: { id: true, reference: true, title: true } } },
+    include: {
+      variationItem: { select: { id: true, reference: true, title: true } },
+      attachments: true
+    },
     orderBy: { date: "desc" }
   });
 
   return NextResponse.json({ qaRecords });
+}
+
+async function copyToQaRecordAttachment(
+  projectId: string,
+  qaRecordId: string,
+  source: { fileName: string; storageKey: string; contentType: string | null }
+) {
+  const buffer = await downloadFromS3(source.storageKey);
+  const uploadKey = `projects/${projectId}/qa-records/${Date.now()}-${Math.random().toString(36).slice(2)}-${source.fileName}`;
+  const contentType = source.contentType || "application/octet-stream";
+  const { storageKey } = await uploadToS3({ key: uploadKey, body: buffer, contentType });
+  return prisma.qARecordAttachment.create({
+    data: { qaRecordId, fileName: source.fileName, storageKey, contentType }
+  });
 }
 
 export async function POST(request: Request, context: { params: { projectId: string } }) {
@@ -49,16 +66,23 @@ export async function POST(request: Request, context: { params: { projectId: str
     return item.id;
   }
 
-  // Two input paths, same end result (a new QARecord row): a fresh
-  // multipart upload (manual entry, from the QA tab or an item's page), or
-  // a JSON reference to an image/file already stored elsewhere in this
-  // project (the "Use as QA Record" action — see
-  // components/quality-assurance/use-as-qa-record-action.tsx). The second
-  // path always copies the bytes to a brand-new key rather than reusing the
-  // source's storageKey — this QARecord's own DELETE route deletes its
-  // storageKey from S3, which would otherwise silently wipe out the
-  // original Update attachment/Picture out from under it (same reasoning
-  // as day-works-sheets/route.ts).
+  // Three input paths, same end result (a new QARecord with one or more
+  // QARecordAttachment rows, non-destructive — nothing about the source is
+  // ever moved or deleted):
+  //  1. A fresh multipart upload (manual entry, from the QA tab or an
+  //     item's page) — may include several `files`.
+  //  2. A JSON reference to a single existing image/file elsewhere in this
+  //     project ("Use as QA Record" on one Update attachment or Pictures
+  //     item — components/quality-assurance/use-as-qa-record-action.tsx).
+  //  3. A JSON reference to a whole Update ("Assign QA" in the Update's tag
+  //     dropdown — components/quality-assurance/assign-update-as-qa-dialog.tsx):
+  //     every attachment on that Update becomes its own QARecordAttachment,
+  //     and the Update itself gets tagged (qaRecordId set, variationItemId
+  //     cleared — mutually exclusive, see schema comment on Update).
+  // Every copy re-uploads bytes to a brand-new key rather than reusing the
+  // source's storageKey — this record's own DELETE route deletes every
+  // attachment's storageKey from S3, which would otherwise silently wipe
+  // out the original Update attachment/Picture out from under it.
   const contentTypeHeader = request.headers.get("content-type") ?? "";
 
   if (contentTypeHeader.includes("application/json")) {
@@ -72,7 +96,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     }
     if (
       !source ||
-      (source.type !== "update-attachment" && source.type !== "variation-photo") ||
+      (source.type !== "update-attachment" && source.type !== "variation-photo" && source.type !== "update") ||
       typeof source.id !== "string"
     ) {
       return NextResponse.json({ error: "Invalid source reference" }, { status: 400 });
@@ -81,6 +105,33 @@ export async function POST(request: Request, context: { params: { projectId: str
     const variationItemId = await resolveVariationItemId(payload?.variationItemId);
     if (variationItemId && typeof variationItemId === "object") {
       return NextResponse.json({ error: variationItemId.error }, { status: 400 });
+    }
+
+    if (source.type === "update") {
+      const sourceUpdate = await prisma.update.findFirst({
+        where: { id: source.id, projectId, parentId: null },
+        include: { attachments: true }
+      });
+      if (!sourceUpdate) {
+        return NextResponse.json({ error: "Update not found" }, { status: 404 });
+      }
+
+      const qaRecord = await prisma.qARecord.create({
+        data: { projectId, variationItemId, stage, notes: notes || undefined }
+      });
+      for (const attachment of sourceUpdate.attachments) {
+        await copyToQaRecordAttachment(projectId, qaRecord.id, attachment);
+      }
+      await prisma.update.update({
+        where: { id: sourceUpdate.id },
+        data: { qaRecordId: qaRecord.id, variationItemId: null }
+      });
+
+      const withAttachments = await prisma.qARecord.findUnique({
+        where: { id: qaRecord.id },
+        include: { attachments: true, variationItem: { select: { id: true, reference: true, title: true } } }
+      });
+      return NextResponse.json({ qaRecord: withAttachments }, { status: 201 });
     }
 
     const sourceRecord =
@@ -92,23 +143,16 @@ export async function POST(request: Request, context: { params: { projectId: str
       return NextResponse.json({ error: "Source file not found" }, { status: 404 });
     }
 
-    const buffer = await downloadFromS3(sourceRecord.storageKey);
-    const uploadKey = `projects/${projectId}/qa-records/${Date.now()}-${sourceRecord.fileName}`;
-    const contentType = sourceRecord.contentType || "application/octet-stream";
-    const { storageKey } = await uploadToS3({ key: uploadKey, body: buffer, contentType });
-
     const qaRecord = await prisma.qARecord.create({
-      data: {
-        projectId,
-        variationItemId,
-        stage,
-        notes: notes || undefined,
-        fileName: sourceRecord.fileName,
-        storageKey
-      }
+      data: { projectId, variationItemId, stage, notes: notes || undefined }
     });
+    await copyToQaRecordAttachment(projectId, qaRecord.id, sourceRecord);
 
-    return NextResponse.json({ qaRecord }, { status: 201 });
+    const withAttachments = await prisma.qARecord.findUnique({
+      where: { id: qaRecord.id },
+      include: { attachments: true, variationItem: { select: { id: true, reference: true, title: true } } }
+    });
+    return NextResponse.json({ qaRecord: withAttachments }, { status: 201 });
   }
 
   const formData = await request.formData();
@@ -116,7 +160,7 @@ export async function POST(request: Request, context: { params: { projectId: str
   const notes = formData.get("notes")?.toString().trim();
   const date = formData.get("date")?.toString();
   const variationItemIdRaw = formData.get("variationItemId")?.toString();
-  const file = formData.get("file");
+  const files = formData.getAll("files").filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
   if (!stage) {
     return NextResponse.json({ error: "Stage/milestone label is required" }, { status: 400 });
@@ -127,27 +171,28 @@ export async function POST(request: Request, context: { params: { projectId: str
     return NextResponse.json({ error: variationItemId.error }, { status: 400 });
   }
 
-  let fileName: string | undefined;
-  let storageKey: string | undefined;
-  if (file instanceof File && file.size > 0) {
-    const buffer = new Uint8Array(await file.arrayBuffer());
-    const uploadKey = `projects/${projectId}/qa-records/${Date.now()}-${file.name}`;
-    const uploaded = await uploadToS3({ key: uploadKey, body: buffer, contentType: file.type || "application/octet-stream" });
-    fileName = file.name;
-    storageKey = uploaded.storageKey;
-  }
-
   const qaRecord = await prisma.qARecord.create({
     data: {
       projectId,
       variationItemId,
       stage,
       notes: notes || undefined,
-      date: date ? new Date(date) : undefined,
-      fileName,
-      storageKey
+      date: date ? new Date(date) : undefined
     }
   });
 
-  return NextResponse.json({ qaRecord }, { status: 201 });
+  for (const file of files) {
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const uploadKey = `projects/${projectId}/qa-records/${Date.now()}-${file.name}`;
+    const uploaded = await uploadToS3({ key: uploadKey, body: buffer, contentType: file.type || "application/octet-stream" });
+    await prisma.qARecordAttachment.create({
+      data: { qaRecordId: qaRecord.id, fileName: file.name, storageKey: uploaded.storageKey, contentType: file.type || undefined }
+    });
+  }
+
+  const withAttachments = await prisma.qARecord.findUnique({
+    where: { id: qaRecord.id },
+    include: { attachments: true, variationItem: { select: { id: true, reference: true, title: true } } }
+  });
+  return NextResponse.json({ qaRecord: withAttachments }, { status: 201 });
 }

@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { QARecord, VariationItem } from "@prisma/client";
+import type { QARecord, QARecordAttachment, VariationItem } from "@prisma/client";
 import { QaRecordCard } from "@/components/quality-assurance/qa-record-card";
 import { QaRecordFormDialog } from "@/components/quality-assurance/qa-record-form-dialog";
 
-type QaRecordWithItem = QARecord & { variationItem: { id: string; reference: string; title: string } | null };
+type QaRecordWithItem = QARecord & {
+  variationItem: { id: string; reference: string; title: string } | null;
+  attachments: QARecordAttachment[];
+};
 
 export function VariationQaSection({
   projectId,

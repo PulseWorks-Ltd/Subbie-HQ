@@ -1019,6 +1019,13 @@ model Update {
   authorId        String
   parentId        String?
   variationItemId String?
+  // Mutually exclusive with variationItemId — an Update is tagged to EITHER
+  // a Variation/SI directly OR a QA record (which itself may separately be
+  // project-level or item-linked, see QARecord). Set via the same tag
+  // dropdown ("Assign QA" option) — selecting it copies every attachment on
+  // this Update into a new QARecord (see the qa-records POST route's
+  // source: { type: "update" } branch) rather than moving anything.
+  qaRecordId      String?
   percentComplete Float?
   body            String
   createdAt       DateTime @default(now())
@@ -1043,6 +1050,7 @@ model Update {
   parent         Update?            @relation("UpdateReplies", fields: [parentId], references: [id])
   replies        Update[]           @relation("UpdateReplies")
   variationItem  VariationItem?     @relation(fields: [variationItemId], references: [id])
+  qaRecord       QARecord?          @relation(fields: [qaRecordId], references: [id])
   attachments    UpdateAttachment[]
   recipients     UpdateRecipient[]
   correspondence Correspondence[]
@@ -1433,14 +1441,33 @@ model QARecord {
   variationItemId String?
   stage           String
   notes           String?
-  fileName        String?
-  storageKey      String?
   date            DateTime @default(now())
   createdAt       DateTime @default(now())
 
-  project        Project          @relation(fields: [projectId], references: [id])
-  variationItem  VariationItem?   @relation(fields: [variationItemId], references: [id])
+  project        Project              @relation(fields: [projectId], references: [id])
+  variationItem  VariationItem?       @relation(fields: [variationItemId], references: [id])
   correspondence Correspondence[]
+  attachments    QARecordAttachment[]
+  // Updates tagged straight to this record via the "Assign QA" tag option
+  // (see Update.qaRecordId) — distinct from `attachments`, which is the
+  // file evidence copied in when that tagging happened.
+  updates        Update[]
+}
+
+// One row per file of evidence on a QARecord — mirrors UpdateAttachment
+// exactly (same field shape, same non-destructive copy-on-create story) so
+// a single QA record can hold multiple photos, e.g. several angles of the
+// same lining before a pour, not just one file.
+model QARecordAttachment {
+  id                  String   @id @default(cuid())
+  qaRecordId          String
+  fileName            String
+  storageKey          String
+  contentType         String?
+  thumbnailStorageKey String?
+  createdAt           DateTime @default(now())
+
+  qaRecord QARecord @relation(fields: [qaRecordId], references: [id])
 }
 
 model PushSubscription {

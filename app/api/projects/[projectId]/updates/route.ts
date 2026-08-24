@@ -49,6 +49,7 @@ export async function GET(request: Request, context: { params: { projectId: stri
     include: {
       author: { select: { id: true, firstName: true, lastName: true, email: true } },
       variationItem: { select: { id: true, reference: true, title: true } },
+      qaRecord: { select: { id: true, stage: true } },
       attachments: true,
       recipients: true,
       replies: {

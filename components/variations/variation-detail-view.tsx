@@ -11,6 +11,7 @@ import type {
   DayWorksSheet,
   DayWorksSheetRecord,
   QARecord,
+  QARecordAttachment,
   Update,
   UpdateAttachment,
   VariationItem,
@@ -35,10 +36,11 @@ type ContactOption = { id: string; name: string; email: string | null; role: str
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
+  qaRecord: { id: string; stage: string } | null;
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
-type QaRecordWithItem = QARecord & { variationItem: VariationItemRef | null };
+type QaRecordWithItem = QARecord & { variationItem: VariationItemRef | null; attachments: QARecordAttachment[] };
 
 function formatDate(date: Date | null) {
   if (!date) return null;

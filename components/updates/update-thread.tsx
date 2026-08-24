@@ -7,15 +7,23 @@ import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
 import { GenerateOutboundEmailPanel } from "@/components/updates/generate-outbound-email-panel";
+import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
+// Sentinel used only in the tag <select>'s local state — never sent to the
+// server as-is (see handleSaveTag, which intercepts it and opens
+// AssignUpdateAsQaDialog instead of PATCHing).
+const ASSIGN_QA_SENTINEL = "__qa__";
+
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
+type QaRecordRef = { id: string; stage: string };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
+  qaRecord: QaRecordRef | null;
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
@@ -88,10 +96,25 @@ export function UpdateThread({
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [sentMessage, setSentMessage] = useState<string | null>(null);
   const [isEditingTag, setIsEditingTag] = useState(false);
-  const [tagSelection, setTagSelection] = useState(update.variationItem?.id ?? "");
+  const [tagSelection, setTagSelection] = useState(
+    update.qaRecord ? ASSIGN_QA_SENTINEL : (update.variationItem?.id ?? "")
+  );
   const [isSavingTag, setIsSavingTag] = useState(false);
+  const [showAssignQaDialog, setShowAssignQaDialog] = useState(false);
 
   async function handleSaveTag() {
+    if (tagSelection === ASSIGN_QA_SENTINEL) {
+      // Already QA-assigned and re-selected without changing anything —
+      // nothing to do, just close the editor rather than re-creating a
+      // second QA record.
+      if (update.qaRecord) {
+        setIsEditingTag(false);
+        return;
+      }
+      setIsEditingTag(false);
+      setShowAssignQaDialog(true);
+      return;
+    }
     setIsSavingTag(true);
     await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
       method: "PATCH",
@@ -104,8 +127,9 @@ export function UpdateThread({
   }
 
   async function handleRemoveTag() {
-    if (!update.variationItem) return;
-    if (!confirm(`Remove this Update's tag from ${update.variationItem.reference}? The Update itself will remain on the Updates page.`)) {
+    const label = update.variationItem?.reference ?? (update.qaRecord ? `QA — ${update.qaRecord.stage}` : null);
+    if (!label) return;
+    if (!confirm(`Remove this Update's tag from ${label}? The Update itself will remain on the Updates page.`)) {
       return;
     }
     setIsSavingTag(true);
@@ -168,7 +192,8 @@ export function UpdateThread({
                 onChange={(event) => setTagSelection(event.target.value)}
                 className="h-7 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
-                <option value="">Not tied to a Variation/SI</option>
+                <option value="">Not Assigned</option>
+                <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
                 {taggableItems.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.reference} · {option.title}
@@ -184,7 +209,7 @@ export function UpdateThread({
               </button>
               <button
                 onClick={() => {
-                  setTagSelection(update.variationItem?.id ?? "");
+                  setTagSelection(update.qaRecord ? ASSIGN_QA_SENTINEL : (update.variationItem?.id ?? ""));
                   setIsEditingTag(false);
                 }}
                 className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
@@ -202,6 +227,14 @@ export function UpdateThread({
                   {update.variationItem.reference}
                 </Link>
               )}
+              {update.qaRecord && (
+                <Link
+                  href={`/projects/${projectId}/quality-assurance`}
+                  className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary hover:bg-primary/20"
+                >
+                  QA · {update.qaRecord.stage}
+                </Link>
+              )}
               {update.percentComplete != null && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                   {Math.round(update.percentComplete)}% tagged
@@ -211,9 +244,9 @@ export function UpdateThread({
                 onClick={() => setIsEditingTag(true)}
                 className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
               >
-                {update.variationItem ? "Change tag" : "+ Tag"}
+                {update.variationItem || update.qaRecord ? "Change tag" : "+ Tag"}
               </button>
-              {update.variationItem && (
+              {(update.variationItem || update.qaRecord) && (
                 <button
                   onClick={handleRemoveTag}
                   disabled={isSavingTag}
@@ -237,6 +270,18 @@ export function UpdateThread({
         defaultVariationItemId={update.variationItem?.id ?? null}
         defaultRatePerHour={defaultRatePerHour}
       />
+
+      {showAssignQaDialog && (
+        <AssignUpdateAsQaDialog
+          projectId={projectId}
+          updateId={update.id}
+          updateBody={update.body}
+          taggableItems={taggableItems}
+          defaultVariationItemId={update.variationItem?.id ?? null}
+          onClose={() => setShowAssignQaDialog(false)}
+          onAssigned={() => setShowAssignQaDialog(false)}
+        />
+      )}
 
       {update.replies.length > 0 && (
         <div className="flex flex-col gap-3 mt-4 pl-4 border-l-2 border-[#e7edf3] dark:border-slate-800">

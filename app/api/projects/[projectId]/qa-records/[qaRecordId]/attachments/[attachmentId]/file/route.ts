@@ -3,9 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { getSignedDownloadUrl } from "@/lib/s3";
 
-export async function GET(request: Request, context: { params: { projectId: string; qaRecordId: string } }) {
+export async function GET(
+  request: Request,
+  context: { params: { projectId: string; qaRecordId: string; attachmentId: string } }
+) {
   const userId = await requireUserId(request);
-  const { projectId, qaRecordId } = context.params;
+  const { projectId, qaRecordId, attachmentId } = context.params;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -18,11 +21,13 @@ export async function GET(request: Request, context: { params: { projectId: stri
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const qaRecord = await prisma.qARecord.findFirst({ where: { id: qaRecordId, projectId } });
-  if (!qaRecord?.storageKey) {
+  const attachment = await prisma.qARecordAttachment.findFirst({
+    where: { id: attachmentId, qaRecordId, qaRecord: { projectId } }
+  });
+  if (!attachment) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const signedUrl = await getSignedDownloadUrl(qaRecord.storageKey);
+  const signedUrl = await getSignedDownloadUrl(attachment.storageKey);
   return NextResponse.redirect(signedUrl);
 }

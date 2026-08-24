@@ -5,14 +5,20 @@ import { useRouter } from "next/navigation";
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
+import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
+// Same sentinel/semantics as desktop's UpdateThread — see its comment.
+const ASSIGN_QA_SENTINEL = "__qa__";
+
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
+type QaRecordRef = { id: string; stage: string };
 type UpdateWithReplies = Update & {
   author: Author;
   variationItem: VariationItemRef | null;
+  qaRecord: QaRecordRef | null;
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
@@ -80,14 +86,29 @@ export function MobileThread({
     setReplyFiles((current) => current.filter((_, i) => i !== index));
   }
   const [isEditingTag, setIsEditingTag] = useState(false);
-  const [tagSelection, setTagSelection] = useState(update.variationItem?.id ?? "");
+  const [tagSelection, setTagSelection] = useState(
+    update.qaRecord ? ASSIGN_QA_SENTINEL : (update.variationItem?.id ?? "")
+  );
   const [isSavingTag, setIsSavingTag] = useState(false);
+  const [showAssignQaDialog, setShowAssignQaDialog] = useState(false);
 
   // Same PATCH endpoint and tag semantics as desktop's UpdateThread (Task
   // 2.1) — "which SI/Variation this belongs to" often only becomes clear
   // after the update's already posted, so this needs to be editable after
-  // the fact, not just at compose time.
+  // the fact, not just at compose time. "Assign QA" (see the shared
+  // AssignUpdateAsQaDialog) is the one option that doesn't PATCH directly —
+  // it opens a dialog instead, since creating a QARecord needs a stage
+  // label first.
   async function handleSaveTag() {
+    if (tagSelection === ASSIGN_QA_SENTINEL) {
+      if (update.qaRecord) {
+        setIsEditingTag(false);
+        return;
+      }
+      setIsEditingTag(false);
+      setShowAssignQaDialog(true);
+      return;
+    }
     setIsSavingTag(true);
     await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
       method: "PATCH",
@@ -100,8 +121,9 @@ export function MobileThread({
   }
 
   async function handleRemoveTag() {
-    if (!update.variationItem) return;
-    if (!confirm(`Remove this Update's tag from ${update.variationItem.reference}? The Update itself will remain on the Updates page.`)) {
+    const label = update.variationItem?.reference ?? (update.qaRecord ? `QA — ${update.qaRecord.stage}` : null);
+    if (!label) return;
+    if (!confirm(`Remove this Update's tag from ${label}? The Update itself will remain on the Updates page.`)) {
       return;
     }
     setIsSavingTag(true);
@@ -148,7 +170,8 @@ export function MobileThread({
             onChange={(event) => setTagSelection(event.target.value)}
             className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
-            <option value="">Not tied to a Variation/SI</option>
+            <option value="">Not Assigned</option>
+            <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
             {taggableItems.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.reference} · {option.title}
@@ -164,7 +187,7 @@ export function MobileThread({
           </button>
           <button
             onClick={() => {
-              setTagSelection(update.variationItem?.id ?? "");
+              setTagSelection(update.qaRecord ? ASSIGN_QA_SENTINEL : (update.variationItem?.id ?? ""));
               setIsEditingTag(false);
             }}
             className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
@@ -179,13 +202,18 @@ export function MobileThread({
               {update.variationItem.reference}
             </span>
           )}
+          {update.qaRecord && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
+              QA · {update.qaRecord.stage}
+            </span>
+          )}
           <button
             onClick={() => setIsEditingTag(true)}
             className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
           >
-            {update.variationItem ? "Change tag" : "+ Tag"}
+            {update.variationItem || update.qaRecord ? "Change tag" : "+ Tag"}
           </button>
-          {update.variationItem && (
+          {(update.variationItem || update.qaRecord) && (
             <button
               onClick={handleRemoveTag}
               disabled={isSavingTag}
@@ -195,6 +223,18 @@ export function MobileThread({
             </button>
           )}
         </div>
+      )}
+
+      {showAssignQaDialog && (
+        <AssignUpdateAsQaDialog
+          projectId={projectId}
+          updateId={update.id}
+          updateBody={update.body}
+          taggableItems={taggableItems}
+          defaultVariationItemId={update.variationItem?.id ?? null}
+          onClose={() => setShowAssignQaDialog(false)}
+          onAssigned={() => setShowAssignQaDialog(false)}
+        />
       )}
 
       <p className="text-sm leading-relaxed whitespace-pre-wrap mb-1">{update.body}</p>

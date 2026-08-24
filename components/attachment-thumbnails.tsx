@@ -1,5 +1,6 @@
 import { UseAsDayWorksSheetAction, type TaggableItem } from "@/components/day-works/use-as-day-works-sheet-action";
-import { attachmentKind, canUseAsDayWorksSheet } from "@/lib/update-attachments";
+import { UseAsQaRecordAction } from "@/components/quality-assurance/use-as-qa-record-action";
+import { attachmentKind, canUseAsDayWorksSheet, canUseAsQaRecord } from "@/lib/update-attachments";
 
 type AttachmentRef = { id: string; fileName: string; contentType: string };
 
@@ -54,17 +55,32 @@ export function AttachmentThumbnails({
                 </div>
               )}
             </a>
-            {taggableItems && canUseAsDayWorksSheet(attachment.contentType) && (
-              <div className="absolute -bottom-1 -right-1 size-6 flex items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-700 shadow-sm">
-                <UseAsDayWorksSheetAction
-                  projectId={projectId}
-                  source={{ type: "update-attachment", id: attachment.id }}
-                  taggableItems={taggableItems}
-                  defaultVariationItemId={defaultVariationItemId ?? null}
-                  defaultRatePerHour={defaultRatePerHour ?? ""}
-                />
-              </div>
-            )}
+            {taggableItems &&
+              (canUseAsDayWorksSheet(attachment.contentType) || canUseAsQaRecord(attachment.contentType)) && (
+                <div className="absolute -bottom-1 -right-1 flex gap-1">
+                  {canUseAsDayWorksSheet(attachment.contentType) && (
+                    <div className="size-6 flex items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-700 shadow-sm">
+                      <UseAsDayWorksSheetAction
+                        projectId={projectId}
+                        source={{ type: "update-attachment", id: attachment.id }}
+                        taggableItems={taggableItems}
+                        defaultVariationItemId={defaultVariationItemId ?? null}
+                        defaultRatePerHour={defaultRatePerHour ?? ""}
+                      />
+                    </div>
+                  )}
+                  {canUseAsQaRecord(attachment.contentType) && (
+                    <div className="size-6 flex items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-700 shadow-sm">
+                      <UseAsQaRecordAction
+                        projectId={projectId}
+                        source={{ type: "update-attachment", id: attachment.id }}
+                        taggableItems={taggableItems}
+                        defaultVariationItemId={defaultVariationItemId ?? null}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
         );
       })}

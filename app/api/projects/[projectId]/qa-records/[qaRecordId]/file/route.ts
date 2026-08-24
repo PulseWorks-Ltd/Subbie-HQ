@@ -1,0 +1,28 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
+import { getSignedDownloadUrl } from "@/lib/s3";
+
+export async function GET(request: Request, context: { params: { projectId: string; qaRecordId: string } }) {
+  const userId = await requireUserId(request);
+  const { projectId, qaRecordId } = context.params;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const hasAccess = await requireProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const canAccessModule = await requireModuleAccess(projectId, userId, "quality_assurance");
+  if (!canAccessModule) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const qaRecord = await prisma.qARecord.findFirst({ where: { id: qaRecordId, projectId } });
+  if (!qaRecord?.storageKey) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const signedUrl = await getSignedDownloadUrl(qaRecord.storageKey);
+  return NextResponse.redirect(signedUrl);
+}

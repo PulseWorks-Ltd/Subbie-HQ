@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
+import { SAFETY_DOCUMENT_TYPES } from "@/lib/safety-document-types";
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
@@ -47,10 +48,14 @@ export async function POST(request: Request, context: { params: { projectId: str
   const title = formData.get("title")?.toString();
   const notes = formData.get("notes")?.toString();
   const expiresAt = formData.get("expiresAt")?.toString();
+  const typeRaw = formData.get("type")?.toString();
   const file = formData.get("file");
 
   if (!title) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
+  if (typeRaw && !(SAFETY_DOCUMENT_TYPES as string[]).includes(typeRaw)) {
+    return NextResponse.json({ error: "Invalid document type" }, { status: 400 });
   }
 
   let fileName: string | undefined;
@@ -68,6 +73,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     data: {
       projectId,
       title,
+      type: typeRaw ? (typeRaw as (typeof SAFETY_DOCUMENT_TYPES)[number]) : undefined,
       notes: notes || undefined,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
       fileName,

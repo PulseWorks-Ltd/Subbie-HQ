@@ -2,32 +2,37 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SafetyDocument } from "@prisma/client";
-import { SAFETY_DOCUMENT_TYPES, SAFETY_DOCUMENT_TYPE_LABELS } from "@/lib/safety-document-types";
+import type { QARecord, VariationItem } from "@prisma/client";
 
-function toDateInputValue(date: Date | null) {
-  if (!date) return "";
+function toDateInputValue(date: Date) {
   return new Date(date).toISOString().slice(0, 10);
 }
 
-export function HealthSafetyItemFormDialog({
+export function QaRecordFormDialog({
   projectId,
-  document,
+  taggableItems,
+  record,
+  defaultVariationItemId,
   open,
   onClose
 }: {
   projectId: string;
-  document?: SafetyDocument | null;
+  taggableItems: VariationItem[];
+  record?: QARecord | null;
+  // Pre-selects "Link to a Variation/SI" when opened from that item's own
+  // page (Task 2.4) — ignored once editing an existing record, which
+  // already has its own variationItemId.
+  defaultVariationItemId?: string | null;
   open: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
-  const isEditing = Boolean(document);
+  const isEditing = Boolean(record);
 
-  const [title, setTitle] = useState(document?.title ?? "");
-  const [type, setType] = useState(document?.type ?? "other");
-  const [notes, setNotes] = useState(document?.notes ?? "");
-  const [expiresAt, setExpiresAt] = useState(toDateInputValue(document?.expiresAt ?? null));
+  const [stage, setStage] = useState(record?.stage ?? "");
+  const [notes, setNotes] = useState(record?.notes ?? "");
+  const [date, setDate] = useState(toDateInputValue(record?.date ?? new Date()));
+  const [variationItemId, setVariationItemId] = useState(record?.variationItemId ?? defaultVariationItemId ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,35 +46,32 @@ export function HealthSafetyItemFormDialog({
 
     let response: Response;
     if (isEditing) {
-      response = await fetch(`/api/projects/${projectId}/safety-documents/${document!.id}`, {
+      response = await fetch(`/api/projects/${projectId}/qa-records/${record!.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title,
-          type,
+          stage,
           notes: notes || null,
-          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null
+          date: date ? new Date(date).toISOString() : undefined,
+          variationItemId: variationItemId || null
         })
       });
     } else {
       const formData = new FormData();
-      formData.set("title", title);
-      formData.set("type", type);
+      formData.set("stage", stage);
       if (notes) formData.set("notes", notes);
-      if (expiresAt) formData.set("expiresAt", new Date(expiresAt).toISOString());
+      if (date) formData.set("date", new Date(date).toISOString());
+      if (variationItemId) formData.set("variationItemId", variationItemId);
       if (file) formData.set("file", file);
 
-      response = await fetch(`/api/projects/${projectId}/safety-documents`, {
-        method: "POST",
-        body: formData
-      });
+      response = await fetch(`/api/projects/${projectId}/qa-records`, { method: "POST", body: formData });
     }
 
     setIsSubmitting(false);
 
     if (!response.ok) {
       const responseBody = await response.json().catch(() => null);
-      setError(typeof responseBody?.error === "string" ? responseBody.error : "Could not save this document.");
+      setError(typeof responseBody?.error === "string" ? responseBody.error : "Could not save this QA record.");
       return;
     }
 
@@ -88,39 +90,51 @@ export function HealthSafetyItemFormDialog({
         >
           <span className="material-symbols-outlined text-xl">close</span>
         </button>
-        <h2 className="text-lg font-bold mb-1">{isEditing ? "Edit safety document" : "Add safety document"}</h2>
+        <h2 className="text-lg font-bold mb-1">{isEditing ? "Edit QA record" : "Add QA record"}</h2>
         <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5">
           {isEditing
-            ? "Update the details for this document."
-            : "e.g. SSSP, Hazard Register, H&S Policy — with an expiry date if it needs renewing."}
+            ? "Update the details for this QA record."
+            : "e.g. \"Pre-pour reinforcing inspection,\" \"Final fix QA\" — assign it to the project as a whole, or to a specific Variation/SI."}
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Title
+            Stage / milestone
             <input
               type="text"
               required
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="e.g. SSSP"
+              value={stage}
+              onChange={(event) => setStage(event.target.value)}
+              placeholder="e.g. Pre-pour reinforcing inspection"
               className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </label>
 
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Type
+            Assign to
             <select
-              value={type}
-              onChange={(event) => setType(event.target.value as SafetyDocument["type"])}
+              value={variationItemId}
+              onChange={(event) => setVariationItemId(event.target.value)}
               className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
-              {SAFETY_DOCUMENT_TYPES.map((option) => (
-                <option key={option} value={option}>
-                  {SAFETY_DOCUMENT_TYPE_LABELS[option]}
+              <option value="">Project-level (part of the contracted works)</option>
+              {taggableItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.reference} · {item.title}
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Date
+            <input
+              type="date"
+              required
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
           </label>
 
           <label className="flex flex-col gap-1 text-sm font-medium">
@@ -133,19 +147,9 @@ export function HealthSafetyItemFormDialog({
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Expiry date <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
-            <input
-              type="date"
-              value={expiresAt}
-              onChange={(event) => setExpiresAt(event.target.value)}
-              className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-          </label>
-
           {!isEditing && (
             <label className="flex flex-col gap-1 text-sm font-medium">
-              File <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+              File / evidence <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
               <input
                 type="file"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
@@ -169,7 +173,7 @@ export function HealthSafetyItemFormDialog({
               disabled={isSubmitting}
               className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
             >
-              {isSubmitting ? "Saving..." : isEditing ? "Save changes" : "Add document"}
+              {isSubmitting ? "Saving..." : isEditing ? "Save changes" : "Add QA record"}
             </button>
           </div>
         </form>

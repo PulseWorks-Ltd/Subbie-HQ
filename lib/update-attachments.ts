@@ -43,3 +43,11 @@ export function canUseAsDayWorksSheet(contentType: string | null | undefined): b
   const kind = attachmentKind(contentType);
   return kind === "image" || kind === "pdf";
 }
+
+// "Use as QA Record" (Task 3) has no AI extraction step — it's just filing
+// a copy of the file as evidence, so unlike Day Works there's no
+// content-type constraint tied to what a vision pipeline can read. Offered
+// for any attachment kind the app allows at all.
+export function canUseAsQaRecord(contentType: string | null | undefined): boolean {
+  return attachmentKind(contentType) !== "other";
+}

@@ -1,22 +1,24 @@
 "use client";
 
-import type { SafetyDocument } from "@prisma/client";
-import { CountdownBadge } from "@/components/badges/countdown-badge";
-import { SAFETY_DOCUMENT_TYPE_LABELS } from "@/lib/safety-document-types";
+import Link from "next/link";
+import type { QARecord } from "@prisma/client";
 
-function formatDate(date: Date | null) {
-  if (!date) return null;
+type QaRecordWithItem = QARecord & { variationItem: { id: string; reference: string; title: string } | null };
+
+function formatDate(date: Date) {
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function HealthSafetyItemCard({
-  document,
+export function QaRecordCard({
   projectId,
+  qaRecord,
+  showLinkedItem = true,
   onEdit,
   onDelete
 }: {
-  document: SafetyDocument;
   projectId: string;
+  qaRecord: QaRecordWithItem;
+  showLinkedItem?: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -25,28 +27,35 @@ export function HealthSafetyItemCard({
       <div className="flex items-start justify-between gap-3 mb-2">
         <div>
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary mb-1">
-            {SAFETY_DOCUMENT_TYPE_LABELS[document.type]}
+            {qaRecord.variationItem ? "Item-level" : "Project-level"}
           </span>
-          <h3 className="font-bold leading-tight">{document.title}</h3>
+          <h3 className="font-bold leading-tight">{qaRecord.stage}</h3>
         </div>
-        {document.expiresAt && <CountdownBadge date={document.expiresAt} />}
+        <span className="text-xs text-[#4c739a] dark:text-slate-400 shrink-0">{formatDate(qaRecord.date)}</span>
       </div>
 
-      {document.notes && (
-        <p className="text-sm text-[#4c739a] dark:text-slate-400 leading-relaxed mb-3">{document.notes}</p>
+      {qaRecord.notes && (
+        <p className="text-sm text-[#4c739a] dark:text-slate-400 leading-relaxed mb-3">{qaRecord.notes}</p>
       )}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#4c739a] dark:text-slate-400 mb-4">
-        {document.expiresAt && <span>Expires {formatDate(document.expiresAt)}</span>}
-        {document.storageKey && (
+        {showLinkedItem && qaRecord.variationItem && (
+          <Link
+            href={`/projects/${projectId}/variations/${qaRecord.variationItem.id}`}
+            className="font-bold text-primary hover:underline"
+          >
+            {qaRecord.variationItem.reference} · {qaRecord.variationItem.title}
+          </Link>
+        )}
+        {qaRecord.storageKey && (
           <a
-            href={`/api/projects/${projectId}/safety-documents/${document.id}/file`}
+            href={`/api/projects/${projectId}/qa-records/${qaRecord.id}/file`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1 hover:text-primary"
           >
             <span className="material-symbols-outlined text-sm">description</span>
-            {document.fileName}
+            {qaRecord.fileName}
           </a>
         )}
       </div>

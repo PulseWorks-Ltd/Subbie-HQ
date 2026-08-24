@@ -15,15 +15,23 @@ const createVariationItemSchema = z.object({
   dueAt: z.string().date().optional()
 });
 
+const createQaRecordSchema = z.object({
+  stage: z.string().min(1),
+  // Project-level (no item) when omitted — see QARecord's schema comment.
+  variationItemId: z.string().optional()
+});
+
 const patchSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("file"),
     projectId: z.string().min(1),
     category: z.string().min(1),
     // Mutually exclusive: link to an existing item, or (once the reviewer
-    // has confirmed the AI-extracted details) create a brand-new one.
+    // has confirmed the AI-extracted details) create a brand-new one, or
+    // file straight to a QA record instead of Correspondence-only.
     variationItemId: z.string().optional(),
-    createVariationItem: createVariationItemSchema.optional()
+    createVariationItem: createVariationItemSchema.optional(),
+    createQaRecord: createQaRecordSchema.optional()
   }),
   z.object({ action: z.literal("dismiss") }),
   z.object({ action: z.literal("reclassify") })
@@ -98,6 +106,22 @@ export async function PATCH(request: Request, context: { params: { emailId: stri
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
+  if (payload.createQaRecord) {
+    // Same re-check as createVariationItem above, gated on Quality
+    // Assurance instead.
+    const canCreateQaRecord = await requireModuleAccess(project.id, userId, "quality_assurance");
+    if (!canCreateQaRecord) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (payload.createQaRecord.variationItemId) {
+      const item = await prisma.variationItem.findFirst({
+        where: { id: payload.createQaRecord.variationItemId, projectId: project.id }
+      });
+      if (!item) {
+        return NextResponse.json({ error: "Variation/Site Instruction not found on this project." }, { status: 400 });
+      }
+    }
+  }
 
   const result = await fileInboundEmail({
     emailId,
@@ -105,6 +129,7 @@ export async function PATCH(request: Request, context: { params: { emailId: stri
     category: payload.category,
     variationItemId: payload.variationItemId,
     createVariationItem: payload.createVariationItem,
+    createQaRecord: payload.createQaRecord,
     reviewerUserId: userId
   });
   if (!result.ok) {

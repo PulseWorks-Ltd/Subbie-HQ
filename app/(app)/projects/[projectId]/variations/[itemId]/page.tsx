@@ -38,7 +38,7 @@ export default async function VariationItemPage({
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [dayWorksSheets, sheetRecords, materials, plant, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages] = await Promise.all([
+  const [dayWorksSheets, sheetRecords, materials, plant, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages, qaRecords] = await Promise.all([
     // Just the uploaded files — labour records are independent of any
     // sheet now too (Labour, Plant & Material AI Extraction, extended to
     // Labour), fetched at the item level below instead.
@@ -78,7 +78,12 @@ export default async function VariationItemPage({
         })
       : Promise.resolve([]),
     prisma.contractTerms.findUnique({ where: { projectId } }),
-    prisma.variationPackage.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } })
+    prisma.variationPackage.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
+    prisma.qARecord.findMany({
+      where: { variationItemId: itemId },
+      include: { variationItem: { select: { id: true, reference: true, title: true } } },
+      orderBy: { date: "desc" }
+    })
   ]);
 
   return (
@@ -96,6 +101,7 @@ export default async function VariationItemPage({
       taggableItems={taggableItems}
       contractTerms={contractTerms}
       packages={packages}
+      qaRecords={qaRecords}
     />
   );
 }

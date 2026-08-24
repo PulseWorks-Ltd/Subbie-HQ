@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { UseAsDayWorksSheetAction, type TaggableItem } from "@/components/day-works/use-as-day-works-sheet-action";
+import { UseAsQaRecordAction } from "@/components/quality-assurance/use-as-qa-record-action";
 
 export type PictureItem = {
   id: string;
@@ -87,15 +88,26 @@ export function PicturesView({
               >
                 {item.linkedLabel}
               </Link>
-              <div className="flex items-center gap-1 text-primary">
-                <UseAsDayWorksSheetAction
-                  projectId={projectId}
-                  source={{ type: item.source === "update" ? "update-attachment" : "variation-photo", id: item.id }}
-                  taggableItems={taggableItems}
-                  defaultVariationItemId={item.defaultVariationItemId}
-                  defaultRatePerHour={defaultRatePerHour}
-                />
-                <span className="text-[11px] font-bold">Day Works Sheet</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <div className="flex items-center gap-1 text-primary">
+                  <UseAsDayWorksSheetAction
+                    projectId={projectId}
+                    source={{ type: item.source === "update" ? "update-attachment" : "variation-photo", id: item.id }}
+                    taggableItems={taggableItems}
+                    defaultVariationItemId={item.defaultVariationItemId}
+                    defaultRatePerHour={defaultRatePerHour}
+                  />
+                  <span className="text-[11px] font-bold">Day Works Sheet</span>
+                </div>
+                <div className="flex items-center gap-1 text-primary">
+                  <UseAsQaRecordAction
+                    projectId={projectId}
+                    source={{ type: item.source === "update" ? "update-attachment" : "variation-photo", id: item.id }}
+                    taggableItems={taggableItems}
+                    defaultVariationItemId={item.defaultVariationItemId}
+                  />
+                  <span className="text-[11px] font-bold">QA Record</span>
+                </div>
               </div>
             </div>
           ))}

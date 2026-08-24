@@ -53,6 +53,12 @@ export function parseAddressList(raw: string | null | undefined): string[] {
 // brand-new one from this email. When creating, the email's first attachment
 // (if any) becomes the item's source file, same as a manual document upload
 // — the existing S3 object is reused by storageKey, not copied.
+//
+// createQaRecord (Task 4) is a separate, simpler destination: no AI
+// extraction, just the reviewer's own stage label and an optional link to
+// an existing Variation/SI (project-level if omitted) — same
+// reuse-by-storageKey treatment of the email's first attachment as
+// createVariationItem above.
 export async function fileInboundEmail(params: {
   emailId: string;
   projectId: string;
@@ -66,6 +72,10 @@ export async function fileInboundEmail(params: {
     notifiedAt?: string;
     dueAt?: string;
   };
+  createQaRecord?: {
+    stage: string;
+    variationItemId?: string;
+  };
   reviewerUserId: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const email = await prisma.inboundEmail.findUnique({ where: { id: params.emailId }, include: { attachments: true } });
@@ -78,6 +88,7 @@ export async function fileInboundEmail(params: {
 
   await prisma.$transaction(async (tx) => {
     let variationItemId = params.variationItemId;
+    let qaRecordId: string | undefined;
 
     if (params.createVariationItem) {
       const sourceAttachment = email.attachments[0];
@@ -97,6 +108,22 @@ export async function fileInboundEmail(params: {
       variationItemId = created.id;
     }
 
+    if (params.createQaRecord) {
+      const sourceAttachment = email.attachments[0];
+      const created = await tx.qARecord.create({
+        data: {
+          projectId: params.projectId,
+          variationItemId: params.createQaRecord.variationItemId || null,
+          stage: params.createQaRecord.stage,
+          notes: email.body,
+          fileName: sourceAttachment?.fileName,
+          storageKey: sourceAttachment?.storageKey
+        }
+      });
+      qaRecordId = created.id;
+      variationItemId = params.createQaRecord.variationItemId || variationItemId;
+    }
+
     await tx.inboundEmail.update({
       where: { id: params.emailId },
       data: {
@@ -110,6 +137,7 @@ export async function fileInboundEmail(params: {
       data: {
         projectId: params.projectId,
         variationItemId,
+        qaRecordId,
         title: email.subject,
         source: "inbound_email",
         bodyText: email.body,

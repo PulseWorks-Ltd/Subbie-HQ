@@ -3,9 +3,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { deleteFromS3 } from "@/lib/s3";
+import { SAFETY_DOCUMENT_TYPES } from "@/lib/safety-document-types";
 
 const updateSafetyDocumentSchema = z.object({
   title: z.string().min(1).optional(),
+  type: z.enum(SAFETY_DOCUMENT_TYPES as [string, ...string[]]).optional(),
   notes: z.string().optional().nullable(),
   expiresAt: z.string().datetime().nullable().optional()
 });
@@ -35,6 +37,7 @@ export async function PATCH(
     where: { id: safetyDocumentId, projectId },
     data: {
       title: payload.title,
+      type: payload.type as (typeof SAFETY_DOCUMENT_TYPES)[number] | undefined,
       notes: payload.notes ?? undefined,
       expiresAt: payload.expiresAt === undefined ? undefined : payload.expiresAt ? new Date(payload.expiresAt) : null
     }

@@ -10,6 +10,7 @@ import type {
   DayWorksPlant,
   DayWorksSheet,
   DayWorksSheetRecord,
+  QARecord,
   Update,
   UpdateAttachment,
   VariationItem,
@@ -25,6 +26,7 @@ import { VariationPhotosSection } from "@/components/variations/variation-photos
 import { VariationCorrespondenceSection } from "@/components/variations/variation-correspondence-section";
 import { VariationLinkedUpdatesSection } from "@/components/variations/variation-linked-updates-section";
 import { VariationPackageSection } from "@/components/variations/variation-package-section";
+import { VariationQaSection } from "@/components/quality-assurance/variation-qa-section";
 import { CreateVariationDialog } from "@/components/variations/create-variation-dialog";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
@@ -36,6 +38,7 @@ type UpdateWithReplies = Update & {
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
+type QaRecordWithItem = QARecord & { variationItem: VariationItemRef | null };
 
 function formatDate(date: Date | null) {
   if (!date) return null;
@@ -55,7 +58,8 @@ export function VariationDetailView({
   contacts,
   taggableItems,
   contractTerms,
-  packages
+  packages,
+  qaRecords
 }: {
   projectId: string;
   item: VariationItem;
@@ -70,6 +74,7 @@ export function VariationDetailView({
   taggableItems: VariationItem[];
   contractTerms: ContractTerms | null;
   packages: VariationPackage[];
+  qaRecords: QaRecordWithItem[];
 }) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -207,6 +212,7 @@ export function VariationDetailView({
           reference={item.reference}
           correspondence={correspondence}
         />
+        <VariationQaSection projectId={projectId} itemId={item.id} qaRecords={qaRecords} taggableItems={taggableItems} />
       </div>
 
       <VariationLinkedUpdatesSection

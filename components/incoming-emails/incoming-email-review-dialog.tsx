@@ -14,6 +14,12 @@ function matchItemType(category: string): "variation" | "site_instruction" | nul
   return null;
 }
 
+// Same loose-substring approach as matchItemType — "QA", "qa record", "QA /
+// defect record" should all match a reviewer's slight rewording of the preset.
+function matchesQa(category: string): boolean {
+  return category.toLowerCase().includes("qa");
+}
+
 // "SI-83", "SI83", "si 83" should all collide — references get typed and
 // re-typed slightly differently across an email thread and manual entry, so
 // comparing raw strings would let obvious duplicates through.
@@ -57,8 +63,14 @@ export function IncomingEmailReviewDialog({
   // Site Instruction/Variation rather than a dead end.
   const [duplicateNotice, setDuplicateNotice] = useState<string | null>(null);
 
+  // Filing straight to a QA record (Task 4) — no extraction step, just the
+  // reviewer's own stage label and an optional Variation/SI assignment.
+  const [qaStage, setQaStage] = useState("");
+  const [qaVariationItemId, setQaVariationItemId] = useState("");
+
   const selectedProject = useMemo(() => projects.find((project) => project.id === projectId), [projects, projectId]);
   const matchedItemType = useMemo(() => matchItemType(category), [category]);
+  const matchedQa = useMemo(() => matchesQa(category), [category]);
   const itemTypeLabel = matchedItemType === "site_instruction" ? "Site Instruction" : "Variation";
 
   async function handleExtractDetails() {
@@ -113,9 +125,10 @@ export function IncomingEmailReviewDialog({
   // the DOM, regardless of which one is visually primary. Both actions are
   // explicit button clicks instead, so there's no ambiguity about which one
   // Enter would silently trigger.
-  async function handleFile() {
+  async function handleFile(mode: "plain" | "qa" = "plain") {
     if (!projectId || !category.trim()) return;
     if (newItem && (!newItem.reference.trim() || !newItem.title.trim())) return;
+    if (mode === "qa" && !qaStage.trim()) return;
     setIsSubmitting(true);
     setError(null);
 
@@ -137,7 +150,8 @@ export function IncomingEmailReviewDialog({
                 notifiedAt: newItem.notifiedAt || undefined,
                 dueAt: newItem.dueAt || undefined
               }
-            : undefined
+            : undefined,
+        createQaRecord: mode === "qa" ? { stage: qaStage.trim(), variationItemId: qaVariationItemId || undefined } : undefined
       })
     });
 
@@ -219,6 +233,37 @@ export function IncomingEmailReviewDialog({
                 ))}
               </datalist>
             </label>
+
+            {selectedProject && matchedQa && (
+              <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 flex flex-col gap-3">
+                <p className="text-sm font-bold">File as QA Record</p>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Stage / milestone
+                  <input
+                    value={qaStage}
+                    onChange={(event) => setQaStage(event.target.value)}
+                    placeholder="e.g. Pre-pour reinforcing inspection"
+                    className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Assign to
+                  <select
+                    value={qaVariationItemId}
+                    onChange={(event) => setQaVariationItemId(event.target.value)}
+                    className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <option value="">Project-level (part of the contracted works)</option>
+                    {selectedProject.variationItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.reference} · {item.title}
+                        {item.status === "complete" ? " (complete)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
 
             {selectedProject && matchedItemType && !newItem && selectedProject.variationItems.length > 0 && (
               <label className="flex flex-col gap-1 text-sm font-medium">
@@ -320,10 +365,10 @@ export function IncomingEmailReviewDialog({
                 Cancel
               </button>
 
-              {showExtractChoice && (
+              {(showExtractChoice || matchedQa) && (
                 <button
                   type="button"
-                  onClick={handleFile}
+                  onClick={() => handleFile("plain")}
                   disabled={!canSubmitPlain}
                   className="h-10 px-4 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-medium disabled:opacity-60"
                 >
@@ -331,7 +376,16 @@ export function IncomingEmailReviewDialog({
                 </button>
               )}
 
-              {showExtractChoice ? (
+              {matchedQa ? (
+                <button
+                  type="button"
+                  onClick={() => handleFile("qa")}
+                  disabled={isSubmitting || !projectId || !category.trim() || !qaStage.trim()}
+                  className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {isSubmitting ? "Filing..." : "File as QA Record"}
+                </button>
+              ) : showExtractChoice ? (
                 <button
                   type="button"
                   onClick={handleExtractDetails}
@@ -343,7 +397,7 @@ export function IncomingEmailReviewDialog({
               ) : (
                 <button
                   type="button"
-                  onClick={handleFile}
+                  onClick={() => handleFile("plain")}
                   disabled={
                     isSubmitting ||
                     !projectId ||

@@ -216,6 +216,18 @@ enum PlanTier {
   enterprise
 }
 
+// Closed set of H&S document categories (Task 1.1) — defaults to `other` so
+// the migration adding this field doesn't break any pre-existing
+// SafetyDocument row; new documents are expected to pick a real category.
+enum SafetyDocumentType {
+  sssp
+  hazard_register
+  toolbox_talk
+  induction
+  incident_report
+  other
+}
+
 model User {
   id                      String               @id @default(cuid())
   email                   String               @unique
@@ -401,6 +413,7 @@ model Project {
   insuranceDistributions    InsuranceDistribution[]
   contractRequiredCovers    ContractRequiredCover[]
   quote                     ProjectQuote?
+  qaRecords                 QARecord[]
 }
 
 model ProjectMember {
@@ -1113,7 +1126,7 @@ model VariationItem {
   // convention as generalNoticeMethod/disputeNoticeMethod on ContractTerms.
   instructedByName   String?
 
-  project                   Project             @relation(fields: [projectId], references: [id])
+  project                   Project               @relation(fields: [projectId], references: [id])
   updates                   Update[]
   dayWorksSheets            DayWorksSheet[]
   // Direct, sheet-independent relations (Labour, Plant & Material AI
@@ -1129,7 +1142,8 @@ model VariationItem {
   // TODO: when preparing this item for submission (submitted_for_claim), surface
   // linked `correspondence` rows (including filed inbound emails) as supporting
   // evidence for the reviewer — not built yet, see Incoming Emails Task 4.2.
-  suggestedForInboundEmails InboundEmail[]      @relation("InboundEmailSuggestedVariationItem")
+  suggestedForInboundEmails InboundEmail[]        @relation("InboundEmailSuggestedVariationItem")
+  qaRecords                 QARecord[]
 }
 
 // fileName/storageKey are the original feature — an uploaded photo/scan of
@@ -1153,7 +1167,7 @@ model DayWorksSheet {
   contentType     String?
   createdAt       DateTime @default(now())
 
-  variationItem VariationItem        @relation(fields: [variationItemId], references: [id])
+  variationItem VariationItem         @relation(fields: [variationItemId], references: [id])
   materials     DayWorksMaterial[]
   plant         DayWorksPlant[]
   sheetRecords  DayWorksSheetRecord[]
@@ -1187,14 +1201,14 @@ model DayWorksSheet {
 // records with no file behind them. onDelete: SetNull, not Cascade —
 // deleting the sheet must not delete a record that's independent of it.
 model DayWorksSheetRecord {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   variationItemId String
   dayWorksSheetId String?
   sheetNumber     String
   teamLeaderCount Int
   teamMemberCount Int
-  totalHours      Decimal? @db.Decimal(6, 2)
-  ratePerHour     Decimal? @db.Decimal(10, 2)
+  totalHours      Decimal?  @db.Decimal(6, 2)
+  ratePerHour     Decimal?  @db.Decimal(10, 2)
   date            DateTime?
   startTime       String?
   finishTime      String?
@@ -1202,8 +1216,8 @@ model DayWorksSheetRecord {
   notes           String?
   weather         String?
   location        String?
-  sortOrder       Int      @default(0)
-  createdAt       DateTime @default(now())
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
 
   variationItem VariationItem  @relation(fields: [variationItemId], references: [id])
   dayWorksSheet DayWorksSheet? @relation(fields: [dayWorksSheetId], references: [id], onDelete: SetNull)
@@ -1224,13 +1238,13 @@ model DayWorksSheetRecord {
 // material line item is no longer scoped to its sheet's lifecycle, so
 // deleting the sheet must not delete it.
 model DayWorksMaterial {
-  id              String  @id @default(cuid())
-  variationItemId String
-  dayWorksSheetId String?
-  description     String
-  quantity        Decimal @db.Decimal(10, 2)
-  unit            String
-  unitCost        Decimal @db.Decimal(10, 2)
+  id               String   @id @default(cuid())
+  variationItemId  String
+  dayWorksSheetId  String?
+  description      String
+  quantity         Decimal  @db.Decimal(10, 2)
+  unit             String
+  unitCost         Decimal  @db.Decimal(10, 2)
   // Optional receipt/photo attachment — same fileName/storageKey/
   // contentType shape as VariationPhoto (Task: reuse the existing
   // photo-attachment pattern), but nullable and singular rather than a
@@ -1257,13 +1271,13 @@ model DayWorksMaterial {
 // rate later). Keeping them as separate models makes that scoping
 // impossible to blur by accident in the total-calculation code.
 model DayWorksPlant {
-  id              String  @id @default(cuid())
-  variationItemId String
-  dayWorksSheetId String?
-  description     String
-  quantity        Decimal @db.Decimal(10, 2)
-  unit            String
-  unitCost        Decimal @db.Decimal(10, 2)
+  id               String   @id @default(cuid())
+  variationItemId  String
+  dayWorksSheetId  String?
+  description      String
+  quantity         Decimal  @db.Decimal(10, 2)
+  unit             String
+  unitCost         Decimal  @db.Decimal(10, 2)
   photoFileName    String?
   photoStorageKey  String?
   photoContentType String?
@@ -1276,15 +1290,15 @@ model DayWorksPlant {
 }
 
 model VariationPhoto {
-  id              String   @id @default(cuid())
-  variationItemId String
-  fileName        String
-  storageKey      String
-  contentType     String
+  id                  String   @id @default(cuid())
+  variationItemId     String
+  fileName            String
+  storageKey          String
+  contentType         String
   // Same "small generated display copy, original untouched" pattern as
   // UpdateAttachment.thumbnailStorageKey — see lib/image-thumbnails.ts.
   thumbnailStorageKey String?
-  createdAt       DateTime @default(now())
+  createdAt           DateTime @default(now())
 
   variationItem VariationItem @relation(fields: [variationItemId], references: [id])
 }
@@ -1373,8 +1387,14 @@ model Correspondence {
   // Not a locked enum, and searchable via the Correspondence search box.
   category String?
 
+  // Set on source: inbound_email rows filed as a QA record (Task 4) — the
+  // QARecord created alongside this Correspondence row, same "resolve an id,
+  // then create the Correspondence row with it" pattern as variationItemId.
+  qaRecordId String?
+
   project                    Project                @relation(fields: [projectId], references: [id])
   variationItem              VariationItem?         @relation(fields: [variationItemId], references: [id])
+  qaRecord                   QARecord?              @relation(fields: [qaRecordId], references: [id])
   inboundEmail               InboundEmail?          @relation(fields: [inboundEmailId], references: [id])
   sourceInsuranceCertificate InsuranceCertificate?  @relation(fields: [sourceInsuranceCertificateId], references: [id])
   addressedToContact         MainContractorContact? @relation(fields: [addressedToContactId], references: [id])
@@ -1384,18 +1404,43 @@ model Correspondence {
 }
 
 model SafetyDocument {
-  id                String         @id @default(cuid())
+  id                String             @id @default(cuid())
   projectId         String
   title             String
+  // Defaults to `other` — see SafetyDocumentType comment (Task 1.1).
+  type              SafetyDocumentType @default(other)
   notes             String?
   fileName          String?
   storageKey        String?
   expiresAt         DateTime?
   // Last deadline-reminder stage sent for this document's expiresAt — see ReminderStage.
   lastReminderStage ReminderStage?
-  createdAt         DateTime       @default(now())
+  createdAt         DateTime           @default(now())
 
   project Project @relation(fields: [projectId], references: [id])
+}
+
+// Quality Assurance sign-offs (Task 2). Assigned to EITHER the project
+// directly (job-level QA, "part of the contracted works") OR a specific
+// SI/Variation via variationItemId — never both, mirroring how
+// Correspondence already models "always has a project, optionally also
+// tied to one item" (see Correspondence.variationItemId above). `stage` is
+// deliberately free text, not an enum — QA checkpoints vary enormously by
+// trade, unlike SafetyDocumentType's more universal categories.
+model QARecord {
+  id              String   @id @default(cuid())
+  projectId       String
+  variationItemId String?
+  stage           String
+  notes           String?
+  fileName        String?
+  storageKey      String?
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  project        Project          @relation(fields: [projectId], references: [id])
+  variationItem  VariationItem?   @relation(fields: [variationItemId], references: [id])
+  correspondence Correspondence[]
 }
 
 model PushSubscription {
@@ -1410,11 +1455,11 @@ model PushSubscription {
 }
 
 model UpdateAttachment {
-  id          String   @id @default(cuid())
-  updateId    String
-  fileName    String
-  storageKey  String
-  contentType String
+  id                  String   @id @default(cuid())
+  updateId            String
+  fileName            String
+  storageKey          String
+  contentType         String
   // A small (~800px, JPEG) display copy generated at upload time for
   // image attachments only — see lib/image-thumbnails.ts. Null for non-
   // image attachments (PDF/DOCX never get one) and for any attachment
@@ -1423,7 +1468,7 @@ model UpdateAttachment {
   // breaks, it just isn't lightweight yet. The original storageKey above
   // is never touched by this — full quality, always.
   thumbnailStorageKey String?
-  createdAt   DateTime @default(now())
+  createdAt           DateTime @default(now())
 
   update Update @relation(fields: [updateId], references: [id])
 }

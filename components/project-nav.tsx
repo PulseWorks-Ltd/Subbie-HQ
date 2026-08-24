@@ -17,6 +17,7 @@ const NAV_ITEMS: {
   { label: "Variations", segment: "variations", module: null, anyOfModules: ["variations", "site_instructions"] },
   { label: "Payment Claims", segment: "payment-claims", module: "payment_claims" },
   { label: "Health & Safety", segment: "health-safety", module: "health_safety" },
+  { label: "Quality Assurance", segment: "quality-assurance", module: "quality_assurance" },
   { label: "Pictures", segment: "pictures", module: "pictures" },
   { label: "Correspondence", segment: "correspondence", module: "correspondence" },
   { label: "Contract", segment: "contract", module: "contract" },

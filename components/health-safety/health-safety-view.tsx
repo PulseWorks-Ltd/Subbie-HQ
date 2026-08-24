@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SafetyDocument } from "@prisma/client";
+import type { SafetyDocument, SafetyDocumentType } from "@prisma/client";
 import { HealthSafetyItemCard } from "@/components/health-safety/health-safety-item-card";
 import { HealthSafetyItemFormDialog } from "@/components/health-safety/health-safety-item-form-dialog";
+import { SAFETY_DOCUMENT_TYPES, SAFETY_DOCUMENT_TYPE_LABELS } from "@/lib/safety-document-types";
+
+type FilterKey = "all" | SafetyDocumentType;
 
 export function HealthSafetyView({
   projectId,
@@ -16,6 +19,13 @@ export function HealthSafetyView({
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<SafetyDocument | null>(null);
+  const [filter, setFilter] = useState<FilterKey>("all");
+
+  // Only offer a tab for a type that's actually in use on this project —
+  // an empty tab for every possible category would just be clutter (Task
+  // 1.2: "genuinely usable for finding a specific type", not a fixed menu).
+  const typesInUse = SAFETY_DOCUMENT_TYPES.filter((type) => safetyDocuments.some((document) => document.type === type));
+  const filteredDocuments = safetyDocuments.filter((document) => filter === "all" || document.type === filter);
 
   function openCreateDialog() {
     setEditingDocument(null);
@@ -64,17 +74,37 @@ export function HealthSafetyView({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {safetyDocuments.map((document) => (
-            <HealthSafetyItemCard
-              key={document.id}
-              document={document}
-              projectId={projectId}
-              onEdit={() => openEditDialog(document)}
-              onDelete={() => handleDelete(document)}
-            />
-          ))}
-        </div>
+        <>
+          {typesInUse.length > 1 && (
+            <div className="flex gap-1 border-b border-[#e7edf3] dark:border-slate-800 overflow-x-auto">
+              {(["all", ...typesInUse] as FilterKey[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={`px-4 py-2 text-sm font-bold whitespace-nowrap border-b-2 -mb-px ${
+                    filter === key
+                      ? "text-primary border-primary"
+                      : "text-[#4c739a] dark:text-slate-400 border-transparent hover:text-primary"
+                  }`}
+                >
+                  {key === "all" ? "All" : SAFETY_DOCUMENT_TYPE_LABELS[key]}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredDocuments.map((document) => (
+              <HealthSafetyItemCard
+                key={document.id}
+                document={document}
+                projectId={projectId}
+                onEdit={() => openEditDialog(document)}
+                onDelete={() => handleDelete(document)}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       <HealthSafetyItemFormDialog

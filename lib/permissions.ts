@@ -13,7 +13,8 @@ export const MODULES = [
   "insurance",
   "main_contractors",
   "quoting",
-  "incoming_emails"
+  "incoming_emails",
+  "quality_assurance"
 ] as const;
 
 export type ModuleKey = (typeof MODULES)[number];
@@ -50,7 +51,8 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   // main_contractors above — the Incoming Emails review queue spans every
   // project in the org, so it's gated via hasModuleAccess against
   // OrganisationMember, not the project-scoped requireModuleAccess.
-  incoming_emails: "Incoming Emails"
+  incoming_emails: "Incoming Emails",
+  quality_assurance: "Quality Assurance"
 };
 
 export type PresetKey = "admin" | "operations" | "supervisor" | "health_safety_only";
@@ -79,7 +81,8 @@ export const PRESETS: Record<PresetKey, { label: string; isAdmin: boolean; modul
       insurance: true,
       main_contractors: true,
       quoting: true,
-      incoming_emails: true
+      incoming_emails: true,
+      quality_assurance: true
     }
   },
   supervisor: {
@@ -90,7 +93,8 @@ export const PRESETS: Record<PresetKey, { label: string; isAdmin: boolean; modul
       site_instructions: true,
       pictures: true,
       health_safety: true,
-      programme: true
+      programme: true,
+      quality_assurance: true
     }
   },
   health_safety_only: {

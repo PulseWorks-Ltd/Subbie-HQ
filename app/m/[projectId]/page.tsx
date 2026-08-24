@@ -3,20 +3,22 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess } from "@/lib/auth";
 import { MobileUpdatesView } from "@/components/mobile/mobile-updates-view";
+import { UPDATE_CATEGORIES } from "@/lib/update-category";
 
 export default async function MobileProjectUpdatesPage({
   params,
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ update?: string; q?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ update?: string; q?: string; from?: string; to?: string; category?: string }>;
 }) {
   const session = await auth();
   const { projectId } = await params;
-  const { update: highlightUpdateId, q, from, to } = await searchParams;
+  const { update: highlightUpdateId, q, from, to, category } = await searchParams;
   const trimmedQ = q?.trim();
   const fromDate = from ? new Date(`${from}T00:00:00`) : undefined;
   const toDate = to ? new Date(`${to}T23:59:59.999`) : undefined;
+  const validCategory = category && (UPDATE_CATEGORIES as string[]).includes(category) ? category : undefined;
 
   const hasAccess = await requireProjectAccess(projectId, session!.user.id);
   const canAccessUpdates = hasAccess && (await requireModuleAccess(projectId, session!.user.id, "updates"));
@@ -44,6 +46,7 @@ export default async function MobileProjectUpdatesPage({
         ...(fromDate || toDate
           ? { createdAt: { ...(fromDate ? { gte: fromDate } : {}), ...(toDate ? { lte: toDate } : {}) } }
           : {}),
+        ...(validCategory ? { category: validCategory as (typeof UPDATE_CATEGORIES)[number] } : {}),
         ...(trimmedQ
           ? {
               OR: [
@@ -110,6 +113,7 @@ export default async function MobileProjectUpdatesPage({
         initialQuery={q ?? ""}
         initialFrom={from ?? ""}
         initialTo={to ?? ""}
+        initialCategory={validCategory ?? ""}
       />
     </div>
   );

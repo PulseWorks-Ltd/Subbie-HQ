@@ -7,6 +7,7 @@ import { AttachmentPreviewList } from "@/components/updates/attachment-preview-l
 import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
+import { UPDATE_CATEGORIES, UPDATE_CATEGORY_LABELS, categoryOptionValue, parseCategoryOptionValue } from "@/lib/update-category";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type Recipient = { contactId?: string; email: string; label: string };
@@ -26,7 +27,10 @@ export function UpdateComposer({
   const isMobile = variant === "mobile";
 
   const [body, setBody] = useState("");
-  const [variationItemId, setVariationItemId] = useState("");
+  // Holds whichever kind of tag selection is active: "" (Not Assigned),
+  // ASSIGN_QA_SENTINEL, a category:* value (see lib/update-category.ts), or
+  // a real VariationItem id — one combined <select>, not separate controls.
+  const [tagSelection, setTagSelection] = useState("");
   const [percentComplete, setPercentComplete] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -196,12 +200,15 @@ export function UpdateComposer({
     setIsSubmitting(true);
     setError(null);
 
-    const isAssigningQa = variationItemId === ASSIGN_QA_SENTINEL;
+    const isAssigningQa = tagSelection === ASSIGN_QA_SENTINEL;
+    const selectedCategory = parseCategoryOptionValue(tagSelection);
+    const selectedVariationItemId = !isAssigningQa && !selectedCategory ? tagSelection : "";
 
     const formData = new FormData();
     formData.set("body", body);
-    if (variationItemId && !isAssigningQa) formData.set("variationItemId", variationItemId);
-    if (!isMobile && variationItemId && !isAssigningQa && percentComplete) formData.set("percentComplete", percentComplete);
+    if (selectedVariationItemId) formData.set("variationItemId", selectedVariationItemId);
+    if (selectedCategory) formData.set("category", selectedCategory);
+    if (!isMobile && selectedVariationItemId && percentComplete) formData.set("percentComplete", percentComplete);
     files.forEach((file) => formData.append("files", file));
     if (isExternal && drafted) {
       formData.set("isExternal", "true");
@@ -224,7 +231,7 @@ export function UpdateComposer({
         setPendingQaAssignment({ updateId: data.update.id, body: data.update.body ?? body });
       }
       setBody("");
-      setVariationItemId("");
+      setTagSelection("");
       setPercentComplete("");
       setFiles([]);
       resetExternalState();
@@ -250,7 +257,7 @@ export function UpdateComposer({
         value={body}
         onChange={(event) => setBody(event.target.value)}
         rows={3}
-        placeholder={isMobile ? "Post a progress update..." : "Post an update for the team..."}
+        placeholder={isMobile ? "Post a progress diary entry..." : "Post a diary entry for the team..."}
         className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
       />
 
@@ -314,19 +321,28 @@ export function UpdateComposer({
       {openItems.length > 0 && (
         <div className="flex items-center gap-2">
           <select
-            value={variationItemId}
-            onChange={(event) => setVariationItemId(event.target.value)}
+            value={tagSelection}
+            onChange={(event) => setTagSelection(event.target.value)}
             className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <option value="">Not Assigned</option>
             <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
-            {openItems.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.reference} · {item.title}
-              </option>
-            ))}
+            <optgroup label="Category">
+              {UPDATE_CATEGORIES.map((category) => (
+                <option key={category} value={categoryOptionValue(category)}>
+                  {UPDATE_CATEGORY_LABELS[category]}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Site Instructions / Variations">
+              {openItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.reference} · {item.title}
+                </option>
+              ))}
+            </optgroup>
           </select>
-          {!isMobile && variationItemId && variationItemId !== ASSIGN_QA_SENTINEL && (
+          {!isMobile && tagSelection && tagSelection !== ASSIGN_QA_SENTINEL && !parseCategoryOptionValue(tagSelection) && (
             <input
               type="number"
               min={0}
@@ -449,7 +465,7 @@ export function UpdateComposer({
             : "self-end h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
         }
       >
-        {isSubmitting ? "Posting..." : isExternal ? "Send external update" : "Post Update"}
+        {isSubmitting ? "Posting..." : isExternal ? "Send external diary entry" : "Post Diary Entry"}
       </button>
     </form>
     {pendingQaAssignment && (

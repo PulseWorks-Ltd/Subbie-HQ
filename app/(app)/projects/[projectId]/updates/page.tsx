@@ -4,19 +4,21 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
 import { markProjectUpdatesRead } from "@/lib/updates-feed";
 import { UpdatesView } from "@/components/updates/updates-view";
+import { UPDATE_CATEGORIES } from "@/lib/update-category";
 
 export default async function UpdatesPage({
   params,
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ q?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ q?: string; from?: string; to?: string; category?: string }>;
 }) {
   const { projectId } = await params;
-  const { q, from, to } = await searchParams;
+  const { q, from, to, category } = await searchParams;
   const trimmedQ = q?.trim();
   const fromDate = from ? new Date(`${from}T00:00:00`) : undefined;
   const toDate = to ? new Date(`${to}T23:59:59.999`) : undefined;
+  const validCategory = category && (UPDATE_CATEGORIES as string[]).includes(category) ? category : undefined;
 
   const session = await auth();
   const userId = session?.user?.id;
@@ -50,6 +52,7 @@ export default async function UpdatesPage({
         ...(fromDate || toDate
           ? { createdAt: { ...(fromDate ? { gte: fromDate } : {}), ...(toDate ? { lte: toDate } : {}) } }
           : {}),
+        ...(validCategory ? { category: validCategory as (typeof UPDATE_CATEGORIES)[number] } : {}),
         ...(trimmedQ
           ? {
               OR: [
@@ -119,6 +122,7 @@ export default async function UpdatesPage({
       initialQuery={q ?? ""}
       initialFrom={from ?? ""}
       initialTo={to ?? ""}
+      initialCategory={validCategory ?? ""}
     />
   );
 }

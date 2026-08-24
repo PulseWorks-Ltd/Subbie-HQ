@@ -24,12 +24,18 @@ export function UseAsQaRecordAction({
   projectId,
   source,
   taggableItems,
-  defaultVariationItemId
+  defaultVariationItemId,
+  variant = "icon",
+  onTriggered
 }: {
   projectId: string;
   source: QaRecordSource;
   taggableItems: TaggableItem[];
   defaultVariationItemId: string | null;
+  // Same "icon" vs "menu-item" trigger-only distinction as
+  // UseAsDayWorksSheetAction — see its comment (Task 4 decluttering).
+  variant?: "icon" | "menu-item";
+  onTriggered?: () => void;
 }) {
   const [step, setStep] = useState<Step>({ name: "closed" });
   const [selectedItemId, setSelectedItemId] = useState(defaultVariationItemId ?? "");
@@ -38,6 +44,7 @@ export function UseAsQaRecordAction({
   const [error, setError] = useState<string | null>(null);
 
   function openPicker() {
+    onTriggered?.();
     setSelectedItemId(defaultVariationItemId ?? "");
     setStage("");
     setNotes("");
@@ -76,15 +83,26 @@ export function UseAsQaRecordAction({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openPicker}
-        title="Use as QA Record"
-        aria-label="Use as QA Record"
-        className="text-[#4c739a] dark:text-slate-400 hover:text-primary"
-      >
-        <span className="material-symbols-outlined text-base align-middle">verified</span>
-      </button>
+      {variant === "menu-item" ? (
+        <button
+          type="button"
+          onClick={openPicker}
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-[#0d141b] dark:text-slate-200 hover:bg-[#f6f7f8] dark:hover:bg-slate-800"
+        >
+          <span className="material-symbols-outlined text-base">verified</span>
+          Use as QA Record
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={openPicker}
+          title="Use as QA Record"
+          aria-label="Use as QA Record"
+          className="text-[#4c739a] dark:text-slate-400 hover:text-primary"
+        >
+          <span className="material-symbols-outlined text-base align-middle">verified</span>
+        </button>
+      )}
 
       {(step.name === "picker" || step.name === "working") && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">

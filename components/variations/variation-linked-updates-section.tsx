@@ -27,9 +27,9 @@ export function VariationLinkedUpdatesSection({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-bold">Linked Updates</h3>
+      <h3 className="text-sm font-bold">Linked Diary Entries</h3>
       {updates.length === 0 ? (
-        <p className="text-sm text-[#4c739a] dark:text-slate-400">No updates tagged to this item yet.</p>
+        <p className="text-sm text-[#4c739a] dark:text-slate-400">No diary entries tagged to this item yet.</p>
       ) : (
         <div className="flex flex-col gap-3">
           {updates.map((update) => (

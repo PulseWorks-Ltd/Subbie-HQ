@@ -1,5 +1,6 @@
 import { UseAsDayWorksSheetAction, type TaggableItem } from "@/components/day-works/use-as-day-works-sheet-action";
 import { UseAsQaRecordAction } from "@/components/quality-assurance/use-as-qa-record-action";
+import { AttachmentOverflowMenu } from "@/components/attachment-overflow-menu";
 import { attachmentKind, canUseAsDayWorksSheet, canUseAsQaRecord } from "@/lib/update-attachments";
 
 type AttachmentRef = { id: string; fileName: string; contentType: string };
@@ -57,28 +58,28 @@ export function AttachmentThumbnails({
             </a>
             {taggableItems &&
               (canUseAsDayWorksSheet(attachment.contentType) || canUseAsQaRecord(attachment.contentType)) && (
-                <div className="absolute -bottom-1 -right-1 flex gap-1">
-                  {canUseAsDayWorksSheet(attachment.contentType) && (
-                    <div className="size-6 flex items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-700 shadow-sm">
+                <div className="absolute -bottom-1 -right-1">
+                  <AttachmentOverflowMenu>
+                    {canUseAsDayWorksSheet(attachment.contentType) && (
                       <UseAsDayWorksSheetAction
                         projectId={projectId}
                         source={{ type: "update-attachment", id: attachment.id }}
                         taggableItems={taggableItems}
                         defaultVariationItemId={defaultVariationItemId ?? null}
                         defaultRatePerHour={defaultRatePerHour ?? ""}
+                        variant="menu-item"
                       />
-                    </div>
-                  )}
-                  {canUseAsQaRecord(attachment.contentType) && (
-                    <div className="size-6 flex items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-700 shadow-sm">
+                    )}
+                    {canUseAsQaRecord(attachment.contentType) && (
                       <UseAsQaRecordAction
                         projectId={projectId}
                         source={{ type: "update-attachment", id: attachment.id }}
                         taggableItems={taggableItems}
                         defaultVariationItemId={defaultVariationItemId ?? null}
+                        variant="menu-item"
                       />
-                    </div>
-                  )}
+                    )}
+                  </AttachmentOverflowMenu>
                 </div>
               )}
           </div>

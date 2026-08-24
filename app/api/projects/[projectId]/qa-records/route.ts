@@ -124,7 +124,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       }
       await prisma.update.update({
         where: { id: sourceUpdate.id },
-        data: { qaRecordId: qaRecord.id, variationItemId: null }
+        data: { qaRecordId: qaRecord.id, variationItemId: null, category: null }
       });
 
       const withAttachments = await prisma.qARecord.findUnique({

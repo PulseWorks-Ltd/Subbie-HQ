@@ -25,7 +25,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   contract: "Contract",
   scope: "Scope",
   programme: "Programme",
-  updates: "Updates",
+  updates: "Project Diary",
   site_instructions: "Site Instructions",
   variations: "Variations",
   pictures: "Pictures",

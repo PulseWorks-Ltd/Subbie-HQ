@@ -9,6 +9,7 @@ import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-up
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
+import { UPDATE_CATEGORIES, UPDATE_CATEGORY_LABELS, categoryOptionValue, parseCategoryOptionValue } from "@/lib/update-category";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -20,6 +21,12 @@ type UpdateWithReplies = Update & {
   attachments: UpdateAttachment[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
+
+function currentTagSelection(update: { variationItem: VariationItemRef | null; qaRecord: QaRecordRef | null; category: string | null }) {
+  if (update.category) return categoryOptionValue(update.category as Parameters<typeof categoryOptionValue>[0]);
+  if (update.qaRecord) return ASSIGN_QA_SENTINEL;
+  return update.variationItem?.id ?? "";
+}
 
 function formatTimestamp(date: Date) {
   return new Date(date).toLocaleString(undefined, {
@@ -84,9 +91,7 @@ export function MobileThread({
     setReplyFiles((current) => current.filter((_, i) => i !== index));
   }
   const [isEditingTag, setIsEditingTag] = useState(false);
-  const [tagSelection, setTagSelection] = useState(
-    update.qaRecord ? ASSIGN_QA_SENTINEL : (update.variationItem?.id ?? "")
-  );
+  const [tagSelection, setTagSelection] = useState(currentTagSelection(update));
   const [isSavingTag, setIsSavingTag] = useState(false);
   const [showAssignQaDialog, setShowAssignQaDialog] = useState(false);
 
@@ -107,11 +112,12 @@ export function MobileThread({
       setShowAssignQaDialog(true);
       return;
     }
+    const category = parseCategoryOptionValue(tagSelection);
     setIsSavingTag(true);
     await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ variationItemId: tagSelection || null })
+      body: JSON.stringify(category ? { category } : { variationItemId: tagSelection || null })
     });
     setIsSavingTag(false);
     setIsEditingTag(false);
@@ -119,9 +125,11 @@ export function MobileThread({
   }
 
   async function handleRemoveTag() {
-    const label = update.variationItem?.reference ?? (update.qaRecord ? `QA — ${update.qaRecord.stage}` : null);
+    const label =
+      update.variationItem?.reference ??
+      (update.qaRecord ? `QA — ${update.qaRecord.stage}` : update.category ? UPDATE_CATEGORY_LABELS[update.category] : null);
     if (!label) return;
-    if (!confirm(`Remove this Update's tag from ${label}? The Update itself will remain on the Updates page.`)) {
+    if (!confirm(`Remove this diary entry's tag from ${label}? The diary entry itself will remain on the Project Diary page.`)) {
       return;
     }
     setIsSavingTag(true);
@@ -170,11 +178,20 @@ export function MobileThread({
           >
             <option value="">Not Assigned</option>
             <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
-            {taggableItems.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.reference} · {option.title}
-              </option>
-            ))}
+            <optgroup label="Category">
+              {UPDATE_CATEGORIES.map((category) => (
+                <option key={category} value={categoryOptionValue(category)}>
+                  {UPDATE_CATEGORY_LABELS[category]}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Site Instructions / Variations">
+              {taggableItems.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.reference} · {option.title}
+                </option>
+              ))}
+            </optgroup>
           </select>
           <button
             onClick={handleSaveTag}
@@ -185,7 +202,7 @@ export function MobileThread({
           </button>
           <button
             onClick={() => {
-              setTagSelection(update.qaRecord ? ASSIGN_QA_SENTINEL : (update.variationItem?.id ?? ""));
+              setTagSelection(currentTagSelection(update));
               setIsEditingTag(false);
             }}
             className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
@@ -205,13 +222,18 @@ export function MobileThread({
               QA · {update.qaRecord.stage}
             </span>
           )}
+          {update.category && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              {UPDATE_CATEGORY_LABELS[update.category]}
+            </span>
+          )}
           <button
             onClick={() => setIsEditingTag(true)}
             className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
           >
-            {update.variationItem || update.qaRecord ? "Change tag" : "+ Tag"}
+            {update.variationItem || update.qaRecord || update.category ? "Change tag" : "+ Tag"}
           </button>
-          {(update.variationItem || update.qaRecord) && (
+          {(update.variationItem || update.qaRecord || update.category) && (
             <button
               onClick={handleRemoveTag}
               disabled={isSavingTag}

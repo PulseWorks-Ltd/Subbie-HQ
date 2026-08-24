@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { UseAsDayWorksSheetAction, type TaggableItem } from "@/components/day-works/use-as-day-works-sheet-action";
 import { UseAsQaRecordAction } from "@/components/quality-assurance/use-as-qa-record-action";
+import { AttachmentOverflowMenu } from "@/components/attachment-overflow-menu";
 
 export type PictureItem = {
   id: string;
@@ -36,14 +37,14 @@ export function PicturesView({
       <div>
         <h2 className="text-lg font-bold">Pictures</h2>
         <p className="text-sm text-[#4c739a] dark:text-slate-400">
-          Every photo uploaded on this project, from Updates and Variations/Site Instructions.
+          Every photo uploaded on this project, from Project Diary and Variations/Site Instructions.
         </p>
       </div>
 
       <div className="flex gap-1 border-b border-[#e7edf3] dark:border-slate-800">
         {([
           ["all", "All"],
-          ["update", "Updates"],
+          ["update", "Project Diary"],
           ["variation-photo", "Variations / SI"]
         ] as [FilterKey, string][]).map(([key, label]) => (
           <button
@@ -64,51 +65,51 @@ export function PicturesView({
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">
           <p className="font-bold mb-1">No photos yet</p>
           <p className="text-sm text-[#4c739a] dark:text-slate-400">
-            Photos attached to Updates or Variations/Site Instructions will show up here.
+            Photos attached to Project Diary or Variations/Site Instructions will show up here.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {filteredItems.map((item) => (
             <div key={item.id} className="flex flex-col gap-1">
-              <a href={item.href} target="_blank" rel="noreferrer">
-                {/* Stored derivative, not the full original (Task 2.2) —
-                    click-through still opens the full-quality original
-                    untouched (Task 2.3). */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`${item.href}?variant=thumbnail`}
-                  alt={item.linkedLabel}
-                  className="aspect-square w-full rounded-lg object-cover border border-[#e7edf3] dark:border-slate-800"
-                />
-              </a>
+              <div className="relative">
+                <a href={item.href} target="_blank" rel="noreferrer">
+                  {/* Stored derivative, not the full original (Task 2.2) —
+                      click-through still opens the full-quality original
+                      untouched (Task 2.3). */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`${item.href}?variant=thumbnail`}
+                    alt={item.linkedLabel}
+                    className="aspect-square w-full rounded-lg object-cover border border-[#e7edf3] dark:border-slate-800"
+                  />
+                </a>
+                <div className="absolute bottom-1 right-1">
+                  <AttachmentOverflowMenu>
+                    <UseAsDayWorksSheetAction
+                      projectId={projectId}
+                      source={{ type: item.source === "update" ? "update-attachment" : "variation-photo", id: item.id }}
+                      taggableItems={taggableItems}
+                      defaultVariationItemId={item.defaultVariationItemId}
+                      defaultRatePerHour={defaultRatePerHour}
+                      variant="menu-item"
+                    />
+                    <UseAsQaRecordAction
+                      projectId={projectId}
+                      source={{ type: item.source === "update" ? "update-attachment" : "variation-photo", id: item.id }}
+                      taggableItems={taggableItems}
+                      defaultVariationItemId={item.defaultVariationItemId}
+                      variant="menu-item"
+                    />
+                  </AttachmentOverflowMenu>
+                </div>
+              </div>
               <Link
                 href={item.linkedHref}
                 className="text-xs text-[#4c739a] dark:text-slate-400 hover:text-primary truncate"
               >
                 {item.linkedLabel}
               </Link>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <div className="flex items-center gap-1 text-primary">
-                  <UseAsDayWorksSheetAction
-                    projectId={projectId}
-                    source={{ type: item.source === "update" ? "update-attachment" : "variation-photo", id: item.id }}
-                    taggableItems={taggableItems}
-                    defaultVariationItemId={item.defaultVariationItemId}
-                    defaultRatePerHour={defaultRatePerHour}
-                  />
-                  <span className="text-[11px] font-bold">Day Works Sheet</span>
-                </div>
-                <div className="flex items-center gap-1 text-primary">
-                  <UseAsQaRecordAction
-                    projectId={projectId}
-                    source={{ type: item.source === "update" ? "update-attachment" : "variation-photo", id: item.id }}
-                    taggableItems={taggableItems}
-                    defaultVariationItemId={item.defaultVariationItemId}
-                  />
-                  <span className="text-[11px] font-bold">QA Record</span>
-                </div>
-              </div>
             </div>
           ))}
         </div>

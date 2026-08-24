@@ -26,7 +26,8 @@ export function MobileUpdatesView({
   highlightUpdateId,
   initialQuery,
   initialFrom,
-  initialTo
+  initialTo,
+  initialCategory
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
@@ -36,9 +37,10 @@ export function MobileUpdatesView({
   initialQuery: string;
   initialFrom: string;
   initialTo: string;
+  initialCategory: string;
 }) {
   const openItems = taggableItems.filter((item) => item.status !== "complete");
-  const isFiltered = Boolean(initialQuery || initialFrom || initialTo);
+  const isFiltered = Boolean(initialQuery || initialFrom || initialTo || initialCategory);
 
   useEffect(() => {
     if (!highlightUpdateId) return;
@@ -87,13 +89,14 @@ export function MobileUpdatesView({
         initialQuery={initialQuery}
         initialFrom={initialFrom}
         initialTo={initialTo}
+        initialCategory={initialCategory}
       />
 
       {updates.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#e7edf3] dark:border-slate-700 py-12">
-          <p className="font-bold mb-1 text-sm">{isFiltered ? "No matching updates" : "No updates yet"}</p>
+          <p className="font-bold mb-1 text-sm">{isFiltered ? "No matching diary entries" : "No diary entries yet"}</p>
           <p className="text-xs text-[#4c739a] dark:text-slate-400">
-            {isFiltered ? "Try a different keyword, date range, or Variation/SI reference." : "Post the first update above."}
+            {isFiltered ? "Try a different keyword, date range, or Variation/SI reference." : "Post the first diary entry above."}
           </p>
         </div>
       ) : (

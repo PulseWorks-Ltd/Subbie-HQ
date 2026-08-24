@@ -12,7 +12,7 @@ const NAV_ITEMS: {
   adminOnly?: boolean;
 }[] = [
   { label: "Overview", segment: "", module: null },
-  { label: "Updates", segment: "updates", module: "updates" },
+  { label: "Project Diary", segment: "updates", module: "updates" },
   { label: "Scope & Programme", segment: "scope-programme", module: null, anyOfModules: ["scope", "programme"] },
   { label: "Variations", segment: "variations", module: null, anyOfModules: ["variations", "site_instructions"] },
   { label: "Payment Claims", segment: "payment-claims", module: "payment_claims" },

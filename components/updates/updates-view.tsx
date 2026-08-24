@@ -24,7 +24,8 @@ export function UpdatesView({
   defaultRatePerHour,
   initialQuery,
   initialFrom,
-  initialTo
+  initialTo,
+  initialCategory
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
@@ -34,13 +35,14 @@ export function UpdatesView({
   initialQuery: string;
   initialFrom: string;
   initialTo: string;
+  initialCategory: string;
 }) {
-  const isFiltered = Boolean(initialQuery || initialFrom || initialTo);
+  const isFiltered = Boolean(initialQuery || initialFrom || initialTo || initialCategory);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-bold">Updates</h2>
+        <h2 className="text-lg font-bold">Project Diary</h2>
         <p className="text-sm text-[#4c739a] dark:text-slate-400">
           A running, audit-friendly log of what's happening on this project.
         </p>
@@ -54,15 +56,16 @@ export function UpdatesView({
           initialQuery={initialQuery}
           initialFrom={initialFrom}
           initialTo={initialTo}
+          initialCategory={initialCategory}
         />
 
         {updates.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">
-            <p className="font-bold mb-1">{isFiltered ? "No matching updates" : "No updates yet"}</p>
+            <p className="font-bold mb-1">{isFiltered ? "No matching diary entries" : "No diary entries yet"}</p>
             <p className="text-sm text-[#4c739a] dark:text-slate-400">
               {isFiltered
                 ? "Try a different keyword, date range, or Variation/SI reference."
-                : "Post the first update to start the project's communication trail."}
+                : "Post the first diary entry to start the project's communication trail."}
             </p>
           </div>
         ) : (

@@ -9,6 +9,7 @@ import { sendExternalUpdateAndLog } from "@/lib/external-update";
 import { formatUserName } from "@/lib/user-display";
 import { MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType, attachmentKind } from "@/lib/update-attachments";
 import { generateThumbnail } from "@/lib/image-thumbnails";
+import { UPDATE_CATEGORIES } from "@/lib/update-category";
 
 const recipientSchema = z
   .object({
@@ -21,6 +22,9 @@ const createUpdateSchema = z.object({
   body: z.string().min(1),
   parentId: z.string().optional(),
   variationItemId: z.string().optional(),
+  // Mutually exclusive with variationItemId — see Update.category's schema
+  // comment. Validated against the fixed enum list, not left as a bare string.
+  category: z.enum(UPDATE_CATEGORIES as [string, ...string[]]).optional(),
   percentComplete: z.number().min(0).max(100).optional(),
   isExternal: z.boolean().default(false),
   externalSubject: z.string().optional(),
@@ -89,6 +93,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     body: formData.get("body"),
     parentId: formData.get("parentId") || undefined,
     variationItemId: formData.get("variationItemId") || undefined,
+    category: formData.get("category") || undefined,
     percentComplete: percentCompleteRaw ? Number(percentCompleteRaw) : undefined,
     isExternal: formData.get("isExternal") === "true",
     externalSubject: formData.get("externalSubject")?.toString() || undefined,
@@ -179,6 +184,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       parentId: payload.parentId,
       // Replies inherit their parent thread's tagged item rather than carrying their own.
       variationItemId: payload.parentId ? undefined : payload.variationItemId,
+      category: payload.parentId ? undefined : (payload.category as (typeof UPDATE_CATEGORIES)[number] | undefined),
       percentComplete: payload.parentId ? undefined : payload.percentComplete,
       body: payload.body,
       isExternal,
@@ -295,7 +301,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       .filter((id) => !notifiedUserIds.has(id))
       .map((id) =>
         sendPushToUser(id, {
-          title: `${authorLabel} posted an update`,
+          title: `${authorLabel} posted a diary entry`,
           body: payload.body.slice(0, 140),
           url: deepLinkUrl
         }).catch(() => {})

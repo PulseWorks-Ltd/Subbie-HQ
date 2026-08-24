@@ -36,7 +36,9 @@ export function UseAsDayWorksSheetAction({
   source,
   taggableItems,
   defaultVariationItemId,
-  defaultRatePerHour
+  defaultRatePerHour,
+  variant = "icon",
+  onTriggered
 }: {
   projectId: string;
   source: DayWorksSheetSource;
@@ -46,12 +48,22 @@ export function UseAsDayWorksSheetAction({
   // one row per project, not per item — see prisma/schema.prisma), same
   // pre-fill the "+Upload" flow on the item's own page already applies.
   defaultRatePerHour: string;
+  // "icon" (default): the original small icon-only button, unchanged.
+  // "menu-item": same trigger, same logic below — only the visible button
+  // markup changes, to sit inside an AttachmentOverflowMenu row instead of
+  // as a standalone badge (Task 4: decluttering, not a behavior change).
+  variant?: "icon" | "menu-item";
+  // Lets a wrapping overflow menu close itself the moment this action's own
+  // picker opens — purely cosmetic (the picker is a full-screen modal
+  // either way), no effect on the conversion logic itself.
+  onTriggered?: () => void;
 }) {
   const [step, setStep] = useState<Step>({ name: "closed" });
   const [selectedItemId, setSelectedItemId] = useState(defaultVariationItemId ?? "");
   const [error, setError] = useState<string | null>(null);
 
   function openPicker() {
+    onTriggered?.();
     setSelectedItemId(defaultVariationItemId ?? "");
     setError(null);
     setStep({ name: "picker" });
@@ -109,15 +121,26 @@ export function UseAsDayWorksSheetAction({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openPicker}
-        title="Use as Day Works Sheet"
-        aria-label="Use as Day Works Sheet"
-        className="text-[#4c739a] dark:text-slate-400 hover:text-primary"
-      >
-        <span className="material-symbols-outlined text-base align-middle">construction</span>
-      </button>
+      {variant === "menu-item" ? (
+        <button
+          type="button"
+          onClick={openPicker}
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-[#0d141b] dark:text-slate-200 hover:bg-[#f6f7f8] dark:hover:bg-slate-800"
+        >
+          <span className="material-symbols-outlined text-base">construction</span>
+          Use as Day Works Sheet
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={openPicker}
+          title="Use as Day Works Sheet"
+          aria-label="Use as Day Works Sheet"
+          className="text-[#4c739a] dark:text-slate-400 hover:text-primary"
+        >
+          <span className="material-symbols-outlined text-base align-middle">construction</span>
+        </button>
+      )}
 
       {(step.name === "picker" || step.name === "working") && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">

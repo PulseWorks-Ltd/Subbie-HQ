@@ -228,6 +228,24 @@ enum SafetyDocumentType {
   other
 }
 
+// Generic categorisation of what kind of event a Project Diary entry
+// (Update) describes — separate from what it's tagged/related to
+// (variationItemId / qaRecordId). Offered in the SAME tag dropdown as
+// those real object tags (mutually exclusive with both) rather than a
+// second control — see Update.category's comment.
+enum UpdateCategory {
+  general
+  progress
+  health_safety
+  delay
+  site_instruction
+  variation
+  day_works
+  delivery
+  defect
+  other
+}
+
 model User {
   id                      String               @id @default(cuid())
   email                   String               @unique
@@ -1014,7 +1032,7 @@ model EvidencePaymentClaim {
 }
 
 model Update {
-  id              String   @id @default(cuid())
+  id              String          @id @default(cuid())
   projectId       String
   authorId        String
   parentId        String?
@@ -1026,9 +1044,15 @@ model Update {
   // this Update into a new QARecord (see the qa-records POST route's
   // source: { type: "update" } branch) rather than moving anything.
   qaRecordId      String?
+  // Mutually exclusive with BOTH variationItemId and qaRecordId — one
+  // combined tag dropdown offers real object tags (SI/Variation, QA) grouped
+  // alongside these generic category labels; picking any one of the three
+  // clears the other two (enforced in the PATCH route, not just client-side).
+  // Nullable/no default — "Not Assigned" until a user picks one explicitly.
+  category        UpdateCategory?
   percentComplete Float?
   body            String
-  createdAt       DateTime @default(now())
+  createdAt       DateTime        @default(now())
 
   // External updates are a one-way notification sent out by email (via
   // SendGrid, see lib/email.ts) rather than an internal, reply-supported

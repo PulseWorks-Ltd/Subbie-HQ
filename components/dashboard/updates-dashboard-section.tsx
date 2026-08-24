@@ -28,7 +28,7 @@ export function UpdatesDashboardSection({ initialItems }: { initialItems: Unread
   return (
     <DashboardSection
       sectionKey="updates"
-      label="Updates"
+      label="Project Diary"
       icon="forum"
       itemCount={items.length}
       defaultExpanded={items.length > 0}
@@ -56,7 +56,7 @@ export function UpdatesDashboardSection({ initialItems }: { initialItems: Unread
             <span className="material-symbols-outlined text-2xl">check</span>
           </div>
           <p className="text-[#0d141b] dark:text-slate-50 font-bold text-sm">All caught up</p>
-          <p className="text-[#4c739a] dark:text-slate-400 text-xs mt-1">No unread Updates.</p>
+          <p className="text-[#4c739a] dark:text-slate-400 text-xs mt-1">No unread diary entries.</p>
         </div>
       }
     >

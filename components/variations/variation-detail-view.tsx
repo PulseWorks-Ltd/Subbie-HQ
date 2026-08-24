@@ -10,6 +10,7 @@ import type {
   DayWorksPlant,
   DayWorksSheet,
   DayWorksSheetRecord,
+  ExternalAction,
   QARecord,
   QARecordAttachment,
   Update,
@@ -28,6 +29,7 @@ import { VariationCorrespondenceSection } from "@/components/variations/variatio
 import { VariationLinkedUpdatesSection } from "@/components/variations/variation-linked-updates-section";
 import { VariationPackageSection } from "@/components/variations/variation-package-section";
 import { VariationQaSection } from "@/components/quality-assurance/variation-qa-section";
+import { VariationExternalActionsSection } from "@/components/external-actions/variation-external-actions-section";
 import { CreateVariationDialog } from "@/components/variations/create-variation-dialog";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
@@ -61,7 +63,8 @@ export function VariationDetailView({
   taggableItems,
   contractTerms,
   packages,
-  qaRecords
+  qaRecords,
+  externalActions
 }: {
   projectId: string;
   item: VariationItem;
@@ -77,6 +80,7 @@ export function VariationDetailView({
   contractTerms: ContractTerms | null;
   packages: VariationPackage[];
   qaRecords: QaRecordWithItem[];
+  externalActions: ExternalAction[];
 }) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -206,6 +210,8 @@ export function VariationDetailView({
           materials={materials}
           plant={plant}
           contractTerms={contractTerms}
+          contacts={contacts}
+          externalActions={externalActions.filter((action) => action.dayWorksSheetId)}
         />
         <VariationPhotosSection projectId={projectId} itemId={item.id} photos={photos} />
         <VariationCorrespondenceSection
@@ -215,6 +221,12 @@ export function VariationDetailView({
           correspondence={correspondence}
         />
         <VariationQaSection projectId={projectId} itemId={item.id} qaRecords={qaRecords} taggableItems={taggableItems} />
+        <VariationExternalActionsSection
+          projectId={projectId}
+          itemId={item.id}
+          actions={externalActions.filter((action) => !action.dayWorksSheetId)}
+          contacts={contacts}
+        />
       </div>
 
       <VariationLinkedUpdatesSection

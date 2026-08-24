@@ -93,6 +93,7 @@ enum CorrespondenceSource {
   inbound_email
   response_letter_draft
   external_update
+  external_action
 }
 
 enum VariationCompletionMode {
@@ -246,6 +247,35 @@ enum UpdateCategory {
   other
 }
 
+// The six response kinds a request can ask an external recipient for.
+// "sign" is deliberately named to match how the business talks about it,
+// but nowhere in the app may this be described as a legally binding
+// electronic signature — see ExternalAction's own comment and every
+// response-UI string for "sign" specifically.
+enum ExternalActionType {
+  acknowledge
+  approve
+  sign
+  confirm
+  reject
+  comment
+}
+
+enum ExternalActionStatus {
+  pending
+  responded
+  expired
+}
+
+// Only meaningful for type: approve, where the recipient picks one or the
+// other. Every other type has no such binary choice (acknowledge/confirm/
+// sign are a single affirmative action, reject always implies rejected,
+// comment carries no choice at all) — stays null for those.
+enum ExternalActionChoice {
+  approved
+  rejected
+}
+
 model User {
   id                      String               @id @default(cuid())
   email                   String               @unique
@@ -275,6 +305,7 @@ model User {
   updateReads             UpdateRead[]
   passwordResetTokens     PasswordResetToken[]
   variationPackages       VariationPackage[]
+  sentExternalActions     ExternalAction[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -432,6 +463,7 @@ model Project {
   contractRequiredCovers    ContractRequiredCover[]
   quote                     ProjectQuote?
   qaRecords                 QARecord[]
+  externalActions           ExternalAction[]
 }
 
 model ProjectMember {
@@ -788,6 +820,7 @@ model MainContractorContact {
   projectContacts  ProjectContact[]
   correspondence   Correspondence[]
   updateRecipients UpdateRecipient[]
+  externalActions  ExternalAction[]
 }
 
 // Which of a Main Contractor's contacts are actually active/relevant for a
@@ -1176,6 +1209,7 @@ model VariationItem {
   // evidence for the reviewer — not built yet, see Incoming Emails Task 4.2.
   suggestedForInboundEmails InboundEmail[]        @relation("InboundEmailSuggestedVariationItem")
   qaRecords                 QARecord[]
+  externalActions           ExternalAction[]
 }
 
 // fileName/storageKey are the original feature — an uploaded photo/scan of
@@ -1199,10 +1233,11 @@ model DayWorksSheet {
   contentType     String?
   createdAt       DateTime @default(now())
 
-  variationItem VariationItem         @relation(fields: [variationItemId], references: [id])
-  materials     DayWorksMaterial[]
-  plant         DayWorksPlant[]
-  sheetRecords  DayWorksSheetRecord[]
+  variationItem   VariationItem         @relation(fields: [variationItemId], references: [id])
+  materials       DayWorksMaterial[]
+  plant           DayWorksPlant[]
+  sheetRecords    DayWorksSheetRecord[]
+  externalActions ExternalAction[]
 }
 
 // One row = one physical day works sheet's SUMMARY, not a per-worker
@@ -1424,6 +1459,13 @@ model Correspondence {
   // then create the Correspondence row with it" pattern as variationItemId.
   qaRecordId String?
 
+  // Set on source: external_action rows — the request this Correspondence
+  // entry logs. Created when the request is sent (bodyText = the message
+  // sent) and updated in place once a response comes in, so the whole
+  // request-and-response exchange lives as ONE evidence-trail entry rather
+  // than two (see lib/external-action.ts).
+  sourceExternalActionId String? @unique
+
   project                    Project                @relation(fields: [projectId], references: [id])
   variationItem              VariationItem?         @relation(fields: [variationItemId], references: [id])
   qaRecord                   QARecord?              @relation(fields: [qaRecordId], references: [id])
@@ -1433,6 +1475,7 @@ model Correspondence {
   sourceContractReview       ContractReview?        @relation(fields: [sourceContractReviewId], references: [id])
   outcomeContractDocument    ContractDocument?      @relation(fields: [outcomeContractDocumentId], references: [id])
   sourceUpdate               Update?                @relation(fields: [sourceUpdateId], references: [id])
+  sourceExternalAction       ExternalAction?        @relation(fields: [sourceExternalActionId], references: [id])
 }
 
 model SafetyDocument {
@@ -1492,6 +1535,81 @@ model QARecordAttachment {
   createdAt           DateTime @default(now())
 
   qaRecord QARecord @relation(fields: [qaRecordId], references: [id])
+}
+
+// A request for an external (no-login) recipient to Acknowledge, Approve,
+// Sign, Confirm, Reject, or Comment on a specific SI/Variation or Day
+// Works Sheet — exactly one of variationItemId/dayWorksSheetId is set,
+// enforced at the application level (see lib/external-action.ts), not a DB
+// constraint, same convention as QARecord's project-vs-item exclusivity.
+//
+// IMPORTANT — honest labelling: "sign" records a typed name + explicit
+// checkbox + timestamp. It is NOT a certified/legally-binding electronic
+// signature and must never be described as one anywhere in the app —
+// only ever as a "recorded acknowledgement".
+//
+// tokenHash follows the exact same pattern as PasswordResetToken (see
+// lib/password-reset.ts): a 32-byte random value is generated, only its
+// SHA-256 hash is ever stored, and the raw value lives only in the emailed
+// link — this table can never itself leak a usable token.
+model ExternalAction {
+  id              String               @id @default(cuid())
+  projectId       String
+  variationItemId String?
+  dayWorksSheetId String?
+  type            ExternalActionType
+  // Customisable context/message shown to the recipient on the public
+  // response page — set at send time, not required.
+  message         String?
+  tokenHash       String               @unique
+  expiresAt       DateTime
+  status          ExternalActionStatus @default(pending)
+
+  // Recipient — same saved-contact-or-one-off-email pattern as External
+  // Updates (lib/external-update.ts): a saved contact's email is always
+  // re-resolved to its CURRENT value at send time, never trusted from the
+  // client, so mainContractorContactId is kept for that resolution/audit
+  // trail even though recipientEmail is what the message actually went to.
+  mainContractorContactId String?
+  recipientEmail          String
+  recipientName           String?
+
+  sentByUserId String
+  sentAt       DateTime @default(now())
+
+  // Response fields directly on this row (Task 1.2's "use judgement") —
+  // a separate ExternalActionResponse table would only ever hold a single
+  // 1:1 row per action, so it doesn't earn its own model. All null until
+  // responded.
+  responseChoice  ExternalActionChoice?
+  // Self-attested by the recipient on the public page — there is no
+  // identity verification, consistent with this being a recorded
+  // acknowledgement, not a certified signature.
+  responseName    String?
+  responseComment String?
+  respondedAt     DateTime?
+
+  project               Project                @relation(fields: [projectId], references: [id])
+  variationItem         VariationItem?         @relation(fields: [variationItemId], references: [id])
+  dayWorksSheet         DayWorksSheet?         @relation(fields: [dayWorksSheetId], references: [id])
+  mainContractorContact MainContractorContact? @relation(fields: [mainContractorContactId], references: [id])
+  sentByUser            User                   @relation(fields: [sentByUserId], references: [id])
+  correspondence        Correspondence?
+}
+
+// Sliding-window throttle for the public token-lookup/response route —
+// same DB-row-count pattern as lib/login-rate-limit.ts, keyed by source IP
+// rather than email since there's no email being submitted at lookup time
+// (the attacker-controlled input here is the token guess itself). Only
+// FAILED lookups are recorded (see lib/external-action.ts), so a
+// legitimate recipient opening their own valid link never spends this
+// budget — it exists purely to slow down someone trying many token
+// guesses, on top of the 256-bit token space already making that
+// computationally infeasible on its own.
+model ExternalActionLookupAttempt {
+  id        String   @id @default(cuid())
+  ipAddress String
+  createdAt DateTime @default(now())
 }
 
 model PushSubscription {

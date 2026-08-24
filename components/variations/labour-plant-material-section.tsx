@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheet, DayWorksSheetRecord } from "@prisma/client";
+import type { ContractTerms, DayWorksMaterial, DayWorksPlant, DayWorksSheet, DayWorksSheetRecord, ExternalAction } from "@prisma/client";
 import { computeSheetRecordTotal, computePackageTotals } from "@/lib/variation-package";
 import {
   DayWorksSheetRecordReviewDialog,
@@ -11,7 +11,11 @@ import {
   type SheetRecordRow
 } from "@/components/variations/day-works-sheet-record-review-dialog";
 import { LabourPlantMaterialReviewDialog } from "@/components/variations/labour-plant-material-review-dialog";
+import { RequestActionDialog } from "@/components/external-actions/request-action-dialog";
+import { ExternalActionList } from "@/components/external-actions/external-action-list";
 import type { ClassifiedFileResult } from "@/app/api/projects/[projectId]/variation-items/[itemId]/labour-plant-material/classify/route";
+
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -339,13 +343,17 @@ function SheetCard({
   itemId,
   sheet,
   records,
-  defaultRatePerHour
+  defaultRatePerHour,
+  contacts,
+  externalActions
 }: {
   projectId: string;
   itemId: string;
   sheet: DayWorksSheet;
   records: DayWorksSheetRecord[];
   defaultRatePerHour: string;
+  contacts: ContactOption[];
+  externalActions: ExternalAction[];
 }) {
   const router = useRouter();
   const [isExtracting, setIsExtracting] = useState(false);
@@ -410,6 +418,7 @@ function SheetCard({
           <button onClick={runExtraction} disabled={isExtracting} className="text-xs font-bold text-primary hover:underline disabled:opacity-60">
             {isExtracting ? "Reading..." : records.length > 0 ? "Re-extract" : "Extract summary"}
           </button>
+          <RequestActionDialog projectId={projectId} target={{ dayWorksSheetId: sheet.id }} contacts={contacts} />
           <button onClick={handleDelete} className="text-xs font-bold text-red-600 hover:underline">
             Delete
           </button>
@@ -445,6 +454,12 @@ function SheetCard({
         </div>
       )}
 
+      {externalActions.length > 0 && (
+        <div className="pt-1">
+          <ExternalActionList actions={externalActions} />
+        </div>
+      )}
+
       {reviewState && (
         <DayWorksSheetRecordReviewDialog
           projectId={projectId}
@@ -471,7 +486,9 @@ export function LabourPlantMaterialSection({
   sheetRecords,
   materials,
   plant,
-  contractTerms
+  contractTerms,
+  contacts,
+  externalActions
 }: {
   projectId: string;
   itemId: string;
@@ -480,6 +497,8 @@ export function LabourPlantMaterialSection({
   materials: DayWorksMaterial[];
   plant: DayWorksPlant[];
   contractTerms: ContractTerms | null;
+  contacts: ContactOption[];
+  externalActions: ExternalAction[];
 }) {
   const router = useRouter();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -607,6 +626,8 @@ export function LabourPlantMaterialSection({
                   sheet={sheet}
                   records={sheetRecords.filter((record) => record.dayWorksSheetId === sheet.id)}
                   defaultRatePerHour={defaultRatePerHour}
+                  contacts={contacts}
+                  externalActions={externalActions.filter((action) => action.dayWorksSheetId === sheet.id)}
                 />
               ))}
             </div>

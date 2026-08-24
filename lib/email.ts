@@ -154,6 +154,42 @@ export async function sendPasswordResetEmail(params: { to: string; name: string;
   });
 }
 
+// Sends the secure, no-login response link for an External Action request
+// (Task 2.2) — same fire-if-configured-else-throw contract as
+// sendExternalUpdateEmail, since this IS the entire point of the action
+// existing: the caller (lib/external-action.ts) only persists the
+// ExternalAction row once this send actually succeeds.
+export async function sendExternalActionRequestEmail(params: {
+  to: string;
+  recipientName: string | null;
+  senderName: string;
+  projectName: string;
+  sourceLabel: string;
+  typeLabel: string;
+  message?: string;
+  responseUrl: string;
+}) {
+  const config = getConfiguredSendGrid();
+  if (!config) {
+    throw new Error("Email sending isn't configured — SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are missing.");
+  }
+
+  const greeting = params.recipientName ? `Hi ${params.recipientName},` : "Hi,";
+
+  await sgMail.send({
+    to: params.to,
+    from: { email: config.fromEmail, name: "Subbie HQ" },
+    subject: `${params.senderName} has requested your ${params.typeLabel.toLowerCase()} — ${params.projectName}`,
+    html: `
+      <p>${greeting}</p>
+      <p>${params.senderName} has requested you <strong>${params.typeLabel}</strong> the following, on <strong>${params.projectName}</strong>:</p>
+      <p>${params.sourceLabel}</p>
+      ${params.message ? `<p>${params.message.replace(/\n/g, "<br />")}</p>` : ""}
+      <p><a href="${params.responseUrl}">Respond now</a> — no login required. This link expires in 30 days.</p>
+    `
+  });
+}
+
 export async function sendOrganisationInviteEmail(params: {
   to: string;
   organisationName: string;

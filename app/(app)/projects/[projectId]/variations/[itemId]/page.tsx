@@ -38,7 +38,7 @@ export default async function VariationItemPage({
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [dayWorksSheets, sheetRecords, materials, plant, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages, qaRecords] = await Promise.all([
+  const [dayWorksSheets, sheetRecords, materials, plant, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages, qaRecords, externalActions] = await Promise.all([
     // Just the uploaded files — labour records are independent of any
     // sheet now too (Labour, Plant & Material AI Extraction, extended to
     // Labour), fetched at the item level below instead.
@@ -84,7 +84,12 @@ export default async function VariationItemPage({
       where: { variationItemId: itemId },
       include: { variationItem: { select: { id: true, reference: true, title: true } }, attachments: true },
       orderBy: { date: "desc" }
-    })
+    }),
+    // Every External Action for this item AND its Day Works Sheets in one
+    // query (dayWorksSheetId set for sheet-scoped requests still carries
+    // this same variationItemId — see lib/external-action.ts) — split by
+    // dayWorksSheetId presence in the view rather than querying twice.
+    prisma.externalAction.findMany({ where: { variationItemId: itemId }, orderBy: { sentAt: "desc" } })
   ]);
 
   return (
@@ -103,6 +108,7 @@ export default async function VariationItemPage({
       contractTerms={contractTerms}
       packages={packages}
       qaRecords={qaRecords}
+      externalActions={externalActions}
     />
   );
 }

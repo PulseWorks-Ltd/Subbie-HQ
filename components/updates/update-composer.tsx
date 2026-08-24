@@ -326,8 +326,8 @@ export function UpdateComposer({
             className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <option value="">Not Assigned</option>
-            <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
             <optgroup label="Category">
+              <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
               {UPDATE_CATEGORIES.map((category) => (
                 <option key={category} value={categoryOptionValue(category)}>
                   {UPDATE_CATEGORY_LABELS[category]}

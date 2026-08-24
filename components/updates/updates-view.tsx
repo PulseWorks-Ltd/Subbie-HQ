@@ -3,6 +3,7 @@
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { UpdateThread } from "@/components/updates/update-thread";
 import { UpdateComposer } from "@/components/updates/update-composer";
+import { UpdatesSearchBar } from "@/components/updates/updates-search-bar";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -19,14 +20,22 @@ export function UpdatesView({
   updates,
   taggableItems,
   contacts,
-  defaultRatePerHour
+  defaultRatePerHour,
+  initialQuery,
+  initialFrom,
+  initialTo
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   taggableItems: VariationItem[];
   contacts: ContactOption[];
   defaultRatePerHour: string;
+  initialQuery: string;
+  initialFrom: string;
+  initialTo: string;
 }) {
+  const isFiltered = Boolean(initialQuery || initialFrom || initialTo);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -39,11 +48,20 @@ export function UpdatesView({
       <div className="flex-1 min-w-0 flex flex-col gap-4">
         <UpdateComposer projectId={projectId} taggableItems={taggableItems} contacts={contacts} variant="desktop" />
 
+        <UpdatesSearchBar
+          basePath={`/projects/${projectId}/updates`}
+          initialQuery={initialQuery}
+          initialFrom={initialFrom}
+          initialTo={initialTo}
+        />
+
         {updates.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">
-            <p className="font-bold mb-1">No updates yet</p>
+            <p className="font-bold mb-1">{isFiltered ? "No matching updates" : "No updates yet"}</p>
             <p className="text-sm text-[#4c739a] dark:text-slate-400">
-              Post the first update to start the project's communication trail.
+              {isFiltered
+                ? "Try a different keyword, date range, or Variation/SI reference."
+                : "Post the first update to start the project's communication trail."}
             </p>
           </div>
         ) : (

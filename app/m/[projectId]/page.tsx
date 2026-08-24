@@ -9,11 +9,14 @@ export default async function MobileProjectUpdatesPage({
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ update?: string }>;
+  searchParams: Promise<{ update?: string; q?: string; from?: string; to?: string }>;
 }) {
   const session = await auth();
   const { projectId } = await params;
-  const { update: highlightUpdateId } = await searchParams;
+  const { update: highlightUpdateId, q, from, to } = await searchParams;
+  const trimmedQ = q?.trim();
+  const fromDate = from ? new Date(`${from}T00:00:00`) : undefined;
+  const toDate = to ? new Date(`${to}T23:59:59.999`) : undefined;
 
   const hasAccess = await requireProjectAccess(projectId, session!.user.id);
   const canAccessUpdates = hasAccess && (await requireModuleAccess(projectId, session!.user.id, "updates"));
@@ -35,7 +38,34 @@ export default async function MobileProjectUpdatesPage({
 
   const [updates, taggableItems, contacts] = await Promise.all([
     prisma.update.findMany({
-      where: { projectId, parentId: null },
+      where: {
+        projectId,
+        parentId: null,
+        ...(fromDate || toDate
+          ? { createdAt: { ...(fromDate ? { gte: fromDate } : {}), ...(toDate ? { lte: toDate } : {}) } }
+          : {}),
+        ...(trimmedQ
+          ? {
+              OR: [
+                { body: { contains: trimmedQ, mode: "insensitive" as const } },
+                { externalSubject: { contains: trimmedQ, mode: "insensitive" as const } },
+                { externalBody: { contains: trimmedQ, mode: "insensitive" as const } },
+                { variationItem: { reference: { contains: trimmedQ, mode: "insensitive" as const } } },
+                {
+                  replies: {
+                    some: {
+                      OR: [
+                        { body: { contains: trimmedQ, mode: "insensitive" as const } },
+                        { externalSubject: { contains: trimmedQ, mode: "insensitive" as const } },
+                        { externalBody: { contains: trimmedQ, mode: "insensitive" as const } }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          : {})
+      },
       include: {
         author: { select: { id: true, firstName: true, lastName: true, email: true } },
         variationItem: { select: { id: true, reference: true, title: true } },
@@ -76,6 +106,9 @@ export default async function MobileProjectUpdatesPage({
         taggableItems={taggableItems}
         contacts={contacts}
         highlightUpdateId={highlightUpdateId}
+        initialQuery={q ?? ""}
+        initialFrom={from ?? ""}
+        initialTo={to ?? ""}
       />
     </div>
   );

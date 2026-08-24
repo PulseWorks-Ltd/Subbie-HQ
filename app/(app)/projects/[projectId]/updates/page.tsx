@@ -5,8 +5,18 @@ import { requireModuleAccess } from "@/lib/auth";
 import { markProjectUpdatesRead } from "@/lib/updates-feed";
 import { UpdatesView } from "@/components/updates/updates-view";
 
-export default async function UpdatesPage({ params }: { params: Promise<{ projectId: string }> }) {
+export default async function UpdatesPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ q?: string; from?: string; to?: string }>;
+}) {
   const { projectId } = await params;
+  const { q, from, to } = await searchParams;
+  const trimmedQ = q?.trim();
+  const fromDate = from ? new Date(`${from}T00:00:00`) : undefined;
+  const toDate = to ? new Date(`${to}T23:59:59.999`) : undefined;
 
   const session = await auth();
   const userId = session?.user?.id;
@@ -34,7 +44,34 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
 
   const [updates, taggableItems, contacts, contractTerms] = await Promise.all([
     prisma.update.findMany({
-      where: { projectId, parentId: null },
+      where: {
+        projectId,
+        parentId: null,
+        ...(fromDate || toDate
+          ? { createdAt: { ...(fromDate ? { gte: fromDate } : {}), ...(toDate ? { lte: toDate } : {}) } }
+          : {}),
+        ...(trimmedQ
+          ? {
+              OR: [
+                { body: { contains: trimmedQ, mode: "insensitive" as const } },
+                { externalSubject: { contains: trimmedQ, mode: "insensitive" as const } },
+                { externalBody: { contains: trimmedQ, mode: "insensitive" as const } },
+                { variationItem: { reference: { contains: trimmedQ, mode: "insensitive" as const } } },
+                {
+                  replies: {
+                    some: {
+                      OR: [
+                        { body: { contains: trimmedQ, mode: "insensitive" as const } },
+                        { externalSubject: { contains: trimmedQ, mode: "insensitive" as const } },
+                        { externalBody: { contains: trimmedQ, mode: "insensitive" as const } }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          : {})
+      },
       include: {
         author: { select: { id: true, firstName: true, lastName: true, email: true } },
         variationItem: { select: { id: true, reference: true, title: true } },
@@ -78,6 +115,9 @@ export default async function UpdatesPage({ params }: { params: Promise<{ projec
       taggableItems={taggableItems}
       contacts={contacts}
       defaultRatePerHour={defaultRatePerHour}
+      initialQuery={q ?? ""}
+      initialFrom={from ?? ""}
+      initialTo={to ?? ""}
     />
   );
 }

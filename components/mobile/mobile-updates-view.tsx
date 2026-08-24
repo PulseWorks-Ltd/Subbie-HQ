@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { MobileThread } from "@/components/mobile/mobile-thread";
 import { UpdateComposer } from "@/components/updates/update-composer";
+import { UpdatesSearchBar } from "@/components/updates/updates-search-bar";
 import { getCountdownInfo } from "@/lib/date-countdown";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
@@ -21,15 +22,22 @@ export function MobileUpdatesView({
   updates,
   taggableItems,
   contacts,
-  highlightUpdateId
+  highlightUpdateId,
+  initialQuery,
+  initialFrom,
+  initialTo
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   taggableItems: VariationItem[];
   contacts: ContactOption[];
   highlightUpdateId?: string;
+  initialQuery: string;
+  initialFrom: string;
+  initialTo: string;
 }) {
   const openItems = taggableItems.filter((item) => item.status !== "complete");
+  const isFiltered = Boolean(initialQuery || initialFrom || initialTo);
 
   useEffect(() => {
     if (!highlightUpdateId) return;
@@ -73,10 +81,19 @@ export function MobileUpdatesView({
         </div>
       )}
 
+      <UpdatesSearchBar
+        basePath={`/m/${projectId}`}
+        initialQuery={initialQuery}
+        initialFrom={initialFrom}
+        initialTo={initialTo}
+      />
+
       {updates.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#e7edf3] dark:border-slate-700 py-12">
-          <p className="font-bold mb-1 text-sm">No updates yet</p>
-          <p className="text-xs text-[#4c739a] dark:text-slate-400">Post the first update above.</p>
+          <p className="font-bold mb-1 text-sm">{isFiltered ? "No matching updates" : "No updates yet"}</p>
+          <p className="text-xs text-[#4c739a] dark:text-slate-400">
+            {isFiltered ? "Try a different keyword, date range, or Variation/SI reference." : "Post the first update above."}
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">

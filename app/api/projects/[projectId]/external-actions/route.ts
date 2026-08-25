@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
-import { createAndSendExternalAction } from "@/lib/external-action";
+import { createAndSendExternalAction, moduleForExternalActionTarget } from "@/lib/external-action";
 import { EXTERNAL_ACTION_TYPES } from "@/lib/external-action-types";
 
 const requestSchema = z
@@ -21,17 +20,6 @@ const requestSchema = z
     message: "Select a contact or enter an email address."
   });
 
-async function moduleForRequest(projectId: string, payload: { variationItemId?: string; dayWorksSheetId?: string }) {
-  const itemId = payload.variationItemId
-    ? payload.variationItemId
-    : (await prisma.dayWorksSheet.findFirst({ where: { id: payload.dayWorksSheetId, variationItem: { projectId } }, select: { variationItemId: true } }))
-        ?.variationItemId;
-  if (!itemId) return null;
-  const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
-  if (!item) return null;
-  return item.type === "variation" ? ("variations" as const) : ("site_instructions" as const);
-}
-
 export async function POST(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
   const { projectId } = context.params;
@@ -45,7 +33,7 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const payload = requestSchema.parse(await request.json());
 
-  const module_ = await moduleForRequest(projectId, payload);
+  const module_ = await moduleForExternalActionTarget(projectId, payload);
   if (!module_) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

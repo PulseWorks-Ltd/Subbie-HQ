@@ -1155,6 +1155,71 @@ export async function draftResponseLetter(
   return DraftedLetterSchema.parse(JSON.parse(raw));
 }
 
+const DraftedExternalActionMessageSchema = z.object({ messageBody: z.string() });
+
+export type DraftedExternalActionMessage = z.infer<typeof DraftedExternalActionMessageSchema>;
+
+// Drafts the message shown to the recipient of an External Action request
+// (Approve/Sign/Confirm/Reject on a Variation/SI or Day Works Sheet) —
+// this REPLACES showing the source record's own description as the
+// primary ask (a real, confirmed bug: a Main Contractor being shown their
+// own instruction text back and asked to "approve" it is meaningless).
+// Same drafting pattern/conventions as draftResponseLetter above (a
+// short, professional message via one Grok call, reviewed and editable by
+// the sender before anything sends — see RequestActionDialog), just for a
+// different message shape. recordedValue is null when nothing has been
+// logged yet — the prompt is instructed never to invent a figure in that
+// case, matching this app's "never assert what the records don't support"
+// convention.
+export async function draftExternalActionRequestMessage(
+  params: {
+    actionTypeLabel: string;
+    itemReference: string;
+    itemTitle: string;
+    isSiteInstruction: boolean;
+    recordedValue: number | null;
+    valueContextLabel: string;
+  },
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<DraftedExternalActionMessage> {
+  const itemKind = params.isSiteInstruction ? "Site Instruction" : "Variation";
+  const valueLine =
+    params.recordedValue != null
+      ? `Recorded value to date: $${params.recordedValue.toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, from ${params.valueContextLabel}.`
+      : `No cost has been recorded against this yet.`;
+
+  const response = await callGrok({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You draft a short, professional message from a construction subcontractor to a Main Contractor, requesting they " +
+          `${params.actionTypeLabel.toLowerCase()} a specific ${itemKind}. ` +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"messageBody": string}. ' +
+          "messageBody: 2-4 plain sentences, no greeting/sign-off (those are added separately by the app), stating clearly that this " +
+          `${itemKind.toLowerCase()} is being carried out under Day Works and will incur additional cost, citing the recorded value ` +
+          "figure given below EXACTLY as stated — never invent, round unusually, or embellish a figure beyond what's given, and if told " +
+          "no cost has been recorded yet, say so plainly rather than implying any amount. End with a clear, professional request for " +
+          `their ${params.actionTypeLabel.toLowerCase()}. Do not invent details about scope or cause beyond the reference/title given.`
+      },
+      {
+        role: "user",
+        content: `${itemKind}: ${params.itemReference} — ${params.itemTitle}\n${valueLine}`
+      }
+    ]
+  }, { ...usageContext, feature: "external_action_draft" });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return DraftedExternalActionMessageSchema.parse(JSON.parse(raw));
+}
+
 const ExtractedCertificateCoverSchema = z.object({
   coverType: z.string(),
   value: z.number()

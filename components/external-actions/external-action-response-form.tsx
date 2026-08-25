@@ -3,9 +3,19 @@
 import { useEffect, useState } from "react";
 import { EXTERNAL_ACTION_TYPE_LABELS } from "@/lib/external-action-types";
 
+type ValueSnapshot = {
+  combinedTotal: number;
+  labourTotal: number;
+  materialsTotal: number;
+  materialsMarkupTotal: number;
+  plantTotal: number;
+  dayWorksSheets: { fileName: string; createdAt: string }[];
+};
+
 type PublicContext = {
   type: "acknowledge" | "approve" | "sign" | "confirm" | "reject" | "comment";
   message: string | null;
+  valueSnapshot: ValueSnapshot | null;
   status: "pending" | "responded" | "expired";
   expiresAt: string;
   recipientName: string | null;
@@ -18,6 +28,10 @@ type PublicContext = {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatCurrency(amount: number) {
+  return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
 }
 
 // The entire public, no-login surface for an External Action (Task 3) —
@@ -121,6 +135,7 @@ export function ExternalActionResponseForm({ token }: { token: string }) {
     context.source.kind === "variation_item"
       ? `${context.source.isSiteInstruction ? "Site Instruction" : "Variation"} ${context.source.reference} — ${context.source.title}`
       : `Day Works Sheet — ${context.source.fileName} (from ${context.source.itemReference} — ${context.source.itemTitle})`;
+  const snapshot = context.valueSnapshot;
 
   return (
     <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
@@ -129,17 +144,63 @@ export function ExternalActionResponseForm({ token }: { token: string }) {
         {context.recipientName ? `Hi ${context.recipientName},` : "Hi,"}
       </h1>
       <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-4">
-        {context.senderName} has requested your {typeLabel.toLowerCase()} on:
+        {context.senderName} has requested your {typeLabel.toLowerCase()} on {sourceLabel}:
       </p>
 
-      <div className="rounded-lg bg-[#f6f7f8] dark:bg-slate-800 p-3 mb-4">
-        <p className="text-sm font-bold">{sourceLabel}</p>
-        {context.source.kind === "variation_item" && context.source.description && (
-          <p className="text-sm text-[#4c739a] dark:text-slate-400 mt-1">{context.source.description}</p>
-        )}
-      </div>
+      {/* Primary content — the actual ask, drafted and reviewed by the
+          sender before this was sent (see RequestActionDialog). This is
+          what replaced the original bug: the source record's own
+          description used to be shown here instead, which is meaningless
+          when it's the Main Contractor's own instruction text. */}
+      {context.message && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 mb-4">
+          <p className="text-sm whitespace-pre-wrap">{context.message}</p>
+        </div>
+      )}
 
-      {context.message && <p className="text-sm mb-4 whitespace-pre-wrap">{context.message}</p>}
+      {snapshot && (snapshot.combinedTotal > 0 || snapshot.dayWorksSheets.length > 0) && (
+        <div className="rounded-lg bg-[#f6f7f8] dark:bg-slate-800 p-3 mb-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-2">
+            Value &amp; evidence
+          </p>
+          {snapshot.dayWorksSheets.length > 0 && (
+            <ul className="text-sm mb-2">
+              {snapshot.dayWorksSheets.map((sheet, index) => (
+                <li key={index} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{sheet.fileName}</span>
+                  <span className="text-[#4c739a] dark:text-slate-400 shrink-0">{formatDate(sheet.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {(snapshot.materialsTotal > 0 || snapshot.plantTotal > 0) && (
+            <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-2">
+              Labour {formatCurrency(snapshot.labourTotal)} · Materials{" "}
+              {formatCurrency(snapshot.materialsTotal + snapshot.materialsMarkupTotal)} · Plant {formatCurrency(snapshot.plantTotal)}
+            </p>
+          )}
+          {snapshot.combinedTotal > 0 ? (
+            <p className="text-sm font-bold pt-2 border-t border-[#e7edf3] dark:border-slate-700">
+              Recorded value to date: {formatCurrency(snapshot.combinedTotal)}
+            </p>
+          ) : (
+            <p className="text-sm text-[#4c739a] dark:text-slate-400 pt-2 border-t border-[#e7edf3] dark:border-slate-700">
+              No cost has been recorded against this yet.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Secondary/background context only — never the primary framing of
+          what's being asked (Task 2.2). */}
+      {context.source.kind === "variation_item" && context.source.description && (
+        <details className="mb-4 text-sm">
+          <summary className="cursor-pointer text-[#4c739a] dark:text-slate-400 hover:text-primary">
+            Original instruction
+          </summary>
+          <p className="mt-2 text-[#4c739a] dark:text-slate-400">{context.source.description}</p>
+        </details>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium">

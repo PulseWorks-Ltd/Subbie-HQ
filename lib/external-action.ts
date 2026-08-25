@@ -2,10 +2,73 @@ import crypto from "crypto";
 import { prisma } from "./prisma";
 import { sendExternalActionRequestEmail } from "./email";
 import { formatUserName } from "./user-display";
-import { EXTERNAL_ACTION_TYPE_LABELS } from "./external-action-types";
+import { EXTERNAL_ACTION_TYPE_LABELS, requiresValueSnapshot } from "./external-action-types";
+import { computePackageTotals, computeSheetRecordTotal } from "./variation-package";
 import type { ExternalActionChoice, ExternalActionType } from "@prisma/client";
 
 const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days, per the task brief
+
+export { requiresValueSnapshot };
+
+export type ExternalActionValueSnapshot = {
+  combinedTotal: number;
+  labourTotal: number;
+  materialsTotal: number;
+  materialsMarkupTotal: number;
+  plantTotal: number;
+  dayWorksSheets: { fileName: string; createdAt: string }[];
+};
+
+// Single source of truth for the value/evidence breakdown shown on the
+// public response page (Task 2.1) — reuses computePackageTotals, the
+// existing shared "what does this item's Labour/Materials/Plant cost,
+// combined" calculation, rather than re-deriving it. Called fresh both
+// when drafting the message preview and again at actual send time (never
+// trusts a client-supplied snapshot), so what's frozen onto the row is
+// always what the DB actually held at the moment of sending.
+//
+// A Day Works Sheet-scoped request gets its OWN sheet's labour total only
+// — materials/plant are item-level relations in this schema (not scoped
+// to one sheet, see DayWorksMaterial/DayWorksPlant's own comments), so
+// they're correctly left at 0 here rather than attributed to one sheet.
+export async function computeValueSnapshot(params: {
+  projectId: string;
+  variationItemId?: string;
+  dayWorksSheetId?: string;
+}): Promise<ExternalActionValueSnapshot> {
+  if (params.dayWorksSheetId) {
+    const [sheet, records] = await Promise.all([
+      prisma.dayWorksSheet.findUnique({ where: { id: params.dayWorksSheetId }, select: { fileName: true, createdAt: true } }),
+      prisma.dayWorksSheetRecord.findMany({ where: { dayWorksSheetId: params.dayWorksSheetId } })
+    ]);
+    const labourTotal = records.reduce((sum, record) => sum + (computeSheetRecordTotal(record.totalHours, record.ratePerHour) ?? 0), 0);
+    return {
+      combinedTotal: labourTotal,
+      labourTotal,
+      materialsTotal: 0,
+      materialsMarkupTotal: 0,
+      plantTotal: 0,
+      dayWorksSheets: sheet ? [{ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() }] : []
+    };
+  }
+
+  const [sheetRecords, materials, plant, contractTerms, dayWorksSheets] = await Promise.all([
+    prisma.dayWorksSheetRecord.findMany({ where: { variationItemId: params.variationItemId } }),
+    prisma.dayWorksMaterial.findMany({ where: { variationItemId: params.variationItemId } }),
+    prisma.dayWorksPlant.findMany({ where: { variationItemId: params.variationItemId } }),
+    prisma.contractTerms.findUnique({ where: { projectId: params.projectId } }),
+    prisma.dayWorksSheet.findMany({ where: { variationItemId: params.variationItemId }, select: { fileName: true, createdAt: true } })
+  ]);
+  const totals = computePackageTotals(sheetRecords, materials, plant, contractTerms);
+  return {
+    combinedTotal: totals.grandTotal,
+    labourTotal: totals.labourTotal,
+    materialsTotal: totals.materialsTotal,
+    materialsMarkupTotal: totals.materialsMarkupTotal,
+    plantTotal: totals.plantTotal,
+    dayWorksSheets: dayWorksSheets.map((sheet) => ({ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() }))
+  };
+}
 
 // Same SHA-256-of-a-32-byte-random-value pattern as
 // lib/password-reset.ts's requestPasswordReset — only the hash is ever
@@ -19,6 +82,7 @@ const GENERIC_INVALID_MESSAGE = "This link isn't valid. Please contact the sende
 export type ExternalActionPublicContext = {
   type: ExternalActionType;
   message: string | null;
+  valueSnapshot: ExternalActionValueSnapshot | null;
   status: "pending" | "responded" | "expired";
   expiresAt: Date;
   recipientName: string | null;
@@ -33,6 +97,28 @@ export type ExternalActionPublicContext = {
     respondedAt: Date;
   } | null;
 };
+
+// Shared by both the "draft the message" and "send the request" routes —
+// resolves whichever attachment point was given to the Variations/Site
+// Instructions module its item actually belongs to, for the module-access
+// check both routes need to run.
+export async function moduleForExternalActionTarget(
+  projectId: string,
+  target: { variationItemId?: string; dayWorksSheetId?: string }
+): Promise<"variations" | "site_instructions" | null> {
+  const itemId = target.variationItemId
+    ? target.variationItemId
+    : (
+        await prisma.dayWorksSheet.findFirst({
+          where: { id: target.dayWorksSheetId, variationItem: { projectId } },
+          select: { variationItemId: true }
+        })
+      )?.variationItemId;
+  if (!itemId) return null;
+  const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
+  if (!item) return null;
+  return item.type === "variation" ? "variations" : "site_instructions";
+}
 
 // Sends the request email FIRST, only persisting the ExternalAction (and
 // its token) once the send actually succeeds — there's no other reason for
@@ -123,6 +209,15 @@ export async function createAndSendExternalAction(params: {
     return { ok: false, error: "Could not send this request — check your connection and try again." };
   }
 
+  // Frozen at the actual moment of sending, never trusting a client-
+  // supplied figure — recomputed fresh here even though the request
+  // composer already showed the sender a preview moments earlier (Task
+  // 2.1), so what's shown to the recipient always matches what the DB
+  // held at send time.
+  const valueSnapshot = requiresValueSnapshot(params.type)
+    ? await computeValueSnapshot({ projectId: params.projectId, variationItemId, dayWorksSheetId: params.dayWorksSheetId })
+    : null;
+
   const externalAction = await prisma.externalAction.create({
     data: {
       projectId: params.projectId,
@@ -130,6 +225,7 @@ export async function createAndSendExternalAction(params: {
       dayWorksSheetId: params.dayWorksSheetId,
       type: params.type,
       message: params.message,
+      valueSnapshot: valueSnapshot ?? undefined,
       tokenHash: hashToken(rawToken),
       expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
       mainContractorContactId,
@@ -222,6 +318,7 @@ export async function getExternalActionForToken(
     context: {
       type: action.type,
       message: action.message,
+      valueSnapshot: (action.valueSnapshot as unknown as ExternalActionValueSnapshot | null) ?? null,
       status,
       expiresAt: action.expiresAt,
       recipientName: action.recipientName,

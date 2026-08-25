@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EXTERNAL_ACTION_TYPES, EXTERNAL_ACTION_TYPE_LABELS, EXTERNAL_ACTION_TYPE_DESCRIPTIONS } from "@/lib/external-action-types";
+import {
+  EXTERNAL_ACTION_TYPES,
+  EXTERNAL_ACTION_TYPE_LABELS,
+  EXTERNAL_ACTION_TYPE_DESCRIPTIONS,
+  requiresValueSnapshot
+} from "@/lib/external-action-types";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 
@@ -30,24 +35,65 @@ export function RequestActionDialog({
   const [recipientSelection, setRecipientSelection] = useState(contacts[0]?.id ?? ONE_OFF_SENTINEL);
   const [oneOffEmail, setOneOffEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [isDrafting, setIsDrafting] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentMessage, setSentMessage] = useState<string | null>(null);
 
   const eligibleContacts = contacts.filter((contact) => contact.email);
   const isOneOff = recipientSelection === ONE_OFF_SENTINEL;
+  const needsDraftedMessage = requiresValueSnapshot(type);
+
+  // Fixes a real, confirmed bug (Task 2 of this pass): Approve/Sign/
+  // Confirm/Reject requests used to show the source record's own
+  // description as the "ask" — meaningless when that's the Main
+  // Contractor's OWN instruction text being shown back to them. This
+  // drafts the ACTUAL ask (the recorded Day Works/labour/materials/plant
+  // value) instead, fetched fresh whenever the type changes to one of
+  // these four AND the message is still empty — never overwrites text the
+  // user has already started editing. "Regenerate draft" below covers the
+  // deliberate-refresh case. Nothing sends automatically from this draft —
+  // see handleSend's requiredMessage check.
+  async function fetchDraft() {
+    setIsDrafting(true);
+    setDraftError(null);
+    const response = await fetch(`/api/projects/${projectId}/external-actions/draft`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...target, type })
+    });
+    const body = await response.json().catch(() => null);
+    setIsDrafting(false);
+    if (!response.ok) {
+      setDraftError(typeof body?.error === "string" ? body.error : "Could not draft a message.");
+      return;
+    }
+    setMessage(body.messageBody ?? "");
+  }
+
+  useEffect(() => {
+    if (!isOpen || !needsDraftedMessage || message.trim()) return;
+    void fetchDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, type, needsDraftedMessage]);
 
   function reset() {
     setType("acknowledge");
     setRecipientSelection(contacts[0]?.id ?? ONE_OFF_SENTINEL);
     setOneOffEmail("");
     setMessage("");
+    setDraftError(null);
     setError(null);
   }
 
   async function handleSend() {
     if (isOneOff && !oneOffEmail.trim()) {
       setError("Enter an email address.");
+      return;
+    }
+    if (needsDraftedMessage && !message.trim()) {
+      setError("Review and confirm the message before sending.");
       return;
     }
     setError(null);
@@ -144,16 +190,43 @@ export function RequestActionDialog({
               </label>
             )}
 
-            <label className="flex flex-col gap-1 text-xs font-medium mb-3">
-              Message <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+            <div className="flex flex-col gap-1 mb-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">
+                  {needsDraftedMessage ? (
+                    "Message — review before sending"
+                  ) : (
+                    <>
+                      Message <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+                    </>
+                  )}
+                </label>
+                {needsDraftedMessage && (
+                  <button
+                    type="button"
+                    onClick={fetchDraft}
+                    disabled={isDrafting}
+                    className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
+                  >
+                    {isDrafting ? "Drafting..." : "Regenerate draft"}
+                  </button>
+                )}
+              </div>
+              {needsDraftedMessage && (
+                <p className="text-[11px] text-[#4c739a] dark:text-slate-400">
+                  Drafted from the recorded Day Works value below — check the figure is right, then edit as needed.
+                </p>
+              )}
               <textarea
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                rows={3}
-                placeholder="Any context for the recipient..."
-                className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                rows={4}
+                disabled={isDrafting}
+                placeholder={needsDraftedMessage ? "Drafting..." : "Any context for the recipient..."}
+                className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
               />
-            </label>
+              {draftError && <p className="text-xs text-red-600">{draftError}</p>}
+            </div>
 
             {error && <p className="text-xs text-red-600 mb-3">{error}</p>}
 
@@ -172,7 +245,7 @@ export function RequestActionDialog({
               <button
                 type="button"
                 onClick={handleSend}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDrafting || (needsDraftedMessage && !message.trim())}
                 className="h-9 px-3 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
               >
                 {isSubmitting ? "Sending..." : "Send"}

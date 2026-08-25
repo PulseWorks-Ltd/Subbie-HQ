@@ -31,3 +31,15 @@ export const EXTERNAL_ACTION_TYPE_DESCRIPTIONS: Record<ExternalActionType, strin
   reject: "Recipient must give a reason.",
   comment: "Recipient leaves a free-text response only."
 };
+
+// Only these four types carry a genuine commercial "please approve this
+// cost" ask — acknowledge/comment requests are about something else
+// entirely and shouldn't be forced through the value-drafting flow. Kept
+// in this client-safe constants file (not lib/external-action.ts, which
+// imports Prisma) so client components can gate their UI on it without
+// pulling server-only code into the browser bundle.
+const VALUE_DRIVEN_TYPES: ExternalActionType[] = ["approve", "sign", "confirm", "reject"];
+
+export function requiresValueSnapshot(type: ExternalActionType): boolean {
+  return VALUE_DRIVEN_TYPES.includes(type);
+}

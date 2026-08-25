@@ -1561,6 +1561,18 @@ model ExternalAction {
   // Customisable context/message shown to the recipient on the public
   // response page — set at send time, not required.
   message         String?
+  // Frozen breakdown of recorded Day Works / labour / materials / plant
+  // value at SEND time, for approve/sign/confirm/reject requests only (see
+  // lib/external-action.ts's computeValueSnapshot) — shown alongside the
+  // drafted message as the primary "what's actually being asked" content
+  // on the public response page, instead of just the source record's own
+  // description (a real, confirmed bug — a Main Contractor being shown
+  // their own instruction text back and asked to "approve" it is
+  // meaningless). Frozen rather than recomputed at view time so the
+  // approval always reflects the figure actually sent, even if more Day
+  // Works gets logged against the item afterward. Null for
+  // acknowledge/comment requests, which carry no such ask.
+  valueSnapshot   Json?
   tokenHash       String               @unique
   expiresAt       DateTime
   status          ExternalActionStatus @default(pending)

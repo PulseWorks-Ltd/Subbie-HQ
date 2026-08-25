@@ -10,12 +10,14 @@ type ValueSnapshot = {
   materialsMarkupTotal: number;
   plantTotal: number;
   dayWorksSheets: { fileName: string; createdAt: string }[];
+  previousPackage: { grandTotal: number; sentAt: string } | null;
 };
 
 type PublicContext = {
   type: "acknowledge" | "approve" | "sign" | "confirm" | "reject" | "comment";
   message: string | null;
   valueSnapshot: ValueSnapshot | null;
+  package: { fileName: string } | null;
   status: "pending" | "responded" | "expired";
   expiresAt: string;
   recipientName: string | null;
@@ -158,6 +160,18 @@ export function ExternalActionResponseForm({ token }: { token: string }) {
         </div>
       )}
 
+      {context.package && (
+        <a
+          href={`/api/external-actions/${token}/package-file`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 mb-4 text-sm font-bold text-primary hover:bg-[#f6f7f8] dark:hover:bg-slate-800"
+        >
+          <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+          View / Download Variation Package — {context.package.fileName}
+        </a>
+      )}
+
       {snapshot && (snapshot.combinedTotal > 0 || snapshot.dayWorksSheets.length > 0) && (
         <div className="rounded-lg bg-[#f6f7f8] dark:bg-slate-800 p-3 mb-4">
           <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-2">
@@ -179,9 +193,15 @@ export function ExternalActionResponseForm({ token }: { token: string }) {
               {formatCurrency(snapshot.materialsTotal + snapshot.materialsMarkupTotal)} · Plant {formatCurrency(snapshot.plantTotal)}
             </p>
           )}
+          {snapshot.previousPackage && (
+            <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-2">
+              New since the last approval request ({formatDate(snapshot.previousPackage.sentAt)}):{" "}
+              {formatCurrency(snapshot.combinedTotal - snapshot.previousPackage.grandTotal)}
+            </p>
+          )}
           {snapshot.combinedTotal > 0 ? (
             <p className="text-sm font-bold pt-2 border-t border-[#e7edf3] dark:border-slate-700">
-              Recorded value to date: {formatCurrency(snapshot.combinedTotal)}
+              Cumulative recorded value to date: {formatCurrency(snapshot.combinedTotal)}
             </p>
           ) : (
             <p className="text-sm text-[#4c739a] dark:text-slate-400 pt-2 border-t border-[#e7edf3] dark:border-slate-700">

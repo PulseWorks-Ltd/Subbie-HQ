@@ -20,6 +20,9 @@ import {
   PACKAGE_CATEGORY_LABELS,
   type PackageCategory
 } from "@/lib/variation-package";
+import { RequestPackageApprovalDialog } from "@/components/external-actions/request-package-approval-dialog";
+
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -304,7 +307,8 @@ export function VariationPackageSection({
   correspondence,
   updates,
   contractTerms,
-  packages
+  packages,
+  contacts
 }: {
   projectId: string;
   itemId: string;
@@ -318,6 +322,7 @@ export function VariationPackageSection({
   updates: { id: string }[];
   contractTerms: ContractTerms | null;
   packages: VariationPackage[];
+  contacts: ContactOption[];
 }) {
   const router = useRouter();
   const [isReviewOpen, setIsReviewOpen] = useState(false);
@@ -365,14 +370,22 @@ export function VariationPackageSection({
                   );
                 })()}
               </div>
-              <a
-                href={`/api/projects/${projectId}/variation-items/${itemId}/packages/${pkg.id}/file`}
-                target="_blank"
-                rel="noreferrer"
-                className="h-8 px-3 flex items-center rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800 shrink-0"
-              >
-                Download
-              </a>
+              <div className="flex items-center gap-2 shrink-0">
+                <RequestPackageApprovalDialog
+                  projectId={projectId}
+                  variationItemId={itemId}
+                  variationPackageId={pkg.id}
+                  contacts={contacts}
+                />
+                <a
+                  href={`/api/projects/${projectId}/variation-items/${itemId}/packages/${pkg.id}/file`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-8 px-3 flex items-center rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800 shrink-0"
+                >
+                  Download
+                </a>
+              </div>
             </div>
           ))}
         </div>

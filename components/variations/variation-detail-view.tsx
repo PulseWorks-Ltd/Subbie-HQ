@@ -250,6 +250,7 @@ export function VariationDetailView({
         updates={updates}
         contractTerms={contractTerms}
         packages={packages}
+        contacts={contacts}
       />
 
       {isCreateVariationOpen && (

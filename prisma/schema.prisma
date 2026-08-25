@@ -1408,8 +1408,9 @@ model VariationPackage {
   includedCategories   String[] @default([])
   createdAt            DateTime @default(now())
 
-  variationItem VariationItem @relation(fields: [variationItemId], references: [id])
-  generatedBy   User          @relation(fields: [generatedByUserId], references: [id])
+  variationItem   VariationItem    @relation(fields: [variationItemId], references: [id])
+  generatedBy     User             @relation(fields: [generatedByUserId], references: [id])
+  externalActions ExternalAction[]
 }
 
 model Correspondence {
@@ -1553,14 +1554,23 @@ model QARecordAttachment {
 // SHA-256 hash is ever stored, and the raw value lives only in the emailed
 // link — this table can never itself leak a usable token.
 model ExternalAction {
-  id              String               @id @default(cuid())
-  projectId       String
-  variationItemId String?
-  dayWorksSheetId String?
-  type            ExternalActionType
+  id                 String               @id @default(cuid())
+  projectId          String
+  variationItemId    String?
+  dayWorksSheetId    String?
+  // Set TOGETHER WITH variationItemId (never with dayWorksSheetId) when
+  // this is a Request Approval for a specific generated VariationPackage
+  // rather than a generic approve/sign/confirm/reject on the item's live
+  // state — see VariationPackageSection's "Request Approval" and
+  // lib/external-action.ts's computeValueSnapshot. Approving a package
+  // means approving exactly what's IN that frozen PDF, so its own stored
+  // totals are used, never the item's current (possibly since-changed)
+  // live totals.
+  variationPackageId String?
+  type               ExternalActionType
   // Customisable context/message shown to the recipient on the public
   // response page — set at send time, not required.
-  message         String?
+  message            String?
   // Frozen breakdown of recorded Day Works / labour / materials / plant
   // value at SEND time, for approve/sign/confirm/reject requests only (see
   // lib/external-action.ts's computeValueSnapshot) — shown alongside the
@@ -1572,10 +1582,10 @@ model ExternalAction {
   // approval always reflects the figure actually sent, even if more Day
   // Works gets logged against the item afterward. Null for
   // acknowledge/comment requests, which carry no such ask.
-  valueSnapshot   Json?
-  tokenHash       String               @unique
-  expiresAt       DateTime
-  status          ExternalActionStatus @default(pending)
+  valueSnapshot      Json?
+  tokenHash          String               @unique
+  expiresAt          DateTime
+  status             ExternalActionStatus @default(pending)
 
   // Recipient — same saved-contact-or-one-off-email pattern as External
   // Updates (lib/external-update.ts): a saved contact's email is always
@@ -1604,6 +1614,7 @@ model ExternalAction {
   project               Project                @relation(fields: [projectId], references: [id])
   variationItem         VariationItem?         @relation(fields: [variationItemId], references: [id])
   dayWorksSheet         DayWorksSheet?         @relation(fields: [dayWorksSheetId], references: [id])
+  variationPackage      VariationPackage?      @relation(fields: [variationPackageId], references: [id])
   mainContractorContact MainContractorContact? @relation(fields: [mainContractorContactId], references: [id])
   sentByUser            User                   @relation(fields: [sentByUserId], references: [id])
   correspondence        Correspondence?

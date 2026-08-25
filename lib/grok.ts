@@ -1220,6 +1220,66 @@ export async function draftExternalActionRequestMessage(
   return DraftedExternalActionMessageSchema.parse(JSON.parse(raw));
 }
 
+// Drafts the message for a Request Approval sent on a specific generated
+// VariationPackage — same pattern/conventions as draftExternalActionRequestMessage
+// above (short, professional, one Grok call, honest about figures), but
+// with the CUMULATIVE + NEW-SINCE-LAST framing a package approval needs:
+// on a first-ever request there's nothing to compare against, so the
+// message states the cumulative total plainly; on a follow-up request it
+// states both the cumulative total AND the amount that's changed since
+// the last approval request, using a figure computed deterministically by
+// the caller (never left to the model to subtract).
+export async function draftPackageApprovalMessage(
+  params: {
+    itemReference: string;
+    itemTitle: string;
+    isSiteInstruction: boolean;
+    cumulativeTotal: number;
+    newSinceLastTotal: number | null; // null = first-ever request for this item
+  },
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<DraftedExternalActionMessage> {
+  const itemKind = params.isSiteInstruction ? "Site Instruction" : "Variation";
+  const formattedCumulative = params.cumulativeTotal.toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const valueLine =
+    params.newSinceLastTotal == null
+      ? `This is the first Variation Package sent for approval on this item. Cumulative recorded value to date: $${formattedCumulative}.`
+      : `Cumulative recorded value to date: $${formattedCumulative}. Since the last approval request, an additional $${params.newSinceLastTotal.toLocaleString("en-NZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been recorded.`;
+
+  const response = await callGrok({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You draft a short, professional message from a construction subcontractor to a Main Contractor, sending a Variation Package " +
+          `(a bundled PDF of evidence) for their approval on a specific ${itemKind}. ` +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"messageBody": string}. ' +
+          "messageBody: 2-4 plain sentences, no greeting/sign-off (added separately by the app). State clearly that the attached " +
+          "Variation Package is being submitted for approval. Cite the cumulative value figure given below EXACTLY as stated — never " +
+          "invent, round unusually, or embellish it. If this is a FIRST request, present the cumulative figure as the whole ask. If " +
+          "this is a FOLLOW-UP request (a 'since the last approval request' figure is given), clearly distinguish the cumulative " +
+          "total from the additional new amount since the last request — a reader should understand both what the running total is " +
+          "and what's new this time, without needing to do their own subtraction. End with a clear, professional request for their " +
+          "approval. Do not invent scope details beyond the reference/title given."
+      },
+      {
+        role: "user",
+        content: `${itemKind}: ${params.itemReference} — ${params.itemTitle}\n${valueLine}`
+      }
+    ]
+  }, { ...usageContext, feature: "external_action_draft" });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return DraftedExternalActionMessageSchema.parse(JSON.parse(raw));
+}
+
 const ExtractedCertificateCoverSchema = z.object({
   coverType: z.string(),
   value: z.number()

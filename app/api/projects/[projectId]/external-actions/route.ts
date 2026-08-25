@@ -8,6 +8,7 @@ const requestSchema = z
   .object({
     variationItemId: z.string().optional(),
     dayWorksSheetId: z.string().optional(),
+    variationPackageId: z.string().optional(),
     type: z.enum(EXTERNAL_ACTION_TYPES as [string, ...string[]]),
     message: z.string().optional(),
     contactId: z.string().optional(),
@@ -15,6 +16,9 @@ const requestSchema = z
   })
   .refine((data) => Boolean(data.variationItemId) !== Boolean(data.dayWorksSheetId), {
     message: "Exactly one of a Variation/SI or a Day Works Sheet must be set."
+  })
+  .refine((data) => !data.variationPackageId || data.type === "approve", {
+    message: "A package approval request must be type: approve."
   })
   .refine((data) => Boolean(data.contactId) || Boolean(data.email), {
     message: "Select a contact or enter an email address."
@@ -47,6 +51,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     projectId,
     variationItemId: payload.variationItemId,
     dayWorksSheetId: payload.dayWorksSheetId,
+    variationPackageId: payload.variationPackageId,
     type: payload.type as (typeof EXTERNAL_ACTION_TYPES)[number],
     message: payload.message?.trim() || undefined,
     recipient: { contactId: payload.contactId, email: payload.email },

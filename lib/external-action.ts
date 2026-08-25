@@ -17,6 +17,12 @@ export type ExternalActionValueSnapshot = {
   materialsMarkupTotal: number;
   plantTotal: number;
   dayWorksSheets: { fileName: string; createdAt: string }[];
+  // Set only for a package-approval request (variationPackageId given) —
+  // the previously-SENT-for-approval package's own frozen grandTotal, for
+  // the cumulative + new-since-last framing (Request Approval). Null when
+  // this is the first-ever approval request for this item, or for a non-
+  // package request.
+  previousPackage: { grandTotal: number; sentAt: string } | null;
 };
 
 // Single source of truth for the value/evidence breakdown shown on the
@@ -31,11 +37,52 @@ export type ExternalActionValueSnapshot = {
 // — materials/plant are item-level relations in this schema (not scoped
 // to one sheet, see DayWorksMaterial/DayWorksPlant's own comments), so
 // they're correctly left at 0 here rather than attributed to one sheet.
+//
+// A package-scoped request (variationPackageId given) is different again:
+// approving a package means approving exactly what's IN that frozen PDF,
+// so this uses the PACKAGE's OWN stored totals (frozen at generation
+// time), never a live recomputation from the item's current (possibly
+// since-changed) records.
 export async function computeValueSnapshot(params: {
   projectId: string;
   variationItemId?: string;
   dayWorksSheetId?: string;
+  variationPackageId?: string;
 }): Promise<ExternalActionValueSnapshot> {
+  if (params.variationPackageId) {
+    const pkg = await prisma.variationPackage.findUnique({ where: { id: params.variationPackageId } });
+    if (!pkg) {
+      return {
+        combinedTotal: 0,
+        labourTotal: 0,
+        materialsTotal: 0,
+        materialsMarkupTotal: 0,
+        plantTotal: 0,
+        dayWorksSheets: [],
+        previousPackage: null
+      };
+    }
+    // "Previously SENT", not "previously generated" — an internal re-
+    // generation that was never actually sent for approval shouldn't count
+    // as the comparison baseline for "what's new since we last asked".
+    const previousSentAction = await prisma.externalAction.findFirst({
+      where: { variationItemId: pkg.variationItemId, variationPackageId: { not: null } },
+      orderBy: { sentAt: "desc" },
+      include: { variationPackage: { select: { grandTotal: true } } }
+    });
+    return {
+      combinedTotal: Number(pkg.grandTotal),
+      labourTotal: Number(pkg.labourTotal),
+      materialsTotal: Number(pkg.materialsTotal),
+      materialsMarkupTotal: Number(pkg.materialsMarkupTotal),
+      plantTotal: Number(pkg.plantTotal),
+      dayWorksSheets: [],
+      previousPackage: previousSentAction?.variationPackage
+        ? { grandTotal: Number(previousSentAction.variationPackage.grandTotal), sentAt: previousSentAction.sentAt.toISOString() }
+        : null
+    };
+  }
+
   if (params.dayWorksSheetId) {
     const [sheet, records] = await Promise.all([
       prisma.dayWorksSheet.findUnique({ where: { id: params.dayWorksSheetId }, select: { fileName: true, createdAt: true } }),
@@ -48,7 +95,8 @@ export async function computeValueSnapshot(params: {
       materialsTotal: 0,
       materialsMarkupTotal: 0,
       plantTotal: 0,
-      dayWorksSheets: sheet ? [{ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() }] : []
+      dayWorksSheets: sheet ? [{ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() }] : [],
+      previousPackage: null
     };
   }
 
@@ -66,7 +114,8 @@ export async function computeValueSnapshot(params: {
     materialsTotal: totals.materialsTotal,
     materialsMarkupTotal: totals.materialsMarkupTotal,
     plantTotal: totals.plantTotal,
-    dayWorksSheets: dayWorksSheets.map((sheet) => ({ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() }))
+    dayWorksSheets: dayWorksSheets.map((sheet) => ({ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() })),
+    previousPackage: null
   };
 }
 
@@ -83,6 +132,11 @@ export type ExternalActionPublicContext = {
   type: ExternalActionType;
   message: string | null;
   valueSnapshot: ExternalActionValueSnapshot | null;
+  // Present only for a Request Approval on a specific VariationPackage —
+  // lets the public page offer a download link for the actual PDF being
+  // approved (via a separate public, token-gated file route — never the
+  // authenticated internal one).
+  package: { fileName: string } | null;
   status: "pending" | "responded" | "expired";
   expiresAt: Date;
   recipientName: string | null;
@@ -130,6 +184,9 @@ export async function createAndSendExternalAction(params: {
   projectId: string;
   variationItemId?: string;
   dayWorksSheetId?: string;
+  // Only valid alongside variationItemId — see ExternalAction.variationPackageId's
+  // schema comment. Validated below to actually belong to that item.
+  variationPackageId?: string;
   type: ExternalActionType;
   message?: string;
   recipient: { contactId?: string; email?: string };
@@ -138,6 +195,9 @@ export async function createAndSendExternalAction(params: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (Boolean(params.variationItemId) === Boolean(params.dayWorksSheetId)) {
     return { ok: false, error: "Exactly one of a Variation/SI or a Day Works Sheet must be set." };
+  }
+  if (params.variationPackageId && params.dayWorksSheetId) {
+    return { ok: false, error: "A package approval must be on a Variation/SI, not a Day Works Sheet." };
   }
 
   const [sender, project] = await Promise.all([
@@ -187,6 +247,16 @@ export async function createAndSendExternalAction(params: {
       return { ok: false, error: "Variation/Site Instruction not found." };
     }
     sourceLabel = `${item.reference} — ${item.title}`;
+
+    if (params.variationPackageId) {
+      const pkg = await prisma.variationPackage.findFirst({
+        where: { id: params.variationPackageId, variationItemId: item.id }
+      });
+      if (!pkg) {
+        return { ok: false, error: "Variation Package not found on this item." };
+      }
+      sourceLabel = `Variation Package for ${sourceLabel}`;
+    }
   }
 
   const rawToken = crypto.randomBytes(32).toString("hex");
@@ -215,7 +285,12 @@ export async function createAndSendExternalAction(params: {
   // 2.1), so what's shown to the recipient always matches what the DB
   // held at send time.
   const valueSnapshot = requiresValueSnapshot(params.type)
-    ? await computeValueSnapshot({ projectId: params.projectId, variationItemId, dayWorksSheetId: params.dayWorksSheetId })
+    ? await computeValueSnapshot({
+        projectId: params.projectId,
+        variationItemId,
+        dayWorksSheetId: params.dayWorksSheetId,
+        variationPackageId: params.variationPackageId
+      })
     : null;
 
   const externalAction = await prisma.externalAction.create({
@@ -223,6 +298,7 @@ export async function createAndSendExternalAction(params: {
       projectId: params.projectId,
       variationItemId,
       dayWorksSheetId: params.dayWorksSheetId,
+      variationPackageId: params.variationPackageId,
       type: params.type,
       message: params.message,
       valueSnapshot: valueSnapshot ?? undefined,
@@ -269,6 +345,7 @@ export async function getExternalActionForToken(
       dayWorksSheet: {
         select: { fileName: true, createdAt: true, variationItem: { select: { reference: true, title: true } } }
       },
+      variationPackage: { select: { fileName: true } },
       sentByUser: { select: { firstName: true, lastName: true, email: true } }
     }
   });
@@ -319,6 +396,7 @@ export async function getExternalActionForToken(
       type: action.type,
       message: action.message,
       valueSnapshot: (action.valueSnapshot as unknown as ExternalActionValueSnapshot | null) ?? null,
+      package: action.variationPackage ? { fileName: action.variationPackage.fileName } : null,
       status,
       expiresAt: action.expiresAt,
       recipientName: action.recipientName,

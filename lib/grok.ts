@@ -885,7 +885,9 @@ const ExtractedContractTermsSchema = z.object({
   dayWorksRateNormal: z.number().nullable(),
   dayWorksRateNight: z.number().nullable(),
   dayWorksRateSundayHoliday: z.number().nullable(),
-  dayWorksRateNotes: z.string().nullable()
+  dayWorksRateNotes: z.string().nullable(),
+  variationScheduleType: z.enum(["fixed_date", "working_days_before_month_end"]).nullable(),
+  variationScheduleValue: z.number().int().nullable()
 });
 
 export type ExtractedContractTerms = z.infer<typeof ExtractedContractTermsSchema>;
@@ -914,7 +916,7 @@ export async function extractContractTermsFromClauses(
         content:
           "You extract actionable reference data from a construction subcontract agreement's clauses, for a subcontractor's project settings. " +
           "Respond with only a JSON object matching this exact shape: " +
-          '{"paymentClaimMethod": string | null, "paymentClaimDay": number | null, "variationNoticePeriodDays": number | null, "variationNoticeMethod": string | null, "retentionPercent": number | null, "defectsLiabilityPeriodDays": number | null, "disputeNoticeMethod": string | null, "generalNoticeMethod": string | null, "materialsMarkupPercent": number | null, "dayWorksRateNormal": number | null, "dayWorksRateNight": number | null, "dayWorksRateSundayHoliday": number | null, "dayWorksRateNotes": string | null}. ' +
+          '{"paymentClaimMethod": string | null, "paymentClaimDay": number | null, "variationNoticePeriodDays": number | null, "variationNoticeMethod": string | null, "retentionPercent": number | null, "defectsLiabilityPeriodDays": number | null, "disputeNoticeMethod": string | null, "generalNoticeMethod": string | null, "materialsMarkupPercent": number | null, "dayWorksRateNormal": number | null, "dayWorksRateNight": number | null, "dayWorksRateSundayHoliday": number | null, "dayWorksRateNotes": string | null, "variationScheduleType": "fixed_date" | "working_days_before_month_end" | null, "variationScheduleValue": number | null}. ' +
           "paymentClaimMethod: how/where payment claims must be submitted (e.g. 'email to accounts@...', 'post to registered office'), or null if not stated. " +
           "paymentClaimDay: the day of the month payment claims are due, if a fixed day is stated, else null. " +
           "variationNoticePeriodDays: the number of days' notice required for a variation claim/instruction, if stated, else null. " +
@@ -925,7 +927,8 @@ export async function extractContractTermsFromClauses(
           "generalNoticeMethod: the default/general method for serving notices under the contract (e.g. post, fax, hand delivery, email), if stated, else null. " +
           "materialsMarkupPercent: the markup/margin percentage the subcontractor may add to materials cost for day works/variations, if stated, else null. " +
           "dayWorksRateNormal/dayWorksRateNight/dayWorksRateSundayHoliday: the contract's day works labour rate ($/hr) for, respectively, normal hours (Monday-Saturday 7am-5pm), hours outside that window on Monday-Saturday, and Sunday/public holidays — populate whichever of these three the contract genuinely and separately states; leave a bucket null if the contract doesn't distinguish it (e.g. a single flat rate for all hours only fills dayWorksRateNormal). Never invent a number for a distinction the contract doesn't make. " +
-          "dayWorksRateNotes: if the contract's day works rate structure doesn't map cleanly onto the three buckets above (e.g. it states one flat rate for all hours, or draws a different distinction such as a separate Saturday rate), briefly describe what's actually stated here as free text; null if the three buckets above already capture it fully or no day works rate is stated at all."
+          "dayWorksRateNotes: if the contract's day works rate structure doesn't map cleanly onto the three buckets above (e.g. it states one flat rate for all hours, or draws a different distinction such as a separate Saturday rate), briefly describe what's actually stated here as free text; null if the three buckets above already capture it fully or no day works rate is stated at all. " +
+          "variationScheduleType/variationScheduleValue: when the contract states a clear, specific deadline for submitting a variation/SI claim each month, classify it as one of two shapes and populate the matching value. 'fixed_date': the contract names a fixed day of the month (e.g. 'claims must be submitted by the 20th of each month') — variationScheduleValue is that day-of-month number (1-31). 'working_days_before_month_end': the contract expresses it relative to month-end (e.g. 'not later than 3 working days before the end of each month') — variationScheduleValue is that number of working days. If the contract doesn't state a clear, specific number for either shape, leave both fields null rather than guessing — this drives an automated external send, so an invented number is worse than none."
       },
       { role: "user", content: documentText }
     ]

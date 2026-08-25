@@ -190,6 +190,11 @@ export async function createAndSendExternalAction(params: {
   type: ExternalActionType;
   message?: string;
   recipient: { contactId?: string; email?: string };
+  // FYI-only cc list — see ExternalAction.ccEmails and
+  // sendExternalActionRequestEmail's cc param. Only ever populated by the
+  // scheduling automation (lib/variation-schedule.ts); manual Request
+  // Approval sends never pass this.
+  ccEmails?: string[];
   sentByUserId: string;
   baseUrl: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -272,7 +277,8 @@ export async function createAndSendExternalAction(params: {
       sourceLabel,
       typeLabel,
       message: params.message,
-      responseUrl
+      responseUrl,
+      cc: params.ccEmails
     });
   } catch (error) {
     console.error("Failed to send External Action request email:", error);
@@ -307,6 +313,7 @@ export async function createAndSendExternalAction(params: {
       mainContractorContactId,
       recipientEmail,
       recipientName,
+      ccEmails: params.ccEmails ?? [],
       sentByUserId: params.sentByUserId
     }
   });

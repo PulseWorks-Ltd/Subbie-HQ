@@ -7,7 +7,8 @@ import { getOrganisationMembership } from "@/lib/organisation";
 const updateSchema = z.object({
   invoiceModeEnabled: z.boolean().optional(),
   nextClaimDate: z.string().datetime().optional(),
-  riskLevel: z.enum(["low", "medium", "high"]).optional()
+  riskLevel: z.enum(["low", "medium", "high"]).optional(),
+  variationAutomationMode: z.enum(["manual", "automatic_with_approval", "fully_automatic"]).optional()
 });
 
 export async function PATCH(request: Request, context: { params: { projectId: string } }) {
@@ -25,7 +26,14 @@ export async function PATCH(request: Request, context: { params: { projectId: st
 
   // nextClaimDate is edited from the Payment Claims module (incl. the Dashboard's
   // reschedule action) — everything else here is structural project config, admin-only.
-  const changesAdminFields = payload.riskLevel !== undefined || payload.invoiceModeEnabled !== undefined;
+  // variationAutomationMode especially so — fully_automatic can put a real
+  // commercial document in front of an external person with no human
+  // review, so changing it is admin-gated the same as every other
+  // structural setting here, not left to any project member.
+  const changesAdminFields =
+    payload.riskLevel !== undefined ||
+    payload.invoiceModeEnabled !== undefined ||
+    payload.variationAutomationMode !== undefined;
   if (changesAdminFields) {
     const project = await prisma.project.findUnique({ where: { id: projectId }, select: { organisationId: true } });
     if (project?.organisationId) {
@@ -48,7 +56,18 @@ export async function PATCH(request: Request, context: { params: { projectId: st
     data: {
       invoiceModeEnabled: payload.invoiceModeEnabled,
       nextClaimDate: payload.nextClaimDate ? new Date(payload.nextClaimDate) : undefined,
-      riskLevel: payload.riskLevel
+      riskLevel: payload.riskLevel,
+      variationAutomationMode: payload.variationAutomationMode,
+      // Attributed to whoever turns automation on — the real accountable
+      // human the cron's auto-generated/sent packages get credited to
+      // (see Project.variationAutomationSetByUserId's schema comment).
+      // Cleared back to null on manual, so no stale attribution lingers.
+      variationAutomationSetByUserId:
+        payload.variationAutomationMode === undefined
+          ? undefined
+          : payload.variationAutomationMode === "manual"
+            ? null
+            : userId
     }
   });
 

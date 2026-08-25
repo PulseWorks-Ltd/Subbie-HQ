@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
-import { uploadToS3 } from "@/lib/s3";
-import { generateVariationPackagePdf } from "@/lib/variation-package-pdf";
-import { computePackageTotals, PACKAGE_CATEGORIES, type PackageCategory } from "@/lib/variation-package";
+import { generateAndStoreVariationPackage } from "@/lib/variation-package-generation";
+import { PACKAGE_CATEGORIES } from "@/lib/variation-package";
 
 // Missing/malformed body defaults to every category (matches the
 // long-standing unconditional behaviour this endpoint had before
@@ -53,104 +52,17 @@ export async function POST(request: Request, context: { params: { projectId: str
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid category selection" }, { status: 400 });
   }
-  const includedCategories: PackageCategory[] = parsed.data.includedCategories ?? [...PACKAGE_CATEGORIES];
-  const isIncluded = (category: PackageCategory) => includedCategories.includes(category);
+  const includedCategories = parsed.data.includedCategories ?? [...PACKAGE_CATEGORIES];
 
-  const [item, user] = await Promise.all([
-    prisma.variationItem.findFirst({ where: { id: itemId, projectId } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, email: true } })
-  ]);
-  if (!item) {
+  const variationPackage = await generateAndStoreVariationPackage({
+    projectId,
+    itemId,
+    generatedByUserId: userId,
+    includedCategories
+  });
+  if (!variationPackage) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-
-  const [photos, correspondence, dayWorksSheets, sheetRecords, materials, plant, updates, contractTerms] = await Promise.all([
-    prisma.variationPhoto.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
-    prisma.correspondence.findMany({
-      where: { variationItemId: itemId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        inboundEmail: true,
-        sourceUpdate: { include: { author: true, recipients: true } }
-      }
-    }),
-    // Just the uploaded files — labour records are independent of any
-    // sheet now too (Labour, Plant & Material AI Extraction, extended to
-    // Labour), fetched at the item level below instead.
-    prisma.dayWorksSheet.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "desc" } }),
-    prisma.dayWorksSheetRecord.findMany({ where: { variationItemId: itemId }, orderBy: { sortOrder: "asc" } }),
-    prisma.dayWorksMaterial.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "asc" } }),
-    prisma.dayWorksPlant.findMany({ where: { variationItemId: itemId }, orderBy: { createdAt: "asc" } }),
-    prisma.update.findMany({
-      where: { variationItemId: itemId },
-      orderBy: { createdAt: "asc" },
-      include: { author: true, attachments: true }
-    }),
-    prisma.contractTerms.findUnique({ where: { projectId } })
-  ]);
-
-  const generatedByName =
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Unknown user";
-
-  // Filter here, once, rather than threading category checks through the
-  // PDF generator — generateVariationPackagePdf already gates every
-  // section on these same arrays'/item's fields being present, so an
-  // excluded category simply becomes "zero items"/"no file" to every part
-  // of the document (cover summary, computed totals, and the real-evidence
-  // embed sections alike), with zero changes needed inside that function.
-  const filteredPhotos = isIncluded("photos") ? photos : [];
-  const filteredCorrespondence = isIncluded("correspondence") ? correspondence : [];
-  const filteredDayWorksSheets = isIncluded("day_works_sheets") ? dayWorksSheets : [];
-  const filteredSheetRecords = isIncluded("day_works_sheets") ? sheetRecords : [];
-  const filteredMaterials = isIncluded("materials") ? materials : [];
-  const filteredPlant = isIncluded("plant") ? plant : [];
-  const filteredUpdates = isIncluded("linked_updates") ? updates : [];
-  const filteredItem = {
-    ...item,
-    quoteFileName: isIncluded("quote") ? item.quoteFileName : null,
-    quoteStorageKey: isIncluded("quote") ? item.quoteStorageKey : null,
-    fileName: isIncluded("si_source_document") ? item.fileName : null,
-    storageKey: isIncluded("si_source_document") ? item.storageKey : null
-  };
-
-  const pdfBytes = await generateVariationPackagePdf({
-    item: filteredItem,
-    photos: filteredPhotos,
-    correspondence: filteredCorrespondence,
-    dayWorksSheets: filteredDayWorksSheets,
-    sheetRecords: filteredSheetRecords,
-    materials: filteredMaterials,
-    plant: filteredPlant,
-    updates: filteredUpdates,
-    contractTerms,
-    generatedByName
-  });
-
-  const uploadKey = `projects/${projectId}/variation-items/${itemId}/packages/${Date.now()}-variation-package-${item.reference}.pdf`;
-  const { storageKey } = await uploadToS3({ key: uploadKey, body: pdfBytes, contentType: "application/pdf" });
-
-  const totals = computePackageTotals(filteredSheetRecords, filteredMaterials, filteredPlant, contractTerms);
-
-  const variationPackage = await prisma.variationPackage.create({
-    data: {
-      variationItemId: itemId,
-      generatedByUserId: userId,
-      fileName: `Variation Package - ${item.reference}.pdf`,
-      storageKey,
-      labourTotal: totals.labourTotal,
-      materialsTotal: totals.materialsTotal,
-      materialsMarkupTotal: totals.materialsMarkupTotal,
-      plantTotal: totals.plantTotal,
-      grandTotal: totals.grandTotal,
-      photoCount: filteredPhotos.length,
-      correspondenceCount: filteredCorrespondence.length,
-      // Records, not files — matches Materials/Plant counting line items
-      // (Task: visual/functional consistency, now that Labour is
-      // independent of any sheet too).
-      dayWorksSheetCount: filteredSheetRecords.length,
-      includedCategories
-    }
-  });
 
   return NextResponse.json({ variationPackage }, { status: 201 });
 }

@@ -531,7 +531,9 @@ async function runContractReviewWork(
       suggestedDayWorksRateNormal: extractedTerms.dayWorksRateNormal,
       suggestedDayWorksRateNight: extractedTerms.dayWorksRateNight,
       suggestedDayWorksRateSundayHoliday: extractedTerms.dayWorksRateSundayHoliday,
-      suggestedDayWorksRateNotes: extractedTerms.dayWorksRateNotes
+      suggestedDayWorksRateNotes: extractedTerms.dayWorksRateNotes,
+      suggestedVariationScheduleType: extractedTerms.variationScheduleType,
+      suggestedVariationScheduleValue: extractedTerms.variationScheduleValue
     },
     update: {
       sourceDocumentId: documentId,
@@ -574,7 +576,15 @@ async function runContractReviewWork(
       // Read-only context, not a settable value of its own — always
       // refreshed by the latest extraction rather than gated by
       // suggestIfUnconfirmed (there's no "confirmed notes" field to check).
-      suggestedDayWorksRateNotes: extractedTerms.dayWorksRateNotes
+      suggestedDayWorksRateNotes: extractedTerms.dayWorksRateNotes,
+      suggestedVariationScheduleType: suggestIfUnconfirmed(
+        existingTerms?.variationScheduleType,
+        extractedTerms.variationScheduleType
+      ),
+      suggestedVariationScheduleValue: suggestIfUnconfirmed(
+        existingTerms?.variationScheduleValue,
+        extractedTerms.variationScheduleValue
+      )
     }
   });
   } catch (error) {

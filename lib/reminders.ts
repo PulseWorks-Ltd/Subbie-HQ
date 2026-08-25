@@ -72,9 +72,12 @@ function insuranceStageLabel(stage: InsuranceReminderStage): string {
   return stage === "six_week" ? "renewal needed soon" : "expired";
 }
 
-type RecipientTarget = { userId: string; email: string };
+export type RecipientTarget = { userId: string; email: string };
 
-async function getRecipients(
+// Exported for lib/variation-schedule.ts's warning-email recipients (same
+// "org members with module access" resolution, not a per-project ask
+// list) — not duplicated there.
+export async function getRecipients(
   project: { id: string; organisationId: string | null },
   module: ModuleKey
 ): Promise<RecipientTarget[]> {

@@ -10,7 +10,13 @@ export default async function SettingsPage({ params }: { params: Promise<{ proje
   const session = await auth();
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { organisationId: true, riskLevel: true, invoiceModeEnabled: true }
+    select: {
+      organisationId: true,
+      riskLevel: true,
+      invoiceModeEnabled: true,
+      variationAutomationMode: true,
+      mainContractorId: true
+    }
   });
   const membership = session?.user?.id ? await getOrganisationMembership(session.user.id) : null;
 
@@ -20,14 +26,33 @@ export default async function SettingsPage({ params }: { params: Promise<{ proje
     redirect(`/projects/${projectId}`);
   }
 
-  const contractTerms = await prisma.contractTerms.findUnique({ where: { projectId } });
+  const [contractTerms, contacts, recipients, scheduleRuns] = await Promise.all([
+    prisma.contractTerms.findUnique({ where: { projectId } }),
+    project.mainContractorId
+      ? prisma.mainContractorContact.findMany({
+          where: { mainContractorId: project.mainContractorId },
+          select: { id: true, name: true, email: true, role: true },
+          orderBy: { name: "asc" }
+        })
+      : Promise.resolve([]),
+    prisma.variationScheduleRecipient.findMany({
+      where: { projectId },
+      include: { contact: { select: { name: true, email: true } } },
+      orderBy: { createdAt: "asc" }
+    }),
+    prisma.variationScheduleRun.findMany({ where: { projectId }, orderBy: { scheduledSendAt: "desc" }, take: 12 })
+  ]);
 
   return (
     <SettingsView
       projectId={projectId}
       riskLevel={project.riskLevel}
       invoiceModeEnabled={project.invoiceModeEnabled}
+      variationAutomationMode={project.variationAutomationMode}
       contractTerms={contractTerms}
+      contacts={contacts}
+      recipients={recipients}
+      scheduleRuns={scheduleRuns}
     />
   );
 }

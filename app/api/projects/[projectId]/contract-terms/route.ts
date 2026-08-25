@@ -16,7 +16,9 @@ const CONFIRMABLE_FIELDS = [
   "materialsMarkupPercent",
   "dayWorksRateNormal",
   "dayWorksRateNight",
-  "dayWorksRateSundayHoliday"
+  "dayWorksRateSundayHoliday",
+  "variationScheduleType",
+  "variationScheduleValue"
 ] as const;
 
 const updateContractTermsSchema = z.object({
@@ -32,6 +34,8 @@ const updateContractTermsSchema = z.object({
   dayWorksRateNormal: z.number().nullable().optional(),
   dayWorksRateNight: z.number().nullable().optional(),
   dayWorksRateSundayHoliday: z.number().nullable().optional(),
+  variationScheduleType: z.enum(["fixed_date", "working_days_before_month_end"]).nullable().optional(),
+  variationScheduleValue: z.number().int().nullable().optional(),
   confirmFields: z.array(z.enum(CONFIRMABLE_FIELDS)).optional()
 });
 
@@ -116,6 +120,8 @@ export async function PATCH(request: Request, context: { params: { projectId: st
       dayWorksRateNormal: payload.dayWorksRateNormal ?? undefined,
       dayWorksRateNight: payload.dayWorksRateNight ?? undefined,
       dayWorksRateSundayHoliday: payload.dayWorksRateSundayHoliday ?? undefined,
+      variationScheduleType: payload.variationScheduleType ?? undefined,
+      variationScheduleValue: payload.variationScheduleValue ?? undefined,
       ...confirmData
     },
     update: {
@@ -131,6 +137,8 @@ export async function PATCH(request: Request, context: { params: { projectId: st
       dayWorksRateNormal: payload.dayWorksRateNormal,
       dayWorksRateNight: payload.dayWorksRateNight,
       dayWorksRateSundayHoliday: payload.dayWorksRateSundayHoliday,
+      variationScheduleType: payload.variationScheduleType,
+      variationScheduleValue: payload.variationScheduleValue,
       ...confirmData
     }
   });

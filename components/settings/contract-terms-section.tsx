@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms } from "@prisma/client";
+import type { ContractTerms, VariationScheduleType } from "@prisma/client";
 
 type FieldKey =
   | "paymentClaimMethod"
@@ -49,8 +49,17 @@ export function ContractTermsSection({
     return initial;
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [scheduleType, setScheduleType] = useState<VariationScheduleType | "">(
+    contractTerms?.variationScheduleType ?? ""
+  );
+  const [scheduleValue, setScheduleValue] = useState(
+    contractTerms?.variationScheduleValue != null ? String(contractTerms.variationScheduleValue) : ""
+  );
 
   const suggestedFields = FIELDS.filter((field) => getSuggested(contractTerms, field.key) !== null);
+  const suggestedScheduleType = contractTerms?.suggestedVariationScheduleType ?? null;
+  const suggestedScheduleValue = contractTerms?.suggestedVariationScheduleValue ?? null;
+  const hasSuggestedSchedule = suggestedScheduleType !== null && suggestedScheduleValue !== null;
 
   async function saveField(key: FieldKey) {
     const field = FIELDS.find((f) => f.key === key)!;
@@ -73,6 +82,33 @@ export function ContractTermsSection({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ confirmFields: keys })
+    });
+    setIsSaving(false);
+    router.refresh();
+  }
+
+  async function saveSchedule() {
+    setIsSaving(true);
+    await fetch(`/api/projects/${projectId}/contract-terms`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        variationScheduleType: scheduleType || null,
+        variationScheduleValue: scheduleValue === "" ? null : Number(scheduleValue)
+      })
+    });
+    setIsSaving(false);
+    router.refresh();
+  }
+
+  async function confirmSchedule() {
+    setScheduleType(suggestedScheduleType ?? "");
+    setScheduleValue(suggestedScheduleValue != null ? String(suggestedScheduleValue) : "");
+    setIsSaving(true);
+    await fetch(`/api/projects/${projectId}/contract-terms`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmFields: ["variationScheduleType", "variationScheduleValue"] })
     });
     setIsSaving(false);
     router.refresh();
@@ -133,6 +169,49 @@ export function ContractTermsSection({
             </div>
           );
         })}
+
+        <div className="flex flex-col gap-1 pt-2 border-t border-[#e7edf3] dark:border-slate-800">
+          <label className="text-sm font-medium">Variation/SI submission schedule</label>
+          <p className="text-xs text-[#4c739a] dark:text-slate-400">
+            Drives the Variation Package scheduling automation (see the Automation setting below) — when in each
+            month the contract requires variation/SI claims to be submitted by.
+          </p>
+          <div className="flex items-center gap-2">
+            <select
+              value={scheduleType}
+              onChange={(event) => setScheduleType(event.target.value as VariationScheduleType | "")}
+              onBlur={saveSchedule}
+              className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              <option value="">Not set — manual entry</option>
+              <option value="fixed_date">Fixed day of the month</option>
+              <option value="working_days_before_month_end">N working days before month-end</option>
+            </select>
+            {scheduleType && (
+              <input
+                type="number"
+                value={scheduleValue}
+                onChange={(event) => setScheduleValue(event.target.value)}
+                onBlur={saveSchedule}
+                placeholder={scheduleType === "fixed_date" ? "Day of month (1-31)" : "Working days"}
+                className="h-9 w-40 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            )}
+          </div>
+          {hasSuggestedSchedule && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium">
+                suggested:{" "}
+                {suggestedScheduleType === "fixed_date"
+                  ? `day ${suggestedScheduleValue} of the month`
+                  : `${suggestedScheduleValue} working days before month-end`}
+              </span>
+              <button onClick={confirmSchedule} disabled={isSaving} className="text-primary font-bold hover:underline disabled:opacity-60">
+                Confirm
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

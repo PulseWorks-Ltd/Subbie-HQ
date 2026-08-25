@@ -2,21 +2,46 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms, RiskLevel } from "@prisma/client";
+import type {
+  ContractTerms,
+  RiskLevel,
+  VariationAutomationMode,
+  VariationRecipientRole,
+  VariationScheduleRun
+} from "@prisma/client";
 import { ContractTermsSection } from "@/components/settings/contract-terms-section";
 import { DayWorksRatesSection } from "@/components/settings/day-works-rates-section";
 import { MainContractorSection } from "@/components/settings/main-contractor-section";
+import { VariationAutomationSection } from "@/components/settings/variation-automation-section";
+
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
+type RecipientRow = {
+  id: string;
+  role: VariationRecipientRole;
+  name: string;
+  email: string;
+  mainContractorContactId: string | null;
+  contact: { name: string; email: string | null } | null;
+};
 
 export function SettingsView({
   projectId,
   riskLevel: initialRiskLevel,
   invoiceModeEnabled: initialInvoiceModeEnabled,
-  contractTerms
+  variationAutomationMode,
+  contractTerms,
+  contacts,
+  recipients,
+  scheduleRuns
 }: {
   projectId: string;
   riskLevel: RiskLevel;
   invoiceModeEnabled: boolean;
+  variationAutomationMode: VariationAutomationMode;
   contractTerms: ContractTerms | null;
+  contacts: ContactOption[];
+  recipients: RecipientRow[];
+  scheduleRuns: VariationScheduleRun[];
 }) {
   const router = useRouter();
   const [riskLevel, setRiskLevel] = useState<RiskLevel>(initialRiskLevel);
@@ -87,6 +112,14 @@ export function SettingsView({
       <ContractTermsSection projectId={projectId} contractTerms={contractTerms} />
 
       <DayWorksRatesSection projectId={projectId} contractTerms={contractTerms} />
+
+      <VariationAutomationSection
+        projectId={projectId}
+        mode={variationAutomationMode}
+        contacts={contacts}
+        recipients={recipients}
+        scheduleRuns={scheduleRuns}
+      />
     </div>
   );
 }

@@ -277,35 +277,37 @@ enum ExternalActionChoice {
 }
 
 model User {
-  id                      String               @id @default(cuid())
-  email                   String               @unique
-  passwordHash            String
-  firstName               String?
-  lastName                String?
+  id                             String                 @id @default(cuid())
+  email                          String                 @unique
+  passwordHash                   String
+  firstName                      String?
+  lastName                       String?
   // Free text — e.g. "Director", "Site Manager", "Quantity Surveyor", not a
   // fixed enum. Optional, same as MainContractorContact.role elsewhere.
-  jobTitle                String?
+  jobTitle                       String?
   // Grants access to /platform-admin (AI usage cost dashboard) — deliberately
   // NOT settable from any UI/API, since this is a single-person,
   // manually-granted capability for the platform owner, not an org-level
   // role. Only ever flipped via a direct database write.
-  isPlatformAdmin         Boolean              @default(false)
+  isPlatformAdmin                Boolean                @default(false)
   // Set whenever the password changes via the forgot-password reset flow
   // (see lib/password-reset.ts) — compared against a JWT session's `iat` in
   // auth.ts's session callback so any session issued before a reset is
   // treated as logged out on its next request. Not set by the My Settings
   // password-change flow (app/api/account/route.ts) today, only by reset.
-  passwordChangedAt       DateTime?
-  createdAt               DateTime             @default(now())
-  memberships             ProjectMember[]
-  organisationMemberships OrganisationMember[]
-  sentInvites             OrganisationInvite[]
-  updates                 Update[]
-  pushSubscriptions       PushSubscription[]
-  updateReads             UpdateRead[]
-  passwordResetTokens     PasswordResetToken[]
-  variationPackages       VariationPackage[]
-  sentExternalActions     ExternalAction[]
+  passwordChangedAt              DateTime?
+  createdAt                      DateTime               @default(now())
+  memberships                    ProjectMember[]
+  organisationMemberships        OrganisationMember[]
+  sentInvites                    OrganisationInvite[]
+  updates                        Update[]
+  pushSubscriptions              PushSubscription[]
+  updateReads                    UpdateRead[]
+  passwordResetTokens            PasswordResetToken[]
+  variationPackages              VariationPackage[]
+  sentExternalActions            ExternalAction[]
+  cancelledVariationScheduleRuns VariationScheduleRun[]
+  automationEnabledProjects      Project[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -438,32 +440,131 @@ model Project {
   mainContractorId   String?
   createdAt          DateTime  @default(now())
 
-  organisation              Organisation?           @relation(fields: [organisationId], references: [id])
-  mainContractor            MainContractor?         @relation(fields: [mainContractorId], references: [id])
-  members                   ProjectMember[]
-  projectContacts           ProjectContact[]
-  contractDocuments         ContractDocument[]
-  clauses                   Clause[]
-  scopeItems                ScopeItem[]
-  programmeItems            ProgrammeItem[]
-  monthlyWorkRecords        MonthlyWorkRecord[]
-  variations                Variation[]
-  paymentClaims             PaymentClaim[]
-  invoices                  Invoice[]
-  evidence                  Evidence[]
-  inboundEmails             InboundEmail[]          @relation("InboundEmailProject")
-  suggestedForInboundEmails InboundEmail[]          @relation("InboundEmailSuggestedProject")
-  updates                   Update[]
-  safetyDocuments           SafetyDocument[]
-  variationItems            VariationItem[]
-  correspondence            Correspondence[]
-  contractReviews           ContractReview[]
-  contractTerms             ContractTerms?
-  insuranceDistributions    InsuranceDistribution[]
-  contractRequiredCovers    ContractRequiredCover[]
-  quote                     ProjectQuote?
-  qaRecords                 QARecord[]
-  externalActions           ExternalAction[]
+  // Manual (default): nothing is ever generated/sent without a person
+  // clicking Request Approval. automatic_with_approval: the scheduling
+  // cron auto-generates the package and warns the team 2 working days
+  // before the real deadline, giving a window to review/cancel before it
+  // actually sends. fully_automatic: generates and sends on the deadline
+  // with no human review step at all — the only automation in this app
+  // that can put a real commercial document in front of an external person
+  // with nobody having looked at it first. See lib/variation-schedule.ts.
+  variationAutomationMode        VariationAutomationMode @default(manual)
+  // Whoever last set variationAutomationMode to a non-manual value — the
+  // real, accountable human attributed as generatedByUserId/sentByUserId
+  // on every package the cron generates/sends for this project, since
+  // fully_automatic runs with no human triggering the action in the
+  // moment. Deliberately not a fabricated "system" user: this project's
+  // owner chose to turn automation on, so the audit trail attributes the
+  // automated output to that real decision, not to nobody.
+  variationAutomationSetByUserId String?
+
+  organisation                 Organisation?                @relation(fields: [organisationId], references: [id])
+  mainContractor               MainContractor?              @relation(fields: [mainContractorId], references: [id])
+  variationAutomationSetByUser User?                        @relation(fields: [variationAutomationSetByUserId], references: [id])
+  members                      ProjectMember[]
+  projectContacts              ProjectContact[]
+  contractDocuments            ContractDocument[]
+  clauses                      Clause[]
+  scopeItems                   ScopeItem[]
+  programmeItems               ProgrammeItem[]
+  monthlyWorkRecords           MonthlyWorkRecord[]
+  variations                   Variation[]
+  paymentClaims                PaymentClaim[]
+  invoices                     Invoice[]
+  evidence                     Evidence[]
+  inboundEmails                InboundEmail[]               @relation("InboundEmailProject")
+  suggestedForInboundEmails    InboundEmail[]               @relation("InboundEmailSuggestedProject")
+  updates                      Update[]
+  safetyDocuments              SafetyDocument[]
+  variationItems               VariationItem[]
+  correspondence               Correspondence[]
+  contractReviews              ContractReview[]
+  contractTerms                ContractTerms?
+  insuranceDistributions       InsuranceDistribution[]
+  contractRequiredCovers       ContractRequiredCover[]
+  quote                        ProjectQuote?
+  qaRecords                    QARecord[]
+  externalActions              ExternalAction[]
+  variationScheduleRecipients  VariationScheduleRecipient[]
+  variationScheduleRuns        VariationScheduleRun[]
+}
+
+enum VariationAutomationMode {
+  manual
+  automatic_with_approval
+  fully_automatic
+}
+
+// One project-level distribution list for automated Variation Package
+// sends — reused across every scheduled cycle rather than picked per-send,
+// since the automation modes above have no human in the loop to choose
+// recipients at send time (fully_automatic has no human step at all).
+// "to" recipients get their own actionable no-login response link, same as
+// a manual Request Approval; "cc" recipients get the same email as a plain
+// FYI copy (real email cc, no actionable link) — see
+// lib/variation-schedule.ts and lib/email.ts's cc support.
+model VariationScheduleRecipient {
+  id                      String                 @id @default(cuid())
+  projectId               String
+  name                    String
+  email                   String
+  role                    VariationRecipientRole @default(to)
+  // Set when picked from the Main Contractor's saved contacts rather than
+  // typed as a one-off — same resolve-to-current-email-at-send-time rule
+  // as every other saved-contact recipient in this app.
+  mainContractorContactId String?
+  createdAt               DateTime               @default(now())
+
+  project Project                @relation(fields: [projectId], references: [id])
+  contact MainContractorContact? @relation(fields: [mainContractorContactId], references: [id])
+}
+
+enum VariationRecipientRole {
+  to
+  cc
+}
+
+// One row per project per calendar month cycle (@@unique below) — the
+// scheduling cron's idempotency key, so a job that runs multiple times a
+// day (or is retried) never double-warns or double-sends the same month's
+// cycle. Also the target of the cancellation mechanism: cancelling this row
+// (before it reaches "sent") is the one, unambiguous way to stop an
+// upcoming automatic send.
+model VariationScheduleRun {
+  id                String                     @id @default(cuid())
+  projectId         String
+  // "YYYY-MM" of the scheduledSendAt this cycle targets — not derived from
+  // createdAt, since a warning can be generated in the month before the
+  // deadline it's warning about (e.g. warning on 30 Jan for a 2 Feb send).
+  cycleMonth        String
+  scheduledSendAt   DateTime
+  // Null for fully_automatic cycles, which have no separate warning stage.
+  warningAt         DateTime?
+  status            VariationScheduleRunStatus @default(pending_warning)
+  warnedAt          DateTime?
+  sentAt            DateTime?
+  cancelledAt       DateTime?
+  cancelledByUserId String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  project           Project            @relation(fields: [projectId], references: [id])
+  cancelledByUser   User?              @relation(fields: [cancelledByUserId], references: [id])
+  generatedPackages VariationPackage[]
+
+  @@unique([projectId, cycleMonth])
+}
+
+enum VariationScheduleRunStatus {
+  pending_warning
+  warned
+  sent
+  cancelled
+  // Automatic mode reached the deadline but the project had no eligible
+  // open Variation/SI to package — recorded rather than silently skipped,
+  // so the cycle still shows up in history instead of looking like a
+  // missed run.
+  skipped_no_items
 }
 
 model ProjectMember {
@@ -679,11 +780,29 @@ model ContractTerms {
   suggestedDayWorksRateSundayHoliday Decimal? @db.Decimal(10, 2)
   suggestedDayWorksRateNotes         String?
 
+  // Governs when the Variation Package scheduling automation (Project's
+  // variationAutomationMode) fires each month — "the contract's own
+  // deadline for submitting a variation/SI claim," expressed as either a
+  // fixed calendar day-of-month or N working days before month-end. Same
+  // suggest-don't-overwrite pattern as every other field above; left null
+  // (manual entry required) when extraction can't find a clear number
+  // rather than guessing one, since this drives a real external send.
+  variationScheduleType  VariationScheduleType?
+  variationScheduleValue Int?
+
+  suggestedVariationScheduleType  VariationScheduleType?
+  suggestedVariationScheduleValue Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   project        Project           @relation(fields: [projectId], references: [id])
   sourceDocument ContractDocument? @relation(fields: [sourceDocumentId], references: [id])
+}
+
+enum VariationScheduleType {
+  fixed_date
+  working_days_before_month_end
 }
 
 // Storage-only groundwork for a future Payment Claims comparison (claimed
@@ -816,11 +935,12 @@ model MainContractorContact {
   role             String?
   createdAt        DateTime @default(now())
 
-  mainContractor   MainContractor    @relation(fields: [mainContractorId], references: [id])
-  projectContacts  ProjectContact[]
-  correspondence   Correspondence[]
-  updateRecipients UpdateRecipient[]
-  externalActions  ExternalAction[]
+  mainContractor              MainContractor               @relation(fields: [mainContractorId], references: [id])
+  projectContacts             ProjectContact[]
+  correspondence              Correspondence[]
+  updateRecipients            UpdateRecipient[]
+  externalActions             ExternalAction[]
+  variationScheduleRecipients VariationScheduleRecipient[]
 }
 
 // Which of a Main Contractor's contacts are actually active/relevant for a
@@ -1406,10 +1526,17 @@ model VariationPackage {
   // migration's backfill UPDATE) — an empty array here would wrongly read
   // as "nothing was included."
   includedCategories   String[] @default([])
+  // Set when this package was generated by the scheduling automation
+  // (lib/variation-schedule.ts) rather than a person clicking Generate —
+  // ties it back to the cycle that produced it, so the send step (at
+  // scheduledSendAt, if not cancelled) knows exactly which already-
+  // generated packages to send without regenerating them.
+  scheduleRunId        String?
   createdAt            DateTime @default(now())
 
-  variationItem   VariationItem    @relation(fields: [variationItemId], references: [id])
-  generatedBy     User             @relation(fields: [generatedByUserId], references: [id])
+  variationItem   VariationItem         @relation(fields: [variationItemId], references: [id])
+  generatedBy     User                  @relation(fields: [generatedByUserId], references: [id])
+  scheduleRun     VariationScheduleRun? @relation(fields: [scheduleRunId], references: [id])
   externalActions ExternalAction[]
 }
 
@@ -1595,6 +1722,14 @@ model ExternalAction {
   mainContractorContactId String?
   recipientEmail          String
   recipientName           String?
+  // FYI-only email cc list, frozen at send time — same "frozen at send,
+  // not recomputed" rule as valueSnapshot. Cc recipients see the same
+  // message as an ordinary email cc; they never get their own actionable
+  // response link (there is exactly one tokenHash/response per action).
+  // Only ever populated by the scheduling automation's distribution list
+  // (lib/variation-schedule.ts) — the manual Request Approval dialogs
+  // don't expose a cc field.
+  ccEmails                String[] @default([])
 
   sentByUserId String
   sentAt       DateTime @default(now())

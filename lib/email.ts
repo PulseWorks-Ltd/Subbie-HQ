@@ -168,6 +168,11 @@ export async function sendExternalActionRequestEmail(params: {
   typeLabel: string;
   message?: string;
   responseUrl: string;
+  // FYI-only copies — see ExternalAction.ccEmails. Real email cc: these
+  // addresses see the exact same message and the exact same responseUrl as
+  // the primary recipient (there's only one link/token per action), so
+  // anyone cc'd can also act on it if they open it themselves.
+  cc?: string[];
 }) {
   const config = getConfiguredSendGrid();
   if (!config) {
@@ -178,6 +183,7 @@ export async function sendExternalActionRequestEmail(params: {
 
   await sgMail.send({
     to: params.to,
+    cc: params.cc && params.cc.length > 0 ? params.cc : undefined,
     from: { email: config.fromEmail, name: "Subbie HQ" },
     subject: `${params.senderName} has requested your ${params.typeLabel.toLowerCase()} — ${params.projectName}`,
     html: `

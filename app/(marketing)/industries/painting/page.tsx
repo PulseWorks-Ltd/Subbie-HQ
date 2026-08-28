@@ -25,7 +25,8 @@ export default function PaintingPage() {
         `Photograph completed work before another trade can damage it — and the damage itself, if it happens`,
         `Log a spec or colour change as an Update the moment it's given`,
         `Record extra coats and materials against the job via Day Works`,
-        `Keep the full trail of who asked for what, and when`
+        `Keep the full trail of who asked for what, and when`,
+        `Get a spec change or extra coat approved with a secure link the client or PM can act on with no login — before it's just a verbal "yes, go ahead"`
       ]}
       workflow={`Change instructed on site → logged as an Update → photo evidence attached → extra materials/coats recorded via Day Works → bundled into a Variation Package when it's time to claim.`}
       whyItMatters={`An extra coat here, a redo there — none of it looks like much in the moment. By the end of a job, it's the difference between the margin you quoted and the margin you actually made.`}

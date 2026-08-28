@@ -15,6 +15,8 @@ const ROWS: { label: string; before: string; after: string }[] = [
     after: "Bundled into one document"
   },
   { label: "Contract review", before: "Read it yourself, or pay a lawyer", after: "Plain-English breakdown in minutes" },
+  { label: "Sign-off", before: "Chasing a signature, phone call after phone call", after: "Secure no-login approval link, tracked" },
+  { label: "Deadlines", before: "A note on the calendar, if you remembered", after: "Staged email and push reminders, before it lapses" },
   { label: "Cost", before: "“Free” (until a claim falls apart)", after: "From $49/month" }
 ];
 

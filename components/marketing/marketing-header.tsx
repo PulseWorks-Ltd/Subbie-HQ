@@ -6,7 +6,12 @@ import Link from "next/link";
 const FEATURE_LINKS = [
   { href: "/features/contract-review", label: "Contract Review" },
   { href: "/features/variations", label: "Site Instructions & Variations" },
-  { href: "/features/dayworks", label: "Dayworks" }
+  { href: "/features/dayworks", label: "Dayworks" },
+  { href: "/features/approvals-automation", label: "Approvals & Automation" },
+  { href: "/features/quality-assurance", label: "Quality Assurance & H&S" },
+  { href: "/features/insurance", label: "Insurance Compliance" },
+  { href: "/features/team-permissions", label: "Team & Permissions" },
+  { href: "/features/scope-programme", label: "Scope & Programme" }
 ];
 
 const INDUSTRY_LINKS = [

@@ -30,7 +30,8 @@ Neither story is about whether the work should've been paid for. It's about nobo
         `Photograph the scaffold at handover, so "what existed when it was signed off" is never just a memory`,
         `Photograph damaged, lost, or extended equipment as evidence`,
         `Record additional labour and hire time via Day Works Sheets`,
-        `Keep every email and site conversation in one Correspondence trail`
+        `Keep every email and site conversation in one Correspondence trail`,
+        `Send a hire extension or variation for approval with a secure link the PM can act on with no login — a written approval that actually exists, not a verbal yes`
       ]}
       workflow={`Instruction or request given on site → logged as an Update the same day → tagged to the relevant Site Instruction or Variation → photos and Day Works attached as the work happens → bundled into a Variation Package before the claim goes in, not after it's disputed.`}
       whyItMatters={`A missed hire extension or an unclaimed extra lift doesn't feel like much on its own. Across a year of jobs, it's real, recoverable money you're quietly writing off.`}

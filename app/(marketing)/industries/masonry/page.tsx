@@ -25,7 +25,8 @@ export default function MasonryPage() {
         `Log ground condition and design changes as an Update, with photos, the moment they're found`,
         `Record additional concrete, blockwork, and labour via Day Works Sheets`,
         `Track weather-affected days against the job as they happen`,
-        `Keep engineer correspondence and revised drawings in one place`
+        `Keep engineer correspondence and revised drawings in one place`,
+        `Get a ground-condition or design change formally approved with a secure link the engineer or PM can act on with no login, before the wall's already built`
       ]}
       workflow={`Condition or design change found → logged as an Update with photos → tagged to a Site Instruction or Variation → Day Works and materials recorded → bundled into a Variation Package when it's time to claim.`}
       whyItMatters={`Ground conditions and engineering changes are often the single largest source of unclaimed cost on a masonry job — and they're also the easiest to prove, if you document them the day they happen instead of trying to reconstruct them weeks later.`}

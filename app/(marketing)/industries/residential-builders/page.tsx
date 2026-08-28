@@ -25,7 +25,8 @@ export default function ResidentialBuildersPage() {
         `Log client-requested changes as an Update the moment they're raised`,
         `Photograph each stage as it's completed, before the next one starts`,
         `Record selections, provisional sum decisions, and instructions in writing as they happen`,
-        `Keep a full correspondence trail linking every change back to who requested it`
+        `Keep a full correspondence trail linking every change back to who requested it`,
+        `Get a client-requested change or a completed stage signed off with a secure link they can act on with no login — a real record, not "they said it was fine"`
       ]}
       workflow={`Change or instruction given → logged as an Update with photos → tagged to a Site Instruction or Variation → Day Works and materials recorded → bundled into a Variation Package to support your claim or final account.`}
       whyItMatters={`A dispute over "was the stage actually complete" or "who asked for this change" is won or lost on the evidence you have on the day — not on what anyone remembers three months later.`}

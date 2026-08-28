@@ -60,7 +60,8 @@ export function HomepageView() {
                 <h3 className="font-bold mb-2">Before You Sign</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Understand what your contract actually expects of you. Identify the commercial risks before
-                  you&apos;re committed to them. Know exactly what you need to do differently on this job.
+                  you&apos;re committed to them. Know your scope of works and the programme milestones you&apos;re
+                  held to — pulled straight from your own documents.
                 </p>
               </div>
               <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
@@ -75,8 +76,9 @@ export function HomepageView() {
                 <h3 className="font-bold mb-2">When It&apos;s Time to Claim</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Build a complete Variation package — instruction, dayworks, materials, photos, correspondence —
-                  ready to hand to the Main Contractor. It&apos;s the evidence base you need to prepare a payment
-                  claim with confidence, without digging for anything after the fact.
+                  then send it for approval with a secure link the Main Contractor can act on without a login, and
+                  track the response. It&apos;s the evidence base you need to prepare a payment claim with
+                  confidence, without digging for anything after the fact.
                 </p>
               </div>
               <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
@@ -120,6 +122,20 @@ export function HomepageView() {
                 One button bundles the instruction, the evidence, and the costing into a document ready to send.
               </p>
             </div>
+            <div>
+              <h3 className="font-bold mb-2">Get Sign-Off Without Chasing a Signature</h3>
+              <p className="text-sm text-[#4c739a] dark:text-slate-400">
+                Send it for approval with a secure link the Main Contractor can act on with no login — track every
+                request from sent to responded, or let the whole monthly cycle send itself.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-bold mb-2">Nothing Quietly Goes Overdue</h3>
+              <p className="text-sm text-[#4c739a] dark:text-slate-400">
+                Variation and Site Instruction deadlines, H&amp;S document expiry, insurance renewal — staged email
+                and push alerts before anything lapses, not after.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -138,7 +154,7 @@ export function HomepageView() {
                 <h3 className="font-bold mb-2">Priced for a sole trader, not a head office.</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Plans start at $49/month, unlimited users, unlimited projects. You&apos;re never charged more for
-                  being busy.
+                  being busy — and as your team grows, each person gets exactly the access their role needs.
                 </p>
               </div>
               <div>
@@ -146,6 +162,13 @@ export function HomepageView() {
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Compared against SA-2017 and the obligations you actually operate under — not a generic platform
                   retrofitted for this market.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-bold mb-2">Everything, across every job, in one place.</h3>
+                <p className="text-sm text-[#4c739a] dark:text-slate-400">
+                  Running more than one project? A single Dashboard shows what needs your attention across all of
+                  them — no logging into each job separately to check.
                 </p>
               </div>
             </div>

@@ -597,7 +597,7 @@ instruction before a client-requested change is priced and carried out.
 What counts as "complete," and how a variation needs to be raised, is
 worth checking against your own contract rather than assumed. What's
 consistent: a stage argued over at claim time is far easier to defend
-with contemporaneous photos and records than with memory alone.
+with continuous photos and records than with memory alone.
 
 ### HOW SUBBIE HQ HELPS
 

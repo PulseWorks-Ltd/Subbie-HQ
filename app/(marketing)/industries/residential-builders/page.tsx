@@ -20,7 +20,7 @@ export default function ResidentialBuildersPage() {
         `Scope creep absorbed a little at a time until it adds up to real, unclaimed cost`,
         `Programme impacts from client-driven changes, with no extension of time ever raised`
       ]}
-      contractRequirements={`Many residential subcontracts define each payment stage precisely — what "complete" actually means for that stage — and require a formal instruction before a client-requested change is priced and carried out. What counts as "complete," and how a variation needs to be raised, is worth checking against your own contract rather than assumed. What's consistent: a stage argued over at claim time is far easier to defend with contemporaneous photos and records than with memory alone.`}
+      contractRequirements={`Many residential subcontracts define each payment stage precisely — what "complete" actually means for that stage — and require a formal instruction before a client-requested change is priced and carried out. What counts as "complete," and how a variation needs to be raised, is worth checking against your own contract rather than assumed. What's consistent: a stage argued over at claim time is far easier to defend with continuous photos and records than with memory alone.`}
       howWeHelp={[
         `Log client-requested changes as an Update the moment they're raised`,
         `Photograph each stage as it's completed, before the next one starts`,

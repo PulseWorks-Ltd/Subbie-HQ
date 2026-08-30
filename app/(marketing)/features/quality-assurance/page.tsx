@@ -11,7 +11,7 @@ export default function QualityAssurancePage() {
   return (
     <FeaturePageView
       h1="Your QA and H&S Records, Actually Findable"
-      problem="An SSSP here, a toolbox talk there, a QA photo texted to whoever asked for it. It all technically exists — somewhere — which is a different thing from being able to produce it the moment a Main Contractor or an inspector actually asks."
+      problem="A SSSP here, a toolbox talk there, a QA photo texted to whoever asked for it. It all technically exists — somewhere — which is a different thing from being able to produce it the moment a Main Contractor or an inspector actually asks."
       consequence="When someone asks for proof — a hazard register, an induction record, a QA sign-off on a specific stage — the honest answer is often 'let me find it,' not 'here it is.'"
       helps={[
         "Log QA records and categorise H&S documents (SSSPs, hazard registers, toolbox talks, inductions, incident reports) against the project they belong to, the moment they happen — not reconstructed later from memory.",

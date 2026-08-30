@@ -6,6 +6,7 @@ import Link from "next/link";
 const FEATURE_LINKS = [
   { href: "/features/contract-review", label: "Contract Review" },
   { href: "/features/variations", label: "Site Instructions & Variations" },
+  { href: "/features/project-diary", label: "Project Diary" },
   { href: "/features/dayworks", label: "Dayworks" },
   { href: "/features/approvals-automation", label: "Approvals & Automation" },
   { href: "/features/quality-assurance", label: "Quality Assurance & H&S" },

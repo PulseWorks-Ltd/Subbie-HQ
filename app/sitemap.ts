@@ -17,6 +17,7 @@ const MARKETING_PATHS = [
   "/pricing",
   "/features/contract-review",
   "/features/variations",
+  "/features/project-diary",
   "/features/dayworks",
   "/features/approvals-automation",
   "/features/quality-assurance",

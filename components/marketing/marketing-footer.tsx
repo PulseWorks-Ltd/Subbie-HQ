@@ -38,6 +38,7 @@ export function MarketingFooter() {
           </p>
           <FooterLink href="/features/contract-review" label="Contract Review" />
           <FooterLink href="/features/variations" label="Site Instructions & Variations" />
+          <FooterLink href="/features/project-diary" label="Project Diary" />
           <FooterLink href="/features/dayworks" label="Dayworks" />
           <FooterLink href="/features/approvals-automation" label="Approvals & Automation" />
           <FooterLink href="/features/quality-assurance" label="Quality Assurance & H&S" />

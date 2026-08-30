@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { constructWebhookEvent, mapStripeStatusToAccessStatus, getPlanTierForPriceId } from "@/lib/stripe";
+import { recordAccessStatusChange } from "@/lib/organisation-access-log";
 
 // Stripe needs the raw, unparsed request body to verify the signature —
 // Next.js route handlers normally consume/parse the body automatically,
@@ -18,7 +19,7 @@ function customerIdOf(customer: string | Stripe.Customer | Stripe.DeletedCustome
 // "looks like it probably worked, refresh soon" hint to the browser, never
 // trusted to itself set access state, since the user can close the tab
 // before the redirect happens at all.
-async function syncSubscriptionStatus(subscription: Stripe.Subscription): Promise<void> {
+async function syncSubscriptionStatus(subscription: Stripe.Subscription, source: string): Promise<void> {
   const accessStatus = mapStripeStatusToAccessStatus(subscription.status);
   if (!accessStatus) return;
 
@@ -26,8 +27,25 @@ async function syncSubscriptionStatus(subscription: Stripe.Subscription): Promis
   const priceId = subscription.items.data[0]?.price.id;
   const planTier = priceId ? getPlanTierForPriceId(priceId) : null;
 
-  const result = await prisma.organisation.updateMany({
+  // Read the existing row first (rather than a blind updateMany) so the
+  // access-event log below knows what status this org is transitioning
+  // FROM — see lib/organisation-access-log.ts.
+  const existing = await prisma.organisation.findFirst({
     where: { stripeCustomerId: customerId },
+    select: { id: true, accessStatus: true }
+  });
+
+  if (!existing) {
+    // Expected immediately after a fresh checkout, if this event somehow
+    // races ahead of checkout.session.completed (which is what first sets
+    // stripeCustomerId) — logged, not thrown, since Stripe will retry
+    // subsequent events and checkout.session.completed backfills the link.
+    console.error(`Stripe webhook: no organisation found for customer ${customerId} (subscription ${subscription.id}).`);
+    return;
+  }
+
+  await prisma.organisation.update({
+    where: { id: existing.id },
     data: {
       accessStatus,
       stripeSubscriptionId: subscription.id,
@@ -36,13 +54,13 @@ async function syncSubscriptionStatus(subscription: Stripe.Subscription): Promis
     }
   });
 
-  if (result.count === 0) {
-    // Expected immediately after a fresh checkout, if this event somehow
-    // races ahead of checkout.session.completed (which is what first sets
-    // stripeCustomerId) — logged, not thrown, since Stripe will retry
-    // subsequent events and checkout.session.completed backfills the link.
-    console.error(`Stripe webhook: no organisation found for customer ${customerId} (subscription ${subscription.id}).`);
-  }
+  await recordAccessStatusChange({
+    organisationId: existing.id,
+    fromStatus: existing.accessStatus,
+    toStatus: accessStatus,
+    planTier,
+    source
+  });
 }
 
 export async function POST(request: Request) {
@@ -79,8 +97,13 @@ export async function POST(request: Request) {
         break;
       }
 
-      await prisma.organisation
-        .update({
+      try {
+        const existing = await prisma.organisation.findUnique({
+          where: { id: organisationId },
+          select: { accessStatus: true }
+        });
+
+        await prisma.organisation.update({
           where: { id: organisationId },
           data: {
             stripeCustomerId,
@@ -94,18 +117,34 @@ export async function POST(request: Request) {
             // only write.
             accessStatus: "trialing"
           }
-        })
-        .catch((error) => {
-          console.error(`Stripe webhook: failed to link checkout session to organisation ${organisationId}:`, error);
         });
+
+        await recordAccessStatusChange({
+          organisationId,
+          fromStatus: existing?.accessStatus ?? null,
+          toStatus: "trialing",
+          planTier: (planTier as "starter" | "professional" | "enterprise" | undefined) ?? null,
+          source: "stripe_checkout"
+        });
+      } catch (error) {
+        console.error(`Stripe webhook: failed to link checkout session to organisation ${organisationId}:`, error);
+      }
       break;
     }
 
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
+    case "customer.subscription.created": {
+      const subscription = event.data.object as Stripe.Subscription;
+      await syncSubscriptionStatus(subscription, "stripe_subscription_created");
+      break;
+    }
+    case "customer.subscription.updated": {
+      const subscription = event.data.object as Stripe.Subscription;
+      await syncSubscriptionStatus(subscription, "stripe_subscription_updated");
+      break;
+    }
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
-      await syncSubscriptionStatus(subscription);
+      await syncSubscriptionStatus(subscription, "stripe_subscription_deleted");
       break;
     }
 

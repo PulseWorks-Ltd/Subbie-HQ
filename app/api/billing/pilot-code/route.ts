@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUserId } from "@/lib/auth";
 import { requireOrganisationAdmin } from "@/lib/organisation";
 import { prisma } from "@/lib/prisma";
+import { recordAccessStatusChange } from "@/lib/organisation-access-log";
 
 const requestSchema = z.object({ code: z.string().min(1) });
 
@@ -27,9 +28,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That code isn't valid. Check it and try again." }, { status: 400 });
   }
 
+  const existing = await prisma.organisation.findUnique({
+    where: { id: membership.organisationId },
+    select: { accessStatus: true, planTier: true }
+  });
+
   await prisma.organisation.update({
     where: { id: membership.organisationId },
     data: { accessStatus: "pilot", pilotAccessGrantedAt: new Date() }
+  });
+
+  await recordAccessStatusChange({
+    organisationId: membership.organisationId,
+    fromStatus: existing?.accessStatus ?? null,
+    toStatus: "pilot",
+    planTier: existing?.planTier ?? null,
+    source: "pilot_code"
   });
 
   return NextResponse.json({ ok: true });

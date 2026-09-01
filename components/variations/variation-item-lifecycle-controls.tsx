@@ -101,7 +101,7 @@ export function VariationItemLifecycleControls({
         ) : (
           <button
             onClick={openReview}
-            className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+            className="h-9 px-3 rounded-lg border border-red-300 dark:border-red-900/40 text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             Close
           </button>
@@ -137,6 +137,7 @@ export function VariationItemLifecycleControls({
       {isReviewOpen && (
         <ClosureReviewDialog
           title="Close this item?"
+          description="Removes it from your active lists — it stays fully accessible in history and can be reactivated at any time."
           checks={checks?.map((c) => ({ label: CHECK_LABELS[c.label] ?? c.label, count: c.count })) ?? null}
           isLoading={isLoadingReview}
           onCancel={() => setIsReviewOpen(false)}

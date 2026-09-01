@@ -75,7 +75,7 @@ function TaskRow({ projectId, task }: { projectId: string; task: TaskWithItem })
           </button>
         )}
         {task.status !== "closed" && (
-          <button onClick={() => transition({ close: true })} disabled={isBusy} className="h-8 px-2 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold disabled:opacity-60">
+          <button onClick={() => transition({ close: true })} disabled={isBusy} className="h-8 px-2 rounded-lg border border-red-300 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs font-bold disabled:opacity-60">
             Close
           </button>
         )}

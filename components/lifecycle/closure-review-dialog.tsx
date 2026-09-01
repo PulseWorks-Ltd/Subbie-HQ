@@ -12,12 +12,14 @@ export type ClosureCheck = { label: string; count: number };
 // when something's outstanding.
 export function ClosureReviewDialog({
   title,
+  description,
   checks,
   isLoading,
   onCancel,
   onConfirm
 }: {
   title: string;
+  description?: string;
   checks: ClosureCheck[] | null;
   isLoading: boolean;
   onCancel: () => void;
@@ -36,7 +38,8 @@ export function ClosureReviewDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="relative w-full max-w-sm rounded-xl bg-white dark:bg-slate-900 p-5 shadow-lg">
-        <h3 className="text-sm font-bold mb-3">{title}</h3>
+        <h3 className="text-sm font-bold mb-1">{title}</h3>
+        {description && <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-3">{description}</p>}
 
         {isLoading || !checks ? (
           <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-4">Checking linked items...</p>

@@ -80,7 +80,7 @@ export function ProjectLifecycleSection({ projectId, status }: { projectId: stri
         {status !== "closed" && (
           <button
             onClick={openReview}
-            className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+            className="h-9 px-3 rounded-lg border border-red-300 dark:border-red-900/40 text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             Close Project
           </button>
@@ -90,6 +90,7 @@ export function ProjectLifecycleSection({ projectId, status }: { projectId: stri
       {isReviewOpen && (
         <ClosureReviewDialog
           title="Close this project?"
+          description="Marks the project's commercial and admin work as finished. It stays fully accessible in history afterward."
           checks={checks}
           isLoading={isLoadingReview}
           onCancel={() => setIsReviewOpen(false)}

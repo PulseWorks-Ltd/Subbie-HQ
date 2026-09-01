@@ -18,11 +18,10 @@ export default function robots(): MetadataRoute.Robots {
         "/team/",
         "/invite/",
         "/platform-admin/",
-        // Draft-only guide pages (outline content, DRAFT-banner) — not
-        // ready for indexing even though the routes stay reachable
+        // Draft-only guide page (outline content, DRAFT-banner) — not
+        // ready for indexing even though the route stays reachable
         // directly. Keep in sync with the exclusion in app/sitemap.ts.
-        "/guides/payment-claims-construction-contracts-act",
-        "/guides/site-instruction-vs-variation"
+        "/guides/payment-claims-construction-contracts-act"
       ]
     },
     sitemap: `${BASE_URL}/sitemap.xml`

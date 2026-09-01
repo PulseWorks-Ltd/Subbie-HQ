@@ -24,14 +24,14 @@ const INDUSTRY_LINKS = [
 
 type NavLink = { href: string; label: string; disabled?: boolean };
 
-// Both currently disabled: draft-only pages (DRAFT banner), pulled from
-// nav/indexing until actually written — same treatment as the footer's
-// greyed-out Phase 2 placeholders. Routes stay reachable directly; see
-// app/sitemap.ts and app/robots.ts.
+// payment-claims-construction-contracts-act is still a draft-only page
+// (DRAFT banner), pulled from nav/indexing until actually written — same
+// treatment as the footer's greyed-out Phase 2 placeholders. Its route
+// stays reachable directly; see app/sitemap.ts and app/robots.ts.
 const GUIDE_LINKS: NavLink[] = [
   { href: "/guides/late-or-non-compliant-claims", label: "Why Late or Non-Compliant Claims Cost You Money" },
-  { href: "/guides/payment-claims-construction-contracts-act", label: "Payment Claims Under the CCA", disabled: true },
-  { href: "/guides/site-instruction-vs-variation", label: "Site Instruction vs Variation", disabled: true }
+  { href: "/guides/site-instruction-vs-variation", label: "Site Instruction vs Variation" },
+  { href: "/guides/payment-claims-construction-contracts-act", label: "Payment Claims Under the CCA", disabled: true }
 ];
 
 function NavDropdown({ label, links }: { label: string; links: NavLink[] }) {

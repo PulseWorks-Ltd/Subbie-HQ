@@ -277,8 +277,8 @@ enum ExternalActionChoice {
 }
 
 model User {
-  id                             String                 @id @default(cuid())
-  email                          String                 @unique
+  id                             String                         @id @default(cuid())
+  email                          String                         @unique
   passwordHash                   String
   firstName                      String?
   lastName                       String?
@@ -289,14 +289,14 @@ model User {
   // NOT settable from any UI/API, since this is a single-person,
   // manually-granted capability for the platform owner, not an org-level
   // role. Only ever flipped via a direct database write.
-  isPlatformAdmin                Boolean                @default(false)
+  isPlatformAdmin                Boolean                        @default(false)
   // Set whenever the password changes via the forgot-password reset flow
   // (see lib/password-reset.ts) — compared against a JWT session's `iat` in
   // auth.ts's session callback so any session issued before a reset is
   // treated as logged out on its next request. Not set by the My Settings
   // password-change flow (app/api/account/route.ts) today, only by reset.
   passwordChangedAt              DateTime?
-  createdAt                      DateTime               @default(now())
+  createdAt                      DateTime                       @default(now())
   memberships                    ProjectMember[]
   organisationMemberships        OrganisationMember[]
   sentInvites                    OrganisationInvite[]
@@ -308,6 +308,13 @@ model User {
   sentExternalActions            ExternalAction[]
   cancelledVariationScheduleRuns VariationScheduleRun[]
   automationEnabledProjects      Project[]
+  closedVariationItems           VariationItem[]                @relation("VariationItemClosedBy")
+  reactivatedVariationItems      VariationItem[]                @relation("VariationItemReactivatedBy")
+  createdTasks                   Task[]                         @relation("TaskCreatedBy")
+  closedTasks                    Task[]                         @relation("TaskClosedBy")
+  closedProjects                 Project[]                      @relation("ProjectClosedBy")
+  variationItemClaimAllocations  VariationItemClaimAllocation[]
+  recordLifecycleEvents          RecordLifecycleEvent[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -488,9 +495,23 @@ model Project {
   // automated output to that real decision, not to nobody.
   variationAutomationSetByUserId String?
 
+  // status stays a plain string (not a Prisma enum) deliberately — adding an
+  // enum here would need a backfill migration against every existing row's
+  // current value; the allowed set ("active" | "completed" | "closed") is
+  // enforced in code instead, see lib/project-lifecycle.ts. completedAt
+  // marks physical/site work finished — a project can be Completed while
+  // still commercially active; closedAt marks the separate, later decision
+  // that commercial/admin matters are sufficiently resolved too (see
+  // lib/project-lifecycle.ts's closure review). completed must never
+  // automatically imply closed.
+  completedAt    DateTime?
+  closedAt       DateTime?
+  closedByUserId String?
+
   organisation                 Organisation?                @relation(fields: [organisationId], references: [id])
   mainContractor               MainContractor?              @relation(fields: [mainContractorId], references: [id])
   variationAutomationSetByUser User?                        @relation(fields: [variationAutomationSetByUserId], references: [id])
+  closedByUser                 User?                        @relation("ProjectClosedBy", fields: [closedByUserId], references: [id])
   members                      ProjectMember[]
   projectContacts              ProjectContact[]
   contractDocuments            ContractDocument[]
@@ -498,6 +519,7 @@ model Project {
   scopeItems                   ScopeItem[]
   programmeItems               ProgrammeItem[]
   monthlyWorkRecords           MonthlyWorkRecord[]
+  tasks                        Task[]
   variations                   Variation[]
   paymentClaims                PaymentClaim[]
   invoices                     Invoice[]
@@ -1066,25 +1088,100 @@ model Variation {
   project Project @relation(fields: [projectId], references: [id])
 }
 
+// The monthly commercial container for a claim — not merely a generated
+// document. claimedAmount is enforced (in application code, see
+// lib/payment-claim.ts) as the computed total of contractWorksAmount +
+// otherAmount + the sum of this claim's VariationItemClaimAllocation rows,
+// so the container's total is never typed separately from what's actually
+// in it. Its supporting evidence links to the REAL, live evidence chain
+// (VariationPackage/Correspondence/ExternalAction/QARecord/Update) via
+// ClaimEvidenceLink below — deliberately NOT the dormant
+// EvidencePaymentClaim/Evidence models, which predate VariationPackage and
+// were never wired to any real UI (kept below, untouched, unreferenced by
+// any new code).
 model PaymentClaim {
-  id               String      @id @default(cuid())
-  projectId        String
-  claimNumber      Int
-  referenceDate    DateTime
-  periodStart      DateTime
-  periodEnd        DateTime
-  status           ClaimStatus @default(draft)
-  claimedAmount    Decimal     @default(0)
-  statutoryWording String
-  serviceDate      DateTime?
-  pdfUrl           String?
-  storageKey       String?
-  createdAt        DateTime    @default(now())
+  id                  String      @id @default(cuid())
+  projectId           String
+  claimNumber         Int
+  referenceDate       DateTime
+  periodStart         DateTime
+  periodEnd           DateTime
+  status              ClaimStatus @default(draft)
+  claimedAmount       Decimal     @default(0)
+  statutoryWording    String
+  serviceDate         DateTime?
+  pdfUrl              String?
+  storageKey          String?
+  createdAt           DateTime    @default(now())
+  // "YYYY-MM" — the first-class monthly identity of this claim, same
+  // string convention as VariationScheduleRun.cycleMonth. Mandatory going
+  // forward; backfilled from periodStart for the 3-step NOT NULL migration
+  // (see this migration's SQL) even though 0 real rows exist today.
+  claimMonth          String
+  // Claim lines that aren't tied to any VariationItem — the base contract
+  // works progress claim, and a free-text-described "other" catch-all.
+  // Variation lines live in `allocations` below instead.
+  contractWorksAmount Decimal     @default(0)
+  otherAmount         Decimal     @default(0)
+  otherDescription    String?
 
-  project       Project                @relation(fields: [projectId], references: [id])
-  evidenceLinks EvidencePaymentClaim[]
+  project            Project                        @relation(fields: [projectId], references: [id])
+  // Legacy, pre-dates any real UI — this model was scaffolded before
+  // VariationPackage/Correspondence/ExternalAction became the actual,
+  // working evidence chain (see claimEvidenceLinks below, which links to
+  // THAT chain instead). Left in place, unused, per "never delete".
+  evidenceLinks      EvidencePaymentClaim[]
+  allocations        VariationItemClaimAllocation[]
+  claimEvidenceLinks ClaimEvidenceLink[]
 
   @@unique([projectId, claimNumber])
+}
+
+// One row per Variation claimed, in one specific month's claim — the
+// Variation's own creation month (variationCreatedAt) never moves because
+// of this; this is purely "how much of it is in THIS claim." Multiple rows
+// across different PaymentClaims for the same VariationItem is exactly how
+// a Variation gets claimed over several months. Day Works is never
+// separately "claimed" — it's evidence supporting its parent
+// VariationItem's allocation (already true via VariationPackage), so no
+// separate Day-Works-claim model exists.
+model VariationItemClaimAllocation {
+  id              String   @id @default(cuid())
+  variationItemId String
+  paymentClaimId  String
+  amount          Decimal  @db.Decimal(12, 2)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  variationItem VariationItem @relation(fields: [variationItemId], references: [id])
+  paymentClaim  PaymentClaim  @relation(fields: [paymentClaimId], references: [id])
+  createdByUser User          @relation(fields: [createdByUserId], references: [id])
+
+  @@unique([variationItemId, paymentClaimId])
+}
+
+// Polymorphic by design (evidenceId is a plain string, resolved against
+// whichever table evidenceType names, in application code — no cross-table
+// FK is possible in one column) — links to the REAL, working evidence chain,
+// not the dormant Evidence model above.
+enum ClaimEvidenceType {
+  variation_package
+  correspondence
+  external_action
+  qa_record
+  update
+}
+
+model ClaimEvidenceLink {
+  id             String            @id @default(cuid())
+  paymentClaimId String
+  evidenceType   ClaimEvidenceType
+  evidenceId     String
+  createdAt      DateTime          @default(now())
+
+  paymentClaim PaymentClaim @relation(fields: [paymentClaimId], references: [id])
+
+  @@unique([paymentClaimId, evidenceType, evidenceId])
 }
 
 model Invoice {
@@ -1341,7 +1438,27 @@ model VariationItem {
   // convention as generalNoticeMethod/disputeNoticeMethod on ContractTerms.
   instructedByName   String?
 
-  project                   Project               @relation(fields: [projectId], references: [id])
+  // Closed/reactivated is a dimension ORTHOGONAL to the completion axis
+  // above (status/percentComplete) — a Site Instruction and the Variation
+  // it becomes are the SAME row (see the comment above on type/
+  // variationCreatedAt), so one closed/reactivated pair here correctly
+  // covers both identities rather than needing two parallel state
+  // machines. `complete` (status) must never automatically imply closed —
+  // these fields only ever change via an explicit close/reactivate action
+  // (lib/variation-item-lifecycle.ts). closedAt null = active, in every
+  // normal list/dashboard; set = excluded from those, but every relation
+  // and the row itself remain fully queryable by id — closing never
+  // detaches or hides data, only changes which default queries include it.
+  // These are CURRENT-STATE fields only (fast "is this active" checks
+  // without a join) — the full history of every close/reactivate, with
+  // context, lives in RecordLifecycleEvent below and is never overwritten
+  // by a later transition.
+  closedAt            DateTime?
+  closedByUserId      String?
+  reactivatedAt       DateTime?
+  reactivatedByUserId String?
+
+  project                   Project                        @relation(fields: [projectId], references: [id])
   updates                   Update[]
   dayWorksSheets            DayWorksSheet[]
   // Direct, sheet-independent relations (Labour, Plant & Material AI
@@ -1357,9 +1474,95 @@ model VariationItem {
   // TODO: when preparing this item for submission (submitted_for_claim), surface
   // linked `correspondence` rows (including filed inbound emails) as supporting
   // evidence for the reviewer — not built yet, see Incoming Emails Task 4.2.
-  suggestedForInboundEmails InboundEmail[]        @relation("InboundEmailSuggestedVariationItem")
+  suggestedForInboundEmails InboundEmail[]                 @relation("InboundEmailSuggestedVariationItem")
   qaRecords                 QARecord[]
   externalActions           ExternalAction[]
+  tasks                     Task[]
+  claimAllocations          VariationItemClaimAllocation[]
+  closedByUser              User?                          @relation("VariationItemClosedBy", fields: [closedByUserId], references: [id])
+  reactivatedByUser         User?                          @relation("VariationItemReactivatedBy", fields: [reactivatedByUserId], references: [id])
+}
+
+// A general-purpose, user-created work item — distinct from ProgrammeItem
+// (an AI-parsed contract-programme MILESTONE, whose draft/parsed/confirmed
+// status tracks whether the extraction was confirmed accurate, not whether
+// work is done). Completed and Closed are deliberately separate states: a
+// Task can sit Completed and stay visible/reachable until someone
+// explicitly Closes it — closure is never automatic just because status
+// reaches completed. No attachment mechanism of its own yet, deliberately
+// deferred rather than built bespoke — this codebase's convention for
+// attachments is a dedicated per-entity table (UpdateAttachment,
+// QARecordAttachment), so a future TaskAttachment would follow that same
+// pattern; nothing here blocks adding it later.
+enum TaskStatus {
+  open
+  in_progress
+  completed
+  closed
+}
+
+model Task {
+  id              String     @id @default(cuid())
+  projectId       String
+  title           String
+  description     String?
+  status          TaskStatus @default(open)
+  // Optional — a Task doesn't have to relate to an SI/Variation at all.
+  variationItemId String?
+  dueAt           DateTime?
+  completedAt     DateTime?
+  closedAt        DateTime?
+  closedByUserId  String?
+  createdByUserId String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  project       Project        @relation(fields: [projectId], references: [id])
+  variationItem VariationItem? @relation(fields: [variationItemId], references: [id])
+  createdByUser User           @relation("TaskCreatedBy", fields: [createdByUserId], references: [id])
+  closedByUser  User?          @relation("TaskClosedBy", fields: [closedByUserId], references: [id])
+}
+
+// One shared audit log for every close/reactivate/complete event across
+// VariationItem/Task/Project — the same pattern this codebase already uses
+// for OrganisationAccessEvent/recordAccessStatusChange (lib/organisation-
+// access-log.ts), mirrored here rather than duplicated. Deliberately a real
+// audit trail, not just a status flag: previousState/newState capture the
+// actual transition, and note carries either a user-supplied reason or an
+// auto-composed summary of whatever closure-review warnings were
+// overridden — this is what lets someone reconstruct "why was this closed,
+// why was it reopened three weeks later" from history alone. Deliberately
+// NOT a per-entity-type table (one RecordLifecycleEvent model, not three).
+enum RecordLifecycleEntityType {
+  variation_item
+  task
+  project
+}
+
+enum RecordLifecycleEventType {
+  closed
+  reactivated
+  completed
+}
+
+model RecordLifecycleEvent {
+  id            String                    @id @default(cuid())
+  entityType    RecordLifecycleEntityType
+  entityId      String
+  eventType     RecordLifecycleEventType
+  userId        String
+  // Plain strings, not FKs to any status enum — this log spans 3 entity
+  // types with 3 different state vocabularies (VariationItem: active/
+  // closed; Task: open/in_progress/completed/closed; Project: active/
+  // completed/closed).
+  previousState String?
+  newState      String?
+  note          String?
+  createdAt     DateTime                  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
 }
 
 // fileName/storageKey are the original feature — an uploaded photo/scan of

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VariationItem } from "@prisma/client";
+import { ReferenceDuplicateCheck } from "@/components/variations/reference-duplicate-check";
 
 function toDateInputValue(date: Date | null) {
   if (!date) return "";
@@ -250,6 +251,9 @@ export function VariationItemFormDialog({
                   className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
               </label>
+              {!isEditing && (
+                <ReferenceDuplicateCheck key={reference} projectId={projectId} reference={reference} onDismiss={onClose} />
+              )}
 
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Title

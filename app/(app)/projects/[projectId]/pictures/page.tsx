@@ -42,7 +42,7 @@ export default async function PicturesPage({ params }: { params: Promise<{ proje
     }),
     taggableTypes.length > 0
       ? prisma.variationItem.findMany({
-          where: { projectId, type: { in: taggableTypes }, status: { not: "complete" } },
+          where: { projectId, type: { in: taggableTypes }, status: { not: "complete" }, closedAt: null },
           orderBy: { createdAt: "desc" }
         })
       : Promise.resolve([]),

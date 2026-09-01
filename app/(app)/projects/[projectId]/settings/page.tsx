@@ -15,7 +15,8 @@ export default async function SettingsPage({ params }: { params: Promise<{ proje
       riskLevel: true,
       invoiceModeEnabled: true,
       variationAutomationMode: true,
-      mainContractorId: true
+      mainContractorId: true,
+      status: true
     }
   });
   const membership = session?.user?.id ? await getOrganisationMembership(session.user.id) : null;
@@ -53,6 +54,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ proje
       contacts={contacts}
       recipients={recipients}
       scheduleRuns={scheduleRuns}
+      projectStatus={project.status}
     />
   );
 }

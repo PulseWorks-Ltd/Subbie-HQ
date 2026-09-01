@@ -92,7 +92,7 @@ export default async function UpdatesPage({
     }),
     visibleTypes.length > 0
       ? prisma.variationItem.findMany({
-          where: { projectId, type: { in: visibleTypes }, status: { not: "complete" } },
+          where: { projectId, type: { in: visibleTypes }, status: { not: "complete" }, closedAt: null },
           orderBy: { createdAt: "desc" }
         })
       : Promise.resolve([]),

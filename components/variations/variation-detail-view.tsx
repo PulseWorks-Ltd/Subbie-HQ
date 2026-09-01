@@ -31,6 +31,7 @@ import { VariationPackageSection } from "@/components/variations/variation-packa
 import { VariationQaSection } from "@/components/quality-assurance/variation-qa-section";
 import { VariationExternalActionsSection } from "@/components/external-actions/variation-external-actions-section";
 import { CreateVariationDialog } from "@/components/variations/create-variation-dialog";
+import { VariationItemLifecycleControls } from "@/components/variations/variation-item-lifecycle-controls";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -130,6 +131,11 @@ export function VariationDetailView({
                 </span>
               )}
               <StatusBadge status={item.status} />
+              {item.closedAt && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                  Closed
+                </span>
+              )}
             </div>
             <h1 className="text-2xl font-bold">
               {item.reference} <span className="font-normal text-[#4c739a] dark:text-slate-400">· {item.title}</span>
@@ -153,6 +159,11 @@ export function VariationDetailView({
             >
               Edit
             </button>
+            <VariationItemLifecycleControls
+              projectId={projectId}
+              itemId={item.id}
+              closedAt={item.closedAt ? item.closedAt.toISOString() : null}
+            />
           </div>
         </div>
 

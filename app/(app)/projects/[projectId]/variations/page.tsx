@@ -31,7 +31,7 @@ export default async function VariationsPage({ params }: { params: Promise<{ pro
     // and haven't been marked complete.
     canSeeVariations && canSeeSiteInstructions
       ? prisma.variationItem.findMany({
-          where: { projectId, type: "site_instruction", variationCreatedAt: null, status: { not: "complete" } },
+          where: { projectId, type: "site_instruction", variationCreatedAt: null, status: { not: "complete" }, closedAt: null },
           orderBy: { createdAt: "desc" }
         })
       : Promise.resolve([])

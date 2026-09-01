@@ -13,6 +13,7 @@ import { ContractTermsSection } from "@/components/settings/contract-terms-secti
 import { DayWorksRatesSection } from "@/components/settings/day-works-rates-section";
 import { MainContractorSection } from "@/components/settings/main-contractor-section";
 import { VariationAutomationSection } from "@/components/settings/variation-automation-section";
+import { ProjectLifecycleSection } from "@/components/settings/project-lifecycle-section";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type RecipientRow = {
@@ -32,7 +33,8 @@ export function SettingsView({
   contractTerms,
   contacts,
   recipients,
-  scheduleRuns
+  scheduleRuns,
+  projectStatus
 }: {
   projectId: string;
   riskLevel: RiskLevel;
@@ -42,6 +44,7 @@ export function SettingsView({
   contacts: ContactOption[];
   recipients: RecipientRow[];
   scheduleRuns: VariationScheduleRun[];
+  projectStatus: string;
 }) {
   const router = useRouter();
   const [riskLevel, setRiskLevel] = useState<RiskLevel>(initialRiskLevel);
@@ -120,6 +123,8 @@ export function SettingsView({
         recipients={recipients}
         scheduleRuns={scheduleRuns}
       />
+
+      <ProjectLifecycleSection projectId={projectId} status={projectStatus} />
     </div>
   );
 }

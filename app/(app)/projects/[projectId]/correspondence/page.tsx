@@ -52,7 +52,10 @@ export default async function CorrespondencePage({
       orderBy: { createdAt: "desc" }
     }),
     visibleTypes.length > 0
-      ? prisma.variationItem.findMany({ where: { projectId, type: { in: visibleTypes } }, orderBy: { createdAt: "desc" } })
+      ? prisma.variationItem.findMany({
+          where: { projectId, type: { in: visibleTypes }, status: { not: "complete" }, closedAt: null },
+          orderBy: { createdAt: "desc" }
+        })
       : Promise.resolve([])
   ]);
 

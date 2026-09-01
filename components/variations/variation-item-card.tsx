@@ -35,6 +35,11 @@ export function VariationItemCard({ projectId, item }: { projectId: string; item
             </span>
           )}
           <StatusBadge status={item.status} />
+          {item.closedAt && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+              Closed
+            </span>
+          )}
         </div>
       </div>
 

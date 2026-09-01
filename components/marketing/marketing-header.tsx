@@ -29,6 +29,7 @@ type NavLink = { href: string; label: string; disabled?: boolean };
 // greyed-out Phase 2 placeholders. Routes stay reachable directly; see
 // app/sitemap.ts and app/robots.ts.
 const GUIDE_LINKS: NavLink[] = [
+  { href: "/guides/late-or-non-compliant-claims", label: "Why Late or Non-Compliant Claims Cost You Money" },
   { href: "/guides/payment-claims-construction-contracts-act", label: "Payment Claims Under the CCA", disabled: true },
   { href: "/guides/site-instruction-vs-variation", label: "Site Instruction vs Variation", disabled: true }
 ];

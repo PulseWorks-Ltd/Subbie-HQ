@@ -66,6 +66,7 @@ export function MarketingFooter() {
             Compare & Guides
           </p>
           <FooterLink href="/compare/spreadsheets-and-paper" label="vs Spreadsheets & Paper" />
+          <FooterLink href="/guides/late-or-non-compliant-claims" label="Late or Non-Compliant Claims" />
           {/* Draft-only pages (see the "DRAFT" banner on each) — pulled from
               nav/indexing until actually written; routes stay reachable
               directly, see app/sitemap.ts and app/robots.ts. */}

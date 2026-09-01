@@ -28,7 +28,8 @@ const MARKETING_PATHS = [
   "/industries/painting",
   "/industries/masonry",
   "/industries/residential-builders",
-  "/compare/spreadsheets-and-paper"
+  "/compare/spreadsheets-and-paper",
+  "/guides/late-or-non-compliant-claims"
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

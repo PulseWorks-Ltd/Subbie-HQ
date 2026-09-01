@@ -95,13 +95,20 @@ export async function POST(request: Request, context: { params: { projectId: str
     contentType: "application/pdf"
   });
 
+  const periodStart = new Date(payload.periodStart);
   const claim = await prisma.paymentClaim.create({
     data: {
       projectId,
       claimNumber,
       referenceDate: new Date(payload.referenceDate),
-      periodStart: new Date(payload.periodStart),
+      periodStart,
       periodEnd: new Date(payload.periodEnd),
+      // This route pre-dates claimMonth (see the record-lifecycle migration)
+      // and isn't called by any real UI (superseded by VariationPackage —
+      // see that migration's schema comment) — derived from periodStart
+      // here purely so this still-existing route keeps compiling and
+      // producing internally-consistent rows, not as a sign it's now live.
+      claimMonth: `${periodStart.getUTCFullYear()}-${String(periodStart.getUTCMonth() + 1).padStart(2, "0")}`,
       claimedAmount,
       statutoryWording,
       serviceDate: payload.serviceDate ? new Date(payload.serviceDate) : undefined,

@@ -15,6 +15,10 @@ const NAV_ITEMS: {
   { label: "Project Diary", segment: "updates", module: "updates" },
   { label: "Scope & Programme", segment: "scope-programme", module: null, anyOfModules: ["scope", "programme"] },
   { label: "Variations", segment: "variations", module: null, anyOfModules: ["variations", "site_instructions"] },
+  // No dedicated permission module — Tasks are cross-cutting (optionally
+  // linked to any Variation/SI) and visible to anyone with project access,
+  // same default as Overview.
+  { label: "Tasks", segment: "tasks", module: null },
   { label: "Payment Claims", segment: "payment-claims", module: "payment_claims" },
   { label: "Health & Safety", segment: "health-safety", module: "health_safety" },
   { label: "Quality Assurance", segment: "quality-assurance", module: "quality_assurance" },

@@ -23,6 +23,10 @@ export function VariationsView({
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<FilterKey>("all");
+  // Active by default (§11.2) — closed items stay fully retained/
+  // searchable (see the Archive page and global search), just not
+  // cluttering this list unless deliberately included.
+  const [showClosed, setShowClosed] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [createType, setCreateType] = useState<"variation" | "site_instruction">(
     canCreateVariation ? "variation" : "site_instruction"
@@ -33,10 +37,12 @@ export function VariationsView({
   // now means "carries a Variation identity", not just "originated as one" —
   // an SI-turned-Variation shows up in both, since it's the same record.
   const filteredItems = items.filter((item) => {
+    if (!showClosed && item.closedAt) return false;
     if (filter === "all") return true;
     if (filter === "site_instruction") return item.type === "site_instruction";
     return item.variationCreatedAt != null;
   });
+  const closedCount = items.filter((item) => item.closedAt != null).length;
 
   function openCreateDialog(type: "variation" | "site_instruction") {
     setCreateType(type);
@@ -91,6 +97,13 @@ export function VariationsView({
           </button>
         ))}
       </div>
+
+      {closedCount > 0 && (
+        <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400 -mt-2">
+          <input type="checkbox" checked={showClosed} onChange={(event) => setShowClosed(event.target.checked)} className="size-4" />
+          Include {closedCount} closed
+        </label>
+      )}
 
       {filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">

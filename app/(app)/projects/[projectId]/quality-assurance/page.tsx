@@ -33,7 +33,7 @@ export default async function QualityAssurancePage({ params }: { params: Promise
     }),
     taggableTypes.length > 0
       ? prisma.variationItem.findMany({
-          where: { projectId, type: { in: taggableTypes }, status: { not: "complete" } },
+          where: { projectId, type: { in: taggableTypes }, status: { not: "complete" }, closedAt: null },
           orderBy: { createdAt: "desc" }
         })
       : Promise.resolve([])

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 function FooterLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="text-sm text-[#4c739a] dark:text-slate-400 hover:text-primary">
+    <Link href={href} className="text-sm text-on-surface-variant hover:text-accent-electric transition-colors">
       {label}
     </Link>
   );
@@ -12,28 +12,26 @@ function FooterLink({ href, label }: { href: string; label: string }) {
 // column its final shape now so future pages just slot in as a link, no
 // footer rebuild needed (per the marketing-site brief's footer requirement).
 function FooterPlaceholder({ label }: { label: string }) {
-  return <span className="text-sm text-[#4c739a]/50 dark:text-slate-400/40">{label}</span>;
+  return <span className="text-sm text-on-surface-variant/40">{label}</span>;
 }
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark px-4 sm:px-8 py-12">
+    <footer className="border-t border-white/5 bg-surface-deep px-4 sm:px-8 py-12">
       <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8">
         <div className="col-span-2 md:col-span-1">
-          <Link href="/" className="flex items-center gap-2 text-[#0d141b] dark:text-slate-50 mb-3">
+          <Link href="/" className="flex items-center gap-2 text-on-surface mb-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/mark-light.png" alt="" className="size-7 dark:hidden" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/mark-dark.png" alt="" className="size-7 hidden dark:block" />
-            <span className="text-base font-bold tracking-tight">Subbie HQ</span>
+            <img src="/brand/mark-dark.png" alt="" className="size-7 opacity-90" />
+            <span className="font-heading text-base font-bold tracking-tight">Subbie HQ</span>
           </Link>
-          <p className="text-sm text-[#4c739a] dark:text-slate-400">
+          <p className="text-sm text-on-surface-variant">
             Contract and commercial management for subcontractors.
           </p>
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-[#0d141b] dark:text-slate-50 mb-1">
+          <p className="text-xs font-bold uppercase tracking-wide text-on-surface mb-1">
             Features
           </p>
           <FooterLink href="/features/contract-review" label="Contract Review" />
@@ -50,7 +48,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-[#0d141b] dark:text-slate-50 mb-1">
+          <p className="text-xs font-bold uppercase tracking-wide text-on-surface mb-1">
             Industries
           </p>
           <FooterLink href="/industries/scaffolding" label="Scaffolding Contractors" />
@@ -62,7 +60,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-[#0d141b] dark:text-slate-50 mb-1">
+          <p className="text-xs font-bold uppercase tracking-wide text-on-surface mb-1">
             Compare & Guides
           </p>
           <FooterLink href="/compare/spreadsheets-and-paper" label="vs Spreadsheets & Paper" />
@@ -78,7 +76,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-[#0d141b] dark:text-slate-50 mb-1">
+          <p className="text-xs font-bold uppercase tracking-wide text-on-surface mb-1">
             Company
           </p>
           <FooterLink href="/pricing" label="Pricing" />
@@ -87,8 +85,8 @@ export function MarketingFooter() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-[#e7edf3] dark:border-slate-800">
-        <p className="text-xs text-[#4c739a] dark:text-slate-400">
+      <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-white/5">
+        <p className="text-xs text-on-surface-variant/60">
           © {new Date().getFullYear()} Subbie HQ. All rights reserved.
         </p>
       </div>

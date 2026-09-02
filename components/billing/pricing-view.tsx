@@ -28,15 +28,15 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
   }
 
   return (
-    <div className="px-4 py-12">
+    <div className="px-4 py-12 sm:py-20">
       <div className="max-w-4xl mx-auto flex flex-col gap-10">
         <div className="text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/mark-light.png" alt="Subbie HQ" className="size-12 mx-auto mb-4 dark:hidden" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 mx-auto mb-4 hidden dark:block" />
-          <h1 className="text-2xl font-black tracking-tight">Simple Pricing That Doesn&apos;t Punish You for Being Busy</h1>
-          <p className="text-sm text-[#4c739a] dark:text-slate-400 mt-2 max-w-xl mx-auto">
+          <img src="/brand/mark-dark.png" alt="Subbie HQ" className="size-12 mx-auto mb-4" />
+          <h1 className="font-heading text-2xl font-extrabold tracking-tight text-on-surface">
+            Simple Pricing That Doesn&apos;t Punish You for Being Busy
+          </h1>
+          <p className="text-sm text-on-surface-variant mt-2 max-w-xl mx-auto">
             Projects, Variations, Site Instructions, photos, correspondence, users — unlimited, on every plan,
             always. The only thing that changes between tiers is your monthly contract review allowance and AI
             drafting allowance, because that&apos;s the part that costs us something to run — we&apos;d rather
@@ -44,7 +44,7 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
           </p>
         </div>
 
-        {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+        {error && <p className="text-sm text-status-error text-center">{error}</p>}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {PLAN_TIERS.map((tier) => {
@@ -52,21 +52,21 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
             return (
               <div
                 key={tier}
-                className="flex flex-col gap-4 rounded-xl border border-[#cfdbe7] dark:border-slate-800 bg-white dark:bg-slate-900 p-6"
+                className="flex flex-col gap-4 rounded-xl border border-white/5 bg-surface-card p-6 shadow-[0_10px_30px_rgba(0,0,0,0.4)]"
               >
                 <div>
-                  <h2 className="text-lg font-bold">{plan.label}</h2>
-                  <p className="text-3xl font-black mt-1">
+                  <h2 className="font-heading text-lg font-bold text-on-surface">{plan.label}</h2>
+                  <p className="font-heading text-3xl font-extrabold text-on-surface mt-1">
                     ${plan.priceUsd}
-                    <span className="text-sm font-medium text-[#4c739a] dark:text-slate-400"> / month</span>
+                    <span className="text-sm font-medium text-on-surface-variant"> / month</span>
                   </p>
                 </div>
-                <p className="text-sm text-[#4c739a] dark:text-slate-400 flex-1">{plan.description}</p>
+                <p className="text-sm text-on-surface-variant flex-1">{plan.description}</p>
 
                 {!isLoggedIn ? (
                   <Link
                     href="/signup"
-                    className="h-10 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90"
+                    className="h-10 flex items-center justify-center rounded-lg bg-accent-electric text-white text-sm font-bold hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all active:scale-95"
                   >
                     Start free trial
                   </Link>
@@ -74,12 +74,12 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
                   <button
                     onClick={() => startTrial(tier)}
                     disabled={startingTier !== null}
-                    className="h-10 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
+                    className="h-10 rounded-lg bg-accent-electric text-white text-sm font-bold hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all active:scale-95 disabled:opacity-60"
                   >
                     {startingTier === tier ? "Starting..." : "Start free trial"}
                   </button>
                 ) : (
-                  <p className="text-xs text-center text-[#4c739a] dark:text-slate-400">
+                  <p className="text-xs text-center text-on-surface-variant">
                     Ask your organisation admin to start a plan.
                   </p>
                 )}
@@ -88,39 +88,39 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
           })}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-white/5 bg-surface-card p-2">
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b border-[#cfdbe7] dark:border-slate-800">
-                <th className="text-left font-bold py-2 pr-4"></th>
-                <th className="text-left font-bold py-2 px-4">Starter</th>
-                <th className="text-left font-bold py-2 px-4">Professional</th>
-                <th className="text-left font-bold py-2 px-4">Enterprise</th>
+              <tr className="border-b border-white/10">
+                <th className="text-left font-bold py-2 pr-4 px-2 text-on-surface"></th>
+                <th className="text-left font-bold py-2 px-4 text-on-surface">Starter</th>
+                <th className="text-left font-bold py-2 px-4 text-on-surface">Professional</th>
+                <th className="text-left font-bold py-2 px-4 text-on-surface">Enterprise</th>
               </tr>
             </thead>
-            <tbody className="text-[#4c739a] dark:text-slate-400">
-              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
-                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Price</td>
+            <tbody className="text-on-surface-variant">
+              <tr className="border-b border-white/5">
+                <td className="py-2 pr-4 px-2 font-medium text-on-surface">Price</td>
                 <td className="py-2 px-4">$49/mo</td>
                 <td className="py-2 px-4">$149/mo</td>
                 <td className="py-2 px-4">$249/mo</td>
               </tr>
-              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
-                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">
+              <tr className="border-b border-white/5">
+                <td className="py-2 pr-4 px-2 font-medium text-on-surface">
                   Projects, Variations, Site Instructions, Photos, Correspondence
                 </td>
                 <td className="py-2 px-4">Unlimited</td>
                 <td className="py-2 px-4">Unlimited</td>
                 <td className="py-2 px-4">Unlimited</td>
               </tr>
-              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
-                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Users</td>
+              <tr className="border-b border-white/5">
+                <td className="py-2 pr-4 px-2 font-medium text-on-surface">Users</td>
                 <td className="py-2 px-4">Unlimited</td>
                 <td className="py-2 px-4">Unlimited</td>
                 <td className="py-2 px-4">Unlimited</td>
               </tr>
-              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
-                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Mobile app</td>
+              <tr className="border-b border-white/5">
+                <td className="py-2 pr-4 px-2 font-medium text-on-surface">Mobile app</td>
                 <td className="py-2 px-4">✓</td>
                 <td className="py-2 px-4">✓</td>
                 <td className="py-2 px-4">✓</td>
@@ -133,14 +133,14 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
                 and restore these exact numbers here in the same change,
                 not the copy alone.
               */}
-              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
-                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">Contract Reviews</td>
+              <tr className="border-b border-white/5">
+                <td className="py-2 pr-4 px-2 font-medium text-on-surface">Contract Reviews</td>
                 <td className="py-2 px-4">Includes monthly contract reviews</td>
                 <td className="py-2 px-4">More contract reviews included</td>
                 <td className="py-2 px-4">Highest contract review allowance</td>
               </tr>
-              <tr className="border-b border-[#e7edf3] dark:border-slate-800">
-                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">
+              <tr className="border-b border-white/5">
+                <td className="py-2 pr-4 px-2 font-medium text-on-surface">
                   Update & email drafting help
                 </td>
                 <td className="py-2 px-4">Generous</td>
@@ -148,7 +148,7 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
                 <td className="py-2 px-4">Highest</td>
               </tr>
               <tr>
-                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">
+                <td className="py-2 pr-4 px-2 font-medium text-on-surface">
                   Additional Contract Reviews
                 </td>
                 <td className="py-2 px-4">$10 each</td>
@@ -159,7 +159,7 @@ export function PricingView({ isLoggedIn, isAdmin }: { isLoggedIn: boolean; isAd
           </table>
         </div>
 
-        <p className="text-sm italic text-[#4c739a] dark:text-slate-400 text-center">
+        <p className="text-sm italic text-on-surface-variant text-center">
           14-day free trial on every plan. You&apos;ll know exactly what you&apos;re paying for before you&apos;re
           ever charged.
         </p>

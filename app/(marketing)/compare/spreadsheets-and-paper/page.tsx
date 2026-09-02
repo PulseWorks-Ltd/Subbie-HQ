@@ -31,7 +31,7 @@ export default function SpreadsheetsAndPaperComparisonPage() {
         <h2 className="text-lg font-bold mb-2">
           Spreadsheets and paper work — until something goes wrong.
         </h2>
-        <p className="text-[#4c739a] dark:text-slate-400">
+        <p className="text-on-surface-variant">
           A dayworks sheet in a ute. A variation tracked in a notebook. An instruction that was only ever a text
           message. It works, until a disputed claim needs evidence from three months ago and nobody can find
           half of it.
@@ -41,16 +41,16 @@ export default function SpreadsheetsAndPaperComparisonPage() {
       <div className="overflow-x-auto mb-10">
         <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="border-b border-[#cfdbe7] dark:border-slate-800">
+            <tr className="border-b border-white/10">
               <th className="text-left font-bold py-2 pr-4"></th>
               <th className="text-left font-bold py-2 px-4">Spreadsheets & Paper</th>
               <th className="text-left font-bold py-2 px-4">Subbie HQ</th>
             </tr>
           </thead>
-          <tbody className="text-[#4c739a] dark:text-slate-400">
+          <tbody className="text-on-surface-variant">
             {ROWS.map((row) => (
-              <tr key={row.label} className="border-b border-[#e7edf3] dark:border-slate-800 last:border-0">
-                <td className="py-2 pr-4 font-medium text-[#0d141b] dark:text-slate-50">{row.label}</td>
+              <tr key={row.label} className="border-b border-white/10 last:border-0">
+                <td className="py-2 pr-4 font-medium text-on-surface">{row.label}</td>
                 <td className="py-2 px-4">{row.before}</td>
                 <td className="py-2 px-4">{row.after}</td>
               </tr>
@@ -62,13 +62,13 @@ export default function SpreadsheetsAndPaperComparisonPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <Link
           href="/signup"
-          className="h-11 px-6 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90"
+          className="h-11 px-6 flex items-center justify-center rounded-lg bg-accent-electric text-white text-sm font-bold hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] transition-all active:scale-95"
         >
           Start Free Trial
         </Link>
         <Link
           href="/pricing"
-          className="h-11 px-6 flex items-center justify-center rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+          className="h-11 px-6 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface text-sm font-bold hover:bg-surface-variant transition-all active:scale-95"
         >
           See Pricing
         </Link>

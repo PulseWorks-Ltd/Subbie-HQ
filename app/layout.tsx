@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Hanken_Grotesk, Inter } from "next/font/google";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { StagingBanner } from "@/components/staging-banner";
 import { themeInitScript } from "@/lib/theme-script";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-display" });
+// Marketing site headings only (2026-09 redesign) — see the `heading`
+// fontFamily entry in tailwind.config.cjs. Loaded globally here (same
+// pattern as Inter above) rather than per-page, but only ever applied via
+// the `font-heading` class, which the authenticated app never uses.
+const hankenGrotesk = Hanken_Grotesk({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-heading" });
 
 export const metadata: Metadata = {
   title: "Subbie HQ",
@@ -14,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${hankenGrotesk.variable}`}>
       <head>
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />

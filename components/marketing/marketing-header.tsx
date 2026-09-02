@@ -45,7 +45,7 @@ function NavDropdown({ label, links }: { label: string; links: NavLink[] }) {
       onMouseLeave={() => setIsOpen(false)}
     >
       <button
-        className="text-sm font-bold text-[#4c739a] dark:text-slate-400 hover:text-primary flex items-center gap-1"
+        className="text-sm font-bold text-on-surface-variant hover:text-accent-electric transition-colors flex items-center gap-1"
         onClick={() => setIsOpen((open) => !open)}
       >
         {label}
@@ -53,17 +53,17 @@ function NavDropdown({ label, links }: { label: string; links: NavLink[] }) {
       </button>
       {isOpen && (
         <div className="absolute top-full left-0 pt-2 z-50">
-          <div className="flex flex-col rounded-lg border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark shadow-lg py-2 min-w-56">
+          <div className="flex flex-col rounded-lg border border-white/10 bg-surface-card shadow-[0_10px_30px_rgba(0,0,0,0.4)] py-2 min-w-56">
             {links.map((link) =>
               link.disabled ? (
-                <span key={link.href} className="px-4 py-2 text-sm font-medium text-[#0d141b]/40 dark:text-slate-50/30">
+                <span key={link.href} className="px-4 py-2 text-sm font-medium text-on-surface-variant/40">
                   {link.label}
                 </span>
               ) : (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-2 text-sm font-medium text-[#0d141b] dark:text-slate-50 hover:bg-[#e7edf3] dark:hover:bg-slate-800"
+                  className="px-4 py-2 text-sm font-medium text-on-surface hover:bg-white/5 hover:text-accent-electric transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -80,18 +80,16 @@ export function MarketingHeader() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <header className="flex items-center justify-between border-b border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark px-4 sm:px-8 py-3 sticky top-0 z-50">
-      <Link href="/" className="flex items-center gap-3 text-[#0d141b] dark:text-slate-50">
+    <header className="flex items-center justify-between border-b border-white/5 bg-surface/80 backdrop-blur-xl px-4 sm:px-8 py-3 sticky top-0 z-50">
+      <Link href="/" className="flex items-center gap-3 text-on-surface">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark-light.png" alt="" className="size-8 dark:hidden" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/mark-dark.png" alt="" className="size-8 hidden dark:block" />
-        <h2 className="text-lg font-bold leading-tight tracking-tight">Subbie HQ</h2>
+        <img src="/brand/mark-dark.png" alt="" className="size-8" />
+        <h2 className="font-heading text-lg font-bold leading-tight tracking-tight">Subbie HQ</h2>
       </Link>
 
       <nav className="hidden md:flex items-center gap-6">
         <NavDropdown label="Features" links={FEATURE_LINKS} />
-        <Link href="/pricing" className="text-sm font-bold text-[#4c739a] dark:text-slate-400 hover:text-primary">
+        <Link href="/pricing" className="text-sm font-bold text-on-surface-variant hover:text-accent-electric transition-colors">
           Pricing
         </Link>
         <NavDropdown label="Industries" links={INDUSTRY_LINKS} />
@@ -101,20 +99,20 @@ export function MarketingHeader() {
       <div className="hidden md:flex items-center gap-3">
         <Link
           href="/login"
-          className="h-9 px-3 flex items-center text-sm font-bold text-[#4c739a] dark:text-slate-400 hover:text-primary"
+          className="h-9 px-3 flex items-center text-sm font-bold text-on-surface hover:text-accent-electric transition-colors"
         >
           Login
         </Link>
         <Link
           href="/signup"
-          className="h-9 px-4 flex items-center rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90"
+          className="h-9 px-4 flex items-center rounded-lg bg-accent-electric text-white text-sm font-bold hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all active:scale-95"
         >
           Start Free Trial
         </Link>
       </div>
 
       <button
-        className="md:hidden size-9 flex items-center justify-center rounded-lg border border-[#e7edf3] dark:border-slate-700"
+        className="md:hidden size-9 flex items-center justify-center rounded-lg border border-white/10 text-on-surface"
         onClick={() => setIsMobileOpen((open) => !open)}
         aria-label="Toggle menu"
       >
@@ -122,30 +120,30 @@ export function MarketingHeader() {
       </button>
 
       {isMobileOpen && (
-        <div className="absolute top-full left-0 right-0 md:hidden bg-white dark:bg-background-dark border-b border-[#e7edf3] dark:border-slate-800 flex flex-col p-4 gap-3">
-          <p className="text-xs font-bold uppercase text-[#4c739a] dark:text-slate-400 mt-2">Features</p>
+        <div className="absolute top-full left-0 right-0 md:hidden bg-surface border-b border-white/5 flex flex-col p-4 gap-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mt-2">Features</p>
           {FEATURE_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium">
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-on-surface">
               {link.label}
             </Link>
           ))}
-          <Link href="/pricing" className="text-sm font-bold mt-2">
+          <Link href="/pricing" className="text-sm font-bold text-on-surface mt-2">
             Pricing
           </Link>
-          <p className="text-xs font-bold uppercase text-[#4c739a] dark:text-slate-400 mt-2">Industries</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mt-2">Industries</p>
           {INDUSTRY_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="text-sm font-medium">
+            <Link key={link.href} href={link.href} className="text-sm font-medium text-on-surface">
               {link.label}
             </Link>
           ))}
-          <p className="text-xs font-bold uppercase text-[#4c739a] dark:text-slate-400 mt-2">Guides</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mt-2">Guides</p>
           {GUIDE_LINKS.map((link) =>
             link.disabled ? (
-              <span key={link.href} className="text-sm font-medium text-[#0d141b]/40 dark:text-slate-50/30">
+              <span key={link.href} className="text-sm font-medium text-on-surface-variant/40">
                 {link.label}
               </span>
             ) : (
-              <Link key={link.href} href={link.href} className="text-sm font-medium">
+              <Link key={link.href} href={link.href} className="text-sm font-medium text-on-surface">
                 {link.label}
               </Link>
             )
@@ -153,13 +151,13 @@ export function MarketingHeader() {
           <div className="flex gap-3 mt-4">
             <Link
               href="/login"
-              className="flex-1 h-10 flex items-center justify-center rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold"
+              className="flex-1 h-10 flex items-center justify-center rounded-lg border border-white/10 text-on-surface text-sm font-bold"
             >
               Login
             </Link>
             <Link
               href="/signup"
-              className="flex-1 h-10 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-bold"
+              className="flex-1 h-10 flex items-center justify-center rounded-lg bg-accent-electric text-white text-sm font-bold"
             >
               Start Free Trial
             </Link>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Subbie HQ - Contract and commercial management for subcontractors.</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700;800&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-card": "#1E293B",
+                        "inverse-primary": "#0056d2",
+                        "surface-container-lowest": "#010f1f",
+                        "secondary-fixed": "#dae2fd",
+                        "on-primary": "#002b73",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-secondary-container": "#adb4ce",
+                        "outline": "#8c90a1",
+                        "accent-electric": "#3B82F6",
+                        "on-secondary": "#283044",
+                        "error-container": "#93000a",
+                        "status-error": "#EF4444",
+                        "background": "#051424",
+                        "surface-container-high": "#1c2b3c",
+                        "tertiary": "#4edea3",
+                        "on-surface-variant": "#c2c6d8",
+                        "on-tertiary-fixed": "#002113",
+                        "secondary-container": "#3f465c",
+                        "on-surface": "#d4e4fa",
+                        "tertiary-fixed": "#6ffbbe",
+                        "surface-container-highest": "#273647",
+                        "surface": "#051424",
+                        "inverse-surface": "#d4e4fa",
+                        "surface-bright": "#2c3a4c",
+                        "primary-container": "#5b8cff",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container-low": "#0d1c2d",
+                        "on-background": "#d4e4fa",
+                        "secondary": "#bec6e0",
+                        "primary-fixed": "#dae2ff",
+                        "error": "#ffb4ab",
+                        "status-warning": "#F59E0B",
+                        "on-tertiary": "#003824",
+                        "surface-tint": "#b2c5ff",
+                        "on-secondary-fixed": "#131b2e",
+                        "on-error": "#690005",
+                        "on-primary-fixed-variant": "#0040a1",
+                        "outline-variant": "#424655",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "primary": "#b2c5ff",
+                        "surface-variant": "#273647",
+                        "inverse-on-surface": "#233143",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-container": "#122131",
+                        "on-primary-container": "#002565",
+                        "tertiary-container": "#00a572",
+                        "on-error-container": "#ffdad6",
+                        "surface-dim": "#051424",
+                        "on-primary-fixed": "#001848",
+                        "primary-fixed-dim": "#b2c5ff",
+                        "on-tertiary-container": "#00311f",
+                        "surface-deep": "#020617"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "stack-md": "16px",
+                        "base": "4px",
+                        "container-max": "1280px",
+                        "gutter": "24px",
+                        "section-gap-sm": "64px",
+                        "section-gap-lg": "120px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "headline-xl-mobile": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "caption": ["Inter"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "headline-xl": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-xl-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface-deep text-on-surface font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl shadow-sm border-b border-white/5 transition-all duration-300">
+<div class="flex justify-between items-center px-gutter py-4 max-w-container-max mx-auto w-full">
+<div class="flex items-center gap-2">
+<img alt="Subbie HQ Logo" class="h-8 w-8 object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VPrrRMNUN46U9lyaXmFgnnb18OUEeQO8AfdfFFT1MbAsLGD7A5-Miaci8IIEU3GyBZ8jfOKFJNzLOVRSU0c2x3y8MMu7NhZAvl_N0R7vDKyoX2ahe_kZITMeEaftNIV8iFxJu2wX4w4mowBtl3iUsTv00Yip1ZFrWCmPVFR_pULnPp0FdZue0PkqqXyPBEoQpMMlMFNzpo4EE0gfxPvww30kGZoDmaw-Mwh9FsqKTvRKJPR3QgGT-z1gU"/>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary tracking-tight">Subbie HQ</span>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1" href="#">Features <span class="material-symbols-outlined text-[16px]">expand_more</span></a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="/pricing">Pricing</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1" href="#">Industries <span class="material-symbols-outlined text-[16px]">expand_more</span></a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1" href="#">Guides <span class="material-symbols-outlined text-[16px]">expand_more</span></a>
+</nav>
+<div class="hidden md:flex items-center gap-4">
+<a class="font-label-md text-label-md text-on-surface hover:text-primary transition-colors" href="/login">Login</a>
+<a class="font-label-md text-label-md bg-accent-electric text-white px-5 py-2.5 rounded-lg hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all active:scale-95" href="/signup">Start Free Trial</a>
+</div>
+<button class="md:hidden text-on-surface p-2">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<main class="pt-[80px]">
+<!-- Hero Section -->
+<section class="relative px-gutter py-section-gap-sm md:py-section-gap-lg max-w-container-max mx-auto flex flex-col md:flex-row items-center gap-12">
+<div class="absolute inset-0 bg-gradient-to-br from-accent-electric/5 to-transparent rounded-full blur-[120px] -z-10 w-3/4 h-3/4 top-0 left-0"></div>
+<div class="w-full md:w-1/2 flex flex-col gap-6 z-10">
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface">The Work Gets Done. The Money Doesn't Always Follow.</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+                    Every unproven Site Instruction, every unsigned dayworks sheet, every variation submitted without the right evidence is money quietly left on the table. Subbie HQ captures the proof as the job happens, so what you're owed is what you actually get paid — not what you're still arguing for three months later.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4 mt-2">
+<a class="text-center font-label-md text-label-md bg-accent-electric text-white px-6 py-3 rounded-lg hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] transition-all active:scale-95" href="/signup">Start Free Trial</a>
+<a class="text-center font-label-md text-label-md border border-outline-variant text-on-surface px-6 py-3 rounded-lg hover:bg-surface-variant transition-all active:scale-95 flex items-center justify-center gap-2" href="#">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+                        See How It Works
+                    </a>
+</div>
+<div class="mt-4 flex flex-col gap-2">
+<div class="flex items-center gap-2 text-tertiary">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span class="font-caption text-caption text-on-surface-variant">Site Managers approve via a secure link — no app, no login required.</span>
+</div>
+<div class="flex items-center gap-2 text-tertiary">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span class="font-caption text-caption text-on-surface-variant italic">Built specifically for subcontractors — not a main contractor's compliance tool you got forced onto.</span>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/2 relative rounded-xl overflow-hidden border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] z-10 group">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-deep/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<img alt="Site supervisor using mobile app on site" class="w-full h-auto object-cover rounded-xl transform transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AEtjO1VEdaqgQYD4C85u24v2WRTH8dQRvPQTRE5DNV9GZxSvVOOCxq1R3ssckkFuwxlER5207TwVy0ZlAUX7ICyIbSvUBr0VoG-M2FvExcSkQRZsa24HvZSKVxVLxdjY3J3Wjc--uLdYuU7TfAuNPhE6_fFBbuov7Rv7uKqj6Te_Oo5x1ssIG3tsGCm9P4-_cqNMCxwvLRTIMXSx-zQ1O3Ol92NWzOO6xyylsXVut0uQLqGjPJbwD1lOYkTVHy4"/>
+</div>
+</section>
+<!-- The Problem -->
+<section class="bg-surface-container py-section-gap-sm md:py-section-gap-lg px-gutter relative overflow-hidden">
+<div class="max-w-3xl mx-auto text-center flex flex-col gap-6 relative z-10">
+<h2 class="font-headline-lg text-headline-lg text-primary">The Problem</h2>
+<h3 class="font-headline-md text-headline-md text-on-surface">Most subcontractors sign contracts they don't have time to read properly — and do the paperwork evenings and weekends, if at all.</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                    Large contractors employ Contracts Managers to catch the clause that costs you money, chase the evidence a claim needs, and keep a job organised enough to survive a dispute. Most subcontractors can't justify that cost. So the paperwork gets rushed, evidence goes missing, and money gets left on the table — not because the work wasn't done, but because it wasn't proven.
+                </p>
+</div>
+</section>
+<!-- Your Job, From Start to Finish -->
+<section class="py-section-gap-sm md:py-section-gap-lg px-gutter max-w-container-max mx-auto flex flex-col gap-section-gap-sm">
+<div class="text-center mb-8">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">Your Job, From Start to Finish</h2>
+<div class="w-16 h-1 bg-accent-electric mx-auto rounded-full"></div>
+</div>
+<!-- Before You Sign -->
+<div class="flex flex-col md:flex-row items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-4">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary mb-2">
+<span class="material-symbols-outlined">edit_document</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Before You Sign</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Understand what your contract actually expects of you. Identify the commercial risks before you're committed to them. Know your scope of works and the programme milestones you're held to — pulled straight from your own documents.
+                    </p>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-card rounded-xl border border-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.4)] relative">
+<div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<img alt="Contract Review UI showing AI summary of clauses" class="w-full h-auto rounded-lg" src="https://lh3.googleusercontent.com/aida/AEtjO1U79gdcx3wAgMg9dAu_O9c4F1RgXm4KUWDZt2qySmdD1CaePp2ZPQ5fTU2jyvX-WR6nIOHyFGjqqDHsKigOQc6MXcPe0OVw5Xkmse6CL-iHC21Oopr4zs0JXNQJjQqx9sy-rCGHfZW1x0RNZQFcxFvRgDUBiGXO05tRX1DYoLj4JkA-q01x-787b-mq0wwAIReRMwfItMbzXghiwXUo0yBwR-6GNJYaqxLVYV_Zao2jzWHfOZwyuUHyJqo"/>
+</div>
+</div>
+</div>
+<!-- While You're On Site -->
+<div class="flex flex-col md:flex-row-reverse items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-4">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary mb-2">
+<span class="material-symbols-outlined">add_a_photo</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface">While You're On Site</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Capture Site Instructions the moment they're given. Record Updates. Take photos. Upload Dayworks Sheets. Everything organised against the job, from your phone, without a spreadsheet in sight.
+                    </p>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-card rounded-xl border border-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.4)] relative">
+<div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<img alt="Evidence Capture Mobile UI showing photo upload and daily entry" class="w-full h-auto rounded-lg" src="https://lh3.googleusercontent.com/aida/AEtjO1WdeUx7R5r5AapwVOHxJNegHTdUVzOiFxNk5kWn-xrFXytwE_-AEmdAy7WLMrGuRAJOLoulzgNKcZrma6EC8hxIAW18CCiHy0yGHD4bjwnTUciyWzgn-uAqzzTxamvUlxw7OjMgaVbheYiPFgMY8L4ASVSunmiXDRG2Yh7YRY2o1YzKmCGhyb42pfd75aj8VXPdyzhun2KP4YiZVSufwN7RAXGZkQhRBjX0QyY-OsRoj5FqsdlQ-bYCqsc"/>
+</div>
+</div>
+</div>
+<!-- When It's Time to Claim -->
+<div class="flex flex-col md:flex-row items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-4">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary mb-2">
+<span class="material-symbols-outlined">request_quote</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface">When It's Time to Claim</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Build a complete Variation package — instruction, dayworks, materials, photos, correspondence — then send it for approval with a secure link. No app, no login required: the Main Contractor opens it and acts, and you track the response. It's the evidence base you need to prepare a payment claim with confidence, without digging for anything after the fact.
+                    </p>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-card rounded-xl border border-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.4)] relative">
+<div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<img alt="Variation Builder UI showing linked evidence and costing steps" class="w-full h-auto rounded-lg" src="https://lh3.googleusercontent.com/aida/AEtjO1WMV-ie-i7H8EwIjluV3PFz9bteMzWaUBF_S3moMVZK9DrnPy8HfAwO2qH9Q05NLPmHiGSn0DI7CCr5TJFPZP2qwew7Z7J-46uDSiD-BPy6bALZqD2YsSeqWNi2hdGpY80Mk9nyNB3-wBwkUGMVxzG5aZleOC4HocLVbVVSXifPJmblY8PQcSVk00gR1HdBaQ12fGOrHEuKRjfU9HJ73htjcgtlYzLx0aciCXsj17rbcevfzpNUsyf_5ys"/>
+</div>
+</div>
+</div>
+<!-- When a Dispute Happens -->
+<div class="flex flex-col md:flex-row-reverse items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-4">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary mb-2">
+<span class="material-symbols-outlined">gavel</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface">When a Dispute Happens</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Every email. Every photo. Every Site Instruction. Every Dayworks Sheet. Every Update. Already organised, already dated, already there.
+                    </p>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-card rounded-xl border border-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.4)] relative">
+<div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<img alt="Dispute Audit Trail UI showing a timeline of linked photos and emails" class="w-full h-auto rounded-lg" src="https://lh3.googleusercontent.com/aida/AEtjO1WhJOP1p0gBR-l85RsP76CiUG11r1FE23SJhNQ8RhtcKil_PubgkKUuJ1Wa0RMXPlTWu8cfawBkaF_QUYmf2ihVeRiHOpFA0AkjX5lSBPD13y6uFFMftf3EJFB3v-2zSC-5ZGe72uIgXjqQT5b7t4YLkOiZd3LvuOQFxu0G8zrzfVjvOG61XPWJyGPdBosvymcY-IODzBQbsxQ6fKRoCHA_s9Et-ZBidvfjF4gLt2GlTHgkbACQhPEWPA"/>
+</div>
+</div>
+</div>
+</section>
+<!-- How Subbie HQ Helps (Bento Grid) -->
+<section class="bg-surface-container py-section-gap-sm md:py-section-gap-lg px-gutter">
+<div class="max-w-container-max mx-auto">
+<div class="text-center mb-12">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">How Subbie HQ Helps</h2>
+<div class="w-16 h-1 bg-accent-electric mx-auto rounded-full"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Bento Item 1 -->
+<div class="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-primary/30 transition-colors group">
+<div class="mb-4 text-accent-electric group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-[32px]">find_in_page</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Understand Your Contract Before You Sign</h4>
+<p class="font-caption text-caption text-on-surface-variant">
+                            Upload your subcontract and get a plain-English breakdown of what's different from standard terms, what it means for your business, and what to do about it.
+                        </p>
+</div>
+<!-- Bento Item 2 -->
+<div class="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-primary/30 transition-colors group">
+<div class="mb-4 text-accent-electric group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-[32px]">bookmark_added</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Never Lose Track of a Site Instruction Again</h4>
+<p class="font-caption text-caption text-on-surface-variant">
+                            Forward the email the moment it lands. Log a verbal instruction on site. Either way, it's recorded, timestamped, and ready to turn into a claim.
+                        </p>
+</div>
+<!-- Bento Item 3 -->
+<div class="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-primary/30 transition-colors group">
+<div class="mb-4 text-accent-electric group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-[32px]">timer</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Never Lose Labour Costs Again</h4>
+<p class="font-caption text-caption text-on-surface-variant">
+                            Photograph the dayworks sheet. Confirm the crew, hours, and rate. No re-typing timesheets from memory at the end of the week.
+                        </p>
+</div>
+<!-- Bento Item 4 -->
+<div class="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-primary/30 transition-colors group lg:col-span-2 flex flex-col sm:flex-row gap-6 items-center">
+<div class="flex-1">
+<div class="mb-4 text-accent-electric group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-[32px]">receipt_long</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Build Professional Variation Claims in Minutes</h4>
+<p class="font-caption text-caption text-on-surface-variant">
+                                One button bundles the instruction, the evidence, and the costing into a document ready to send.
+                            </p>
+</div>
+<div class="flex-1 w-full bg-surface-deep rounded-lg p-2 border border-white/5">
+<div class="h-24 bg-gradient-to-r from-surface-variant to-transparent rounded opacity-50 mb-2"></div>
+<div class="h-4 w-3/4 bg-surface-variant rounded mb-2"></div>
+<div class="h-4 w-1/2 bg-surface-variant rounded"></div>
+</div>
+</div>
+<!-- Bento Item 5 -->
+<div class="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-primary/30 transition-colors group">
+<div class="mb-4 text-accent-electric group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-[32px]">signature</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Get Sign-Off Without Chasing a Signature</h4>
+<p class="font-caption text-caption text-on-surface-variant">
+                             Site Managers and Main Contractors approve via a secure link — no app, no login required. Track every request from sent to responded, or let the whole monthly cycle send itself.
+                        </p>
+</div>
+<!-- Bento Item 6 (Full Width span on mobile/tablet) -->
+<div class="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-primary/30 transition-colors group md:col-span-2 lg:col-span-3 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
+<div class="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none"></div>
+<div class="flex-1 z-10">
+<div class="mb-4 text-accent-electric group-hover:scale-110 transition-transform origin-left">
+<span class="material-symbols-outlined text-[32px]">alarm_on</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Nothing Quietly Goes Overdue</h4>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+                                Variation and Site Instruction deadlines, H&amp;S document expiry, insurance renewal — staged email and push alerts before anything lapses, not after.
+                            </p>
+</div>
+<div class="w-full md:w-auto flex flex-col gap-2 z-10">
+<div class="bg-surface-deep px-4 py-2 rounded border border-status-warning/30 flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-status-warning"></span>
+<span class="font-caption text-caption text-on-surface">Variation #45 Due in 2 days</span>
+</div>
+<div class="bg-surface-deep px-4 py-2 rounded border border-status-error/30 flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-status-error"></span>
+<span class="font-caption text-caption text-on-surface">Insurance Expiring Soon</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Why Subcontractors Choose Subbie HQ -->
+<section class="py-section-gap-sm md:py-section-gap-lg px-gutter max-w-container-max mx-auto">
+<div class="text-center mb-12">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">Why Subcontractors Choose Subbie HQ</h2>
+<div class="w-16 h-1 bg-accent-electric mx-auto rounded-full"></div>
+</div>
+<div class="flex flex-col gap-section-gap-sm">
+<!-- Value Prop 1 -->
+<div class="flex flex-col md:flex-row items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-4">
+<div class="flex gap-4 items-start">
+<div class="mt-1 text-primary">
+<span class="material-symbols-outlined text-[24px]">construction</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Built for subcontractors, not the head contractor's paperwork.</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Most software in this space exists to make main contractors' lives easier, and subbies get forced onto it. Subbie HQ exists because you chose it.
+                    </p>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden">
+<img alt="Subcontractor using mobile app on site" class="w-full h-auto rounded object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfc8U8Jv4gUKTgiE8ZJUmDOwmXBEyZngpi7uNQEQDUzx75nB898Fe_P8FlxraKmArqczn7IVHM1k5AjNPa9tP7_cQoOlV4z5sDncZ_4jUzTZEvtjxk3qJ2BjK2FpvfBxlMueddF_mDmf8kB3oroolJ5hLIY7V3JoZCfQxgvQYNwHmSnZoE17IZbtpSPf_fZbcFL7LkBIakSDRtQHW-rLUWaxE9lvpVzglw2aPL4-M-gOMOHlaFAp9c"/>
+</div>
+</div>
+</div>
+<!-- Value Prop 2 -->
+<div class="flex flex-col md:flex-row-reverse items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-4">
+<div class="flex gap-4 items-start">
+<div class="mt-1 text-primary">
+<span class="material-symbols-outlined text-[24px]">payments</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Priced for a sole trader, not a head office.</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Plans start at $49/month, unlimited users, unlimited projects. You're never charged more for being busy — and as your team grows, each person gets exactly the access their role needs.
+                    </p>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden">
+<img alt="Pricing page on tablet" class="w-full h-auto rounded object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEcQiKyRlplC06xKZDwvNEVGYmlHJ63gnrtj57WG4Otj-hcqyjjANZX_oOeGxsHX58IjLAFTkrRk4Ga_UD0-TdnPknl7-Wd2vouOARgUaGnsG3b8qDMlZFdr-iaMPSMiPZNWZTlZnGBgsD1525CoBIFYxlICrv5iKYbxyDg6Sg-9isshkrZyLYjIc74BgElY2yK0skhctDTd6XCQNzDS247sgydBAOtniEdaP5kajzEm7x_nHzaqs_"/>
+</div>
+</div>
+</div>
+<!-- Value Prop 3 -->
+<div class="flex flex-col md:flex-row items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-4">
+<div class="flex gap-4 items-start">
+<div class="mt-1 text-primary">
+<span class="material-symbols-outlined text-[24px]">public</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Built for NZ and Australian contracts.</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Compared against SA-2017 and the obligations you actually operate under — not a generic platform retrofitted for this market.
+                    </p>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden">
+<img alt="Legal contract with digital breakdown" class="w-full h-auto rounded object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC322ERkYJgJyZXx_IjQL3qk6_fJUalqaiK0TN0ilt71nhEUPxwPzSgs3zKsBb9sMjb_yqipisJMd28M8t-COGojqVJOXYNQ0S_m8WpPRGmIUfrcui7Ntsujbnpn5xgnhbM_oT_9zosXli_hJ1oP4PhPHap5repb4ycWmLDRAQLgAxk0PbyisG2F_9aOxUovPGmuUPhXHnEpfa-VqQX6uT5wXomLgfGl8HEWZveAsgTQ2pRwJM_QjBd"/>
+</div>
+</div>
+</div>
+<!-- Value Prop 4 -->
+<div class="flex flex-col md:flex-row-reverse items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-4">
+<div class="flex gap-4 items-start">
+<div class="mt-1 text-primary">
+<span class="material-symbols-outlined text-[24px]">dashboard</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Everything, across every job, in one place.</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Running more than one project? A single Dashboard shows what needs your attention across all of them — no logging into each job separately to check.
+                    </p>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden">
+<img alt="Multi-project dashboard overview" class="w-full h-auto rounded opacity-80 hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida/AEtjO1XkD46C6e37c8UWmJHalfqUubf9tZ0V8tdS9KurhpyZjdqrjEE14qaOpokgyqdlgFWUmHzTy4vAPliys-dtkjeyjYFOwnqR1khoL2fSqz5N35cWQLv5dWMMmLCFuCfWksi4G61kJrAG_rPBuX8iCSnlVMijNx4qV7Jb8f_-yiPMKUhZqrSvkh_r3U2rnJfx8frWMs4r67p53wRR0sAKZsh9WeAExkZLMXwWMMj_SbMxjInZWNxHWEyP4w"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="bg-gradient-to-b from-surface-container to-surface-deep py-section-gap-sm px-gutter border-t border-white/5 relative overflow-hidden">
+<div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-accent-electric/10 via-surface-deep/50 to-surface-deep pointer-events-none"></div>
+<div class="max-w-4xl mx-auto text-center relative z-10 flex flex-col items-center gap-8">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">
+                    Everything you need to keep the job organised and the money flowing — from the first page of the contract to the last dollar claimed.
+                </h2>
+<a class="font-label-md text-label-md bg-accent-electric text-white px-8 py-4 rounded-lg hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] transition-all active:scale-95 text-lg inline-block" href="/signup">
+                    Start Free Trial
+                </a>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-deep dark:bg-surface-deep border-t border-outline-variant/10 pt-16 pb-8 px-gutter">
+<div class="max-w-container-max mx-auto grid grid-cols-1 md:grid-cols-4 gap-stack-md gap-y-12">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-2">
+<img alt="Subbie HQ Logo" class="h-6 w-6 object-contain opacity-80" src="https://lh3.googleusercontent.com/aida/AEtjO1VPrrRMNUN46U9lyaXmFgnnb18OUEeQO8AfdfFFT1MbAsLGD7A5-Miaci8IIEU3GyBZ8jfOKFJNzLOVRSU0c2x3y8MMu7NhZAvl_N0R7vDKyoX2ahe_kZITMeEaftNIV8iFxJu2wX4w4mowBtl3iUsTv00Yip1ZFrWCmPVFR_pULnPp0FdZue0PkqqXyPBEoQpMMlMFNzpo4EE0gfxPvww30kGZoDmaw-Mwh9FsqKTvRKJPR3QgGT-z1gU"/>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-on-surface">Subbie HQ</span>
+</div>
+<p class="font-caption text-caption text-on-surface-variant max-w-xs">
+                    Contract and commercial management for subcontractors.
+                </p>
+<p class="font-caption text-caption text-on-surface-variant mt-4 opacity-50">
+                    © 2024 Subbie HQ. Commercial Precision for Subcontractors.
+                </p>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface mb-4">Features</h4>
+<ul class="flex flex-col gap-2">
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Contract Review</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Site Instructions &amp; Variations</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Project Diary</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Dayworks</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Approvals &amp; Automation</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Quality Assurance &amp; H&amp;S</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface mb-4">Industries &amp; Guides</h4>
+<ul class="flex flex-col gap-2">
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Scaffolding Contractors</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Painting Contractors</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Masonry Contractors</a></li>
+<li class="mt-2"><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Late or Non-Compliant Claims</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Site Instruction vs Variation</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface mb-4">Company</h4>
+<ul class="flex flex-col gap-2">
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="/pricing">Pricing</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Terms of Service</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Privacy Policy</a></li>
+<li><a class="font-caption text-caption text-on-surface-variant hover:text-on-surface transition-colors" href="#">Contact Support</a></li>
+<li class="mt-4"><a class="font-label-md text-label-md text-primary hover:text-on-surface transition-colors" href="/login">Login</a></li>
+</ul>
+</div>
+</div>
+</footer>
+</body></html>

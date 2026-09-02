@@ -70,70 +70,83 @@ export function HomepageView() {
         </section>
 
         <section className="bg-[#f6f7f8] dark:bg-slate-900/40 py-14">
-          <div className="max-w-5xl mx-auto px-4">
-            <h2 className="text-2xl font-bold mb-8 text-center">Your Job, From Start to Finish</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
-                <div className="rounded-lg overflow-hidden mb-4 border border-[#e7edf3] dark:border-slate-800">
-                  <Image
-                    src="/marketing/contract-documents-desk.jpg"
-                    alt="Contract documents and a tablet laid out on a desk"
-                    width={1168}
-                    height={784}
-                    sizes="(min-width: 768px) 480px, 100vw"
-                    className="w-full h-auto"
-                  />
-                </div>
-                <h3 className="font-bold mb-2">Before You Sign</h3>
-                <p className="text-sm text-[#4c739a] dark:text-slate-400">
+          <div className="max-w-3xl mx-auto px-4">
+            <h2 className="text-2xl font-bold mb-10 text-center">Your Job, From Start to Finish</h2>
+            <div className="flex flex-col gap-12">
+              <div>
+                <h3 className="text-xl font-bold mb-2">Before You Sign</h3>
+                <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5">
                   Understand what your contract actually expects of you. Identify the commercial risks before
                   you&apos;re committed to them. Know your scope of works and the programme milestones you&apos;re
                   held to — pulled straight from your own documents.
                 </p>
-              </div>
-              <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
-                <div className="rounded-lg overflow-hidden mb-4 border border-[#e7edf3] dark:border-slate-800">
+                <div className="max-w-[720px] rounded-xl overflow-hidden border border-[#e7edf3] dark:border-slate-800">
                   <Image
-                    src="/marketing/site-instruction-leading-hand.jpg"
-                    alt="A leading hand on site in high-vis, checking a clipboard and phone"
-                    width={1168}
-                    height={784}
-                    sizes="(min-width: 768px) 480px, 100vw"
+                    src="/marketing/contract-review-ui.webp"
+                    alt="Subbie HQ contract review screen showing a plain-English comparison and flagged risk clauses"
+                    width={1162}
+                    height={768}
+                    sizes="(min-width: 768px) 720px, 100vw"
                     className="w-full h-auto"
                   />
                 </div>
-                <h3 className="font-bold mb-2">While You&apos;re On Site</h3>
-                <p className="text-sm text-[#4c739a] dark:text-slate-400">
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold mb-2">While You&apos;re On Site</h3>
+                <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5">
                   Capture Site Instructions the moment they&apos;re given. Record Updates. Take photos. Upload
                   Dayworks Sheets. Everything organised against the job, from your phone, without a spreadsheet
                   in sight.
                 </p>
-              </div>
-              <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
-                <div className="rounded-lg overflow-hidden mb-4 border border-[#e7edf3] dark:border-slate-800">
+                <div className="max-w-[720px] rounded-xl overflow-hidden border border-[#e7edf3] dark:border-slate-800">
                   <Image
-                    src="/marketing/variation-claim-package.jpg"
-                    alt="A Site Instruction, Dayworks Sheet, photos, and a tablet showing a Variation Claim Package laid out together"
-                    width={1168}
-                    height={784}
-                    sizes="(min-width: 768px) 480px, 100vw"
+                    src="/marketing/evidence-capture-ui.webp"
+                    alt="Subbie HQ mobile evidence capture screen with a live timeline of site activity"
+                    width={1408}
+                    height={768}
+                    sizes="(min-width: 768px) 720px, 100vw"
                     className="w-full h-auto"
                   />
                 </div>
-                <h3 className="font-bold mb-2">When It&apos;s Time to Claim</h3>
-                <p className="text-sm text-[#4c739a] dark:text-slate-400">
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold mb-2">When It&apos;s Time to Claim</h3>
+                <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5">
                   Build a complete Variation package — instruction, dayworks, materials, photos, correspondence —
                   then send it for approval with a secure link. No app, no login required: the Main Contractor
                   opens it and acts, and you track the response. It&apos;s the evidence base you need to prepare a
                   payment claim with confidence, without digging for anything after the fact.
                 </p>
+                <div className="max-w-[720px] rounded-xl overflow-hidden border border-[#e7edf3] dark:border-slate-800">
+                  <Image
+                    src="/marketing/variation-builder-ui.webp"
+                    alt="Subbie HQ Variation Builder showing three steps: select linked evidence, apply costing, and export the claim package"
+                    width={1162}
+                    height={768}
+                    sizes="(min-width: 768px) 720px, 100vw"
+                    className="w-full h-auto"
+                  />
+                </div>
               </div>
-              <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
-                <h3 className="font-bold mb-2">When a Dispute Happens</h3>
-                <p className="text-sm text-[#4c739a] dark:text-slate-400">
+
+              <div>
+                <h3 className="text-xl font-bold mb-2">When a Dispute Happens</h3>
+                <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5">
                   Every email. Every photo. Every Site Instruction. Every Dayworks Sheet. Every Update. Already
                   organised, already dated, already there.
                 </p>
+                <div className="max-w-[720px] rounded-xl overflow-hidden border border-[#e7edf3] dark:border-slate-800">
+                  <Image
+                    src="/marketing/dispute-audit-trail-ui.webp"
+                    alt="Subbie HQ dispute-proof audit trail showing a verified, timestamped timeline of a disputed variation"
+                    width={1408}
+                    height={768}
+                    sizes="(min-width: 768px) 720px, 100vw"
+                    className="w-full h-auto"
+                  />
+                </div>
               </div>
             </div>
           </div>

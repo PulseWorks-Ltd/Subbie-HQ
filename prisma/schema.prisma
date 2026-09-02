@@ -1931,6 +1931,16 @@ model ExternalAction {
   // totals are used, never the item's current (possibly since-changed)
   // live totals.
   variationPackageId String?
+  // Set ALONE (never with variationItemId/dayWorksSheetId/
+  // variationPackageId) when this is a Request Approval for a live
+  // "Hours on Site" sheet — see lib/external-action.ts's
+  // computeValueSnapshot and submitExternalActionResponse, which flips
+  // HoursOnSiteSheet.approvedAt on a responseChoice of "approved". The
+  // sheet's own optional variationItemId (if it was linked to a Site
+  // Instruction) is carried through into valueSnapshot/sourceLabel but is
+  // NOT set as this row's own variationItemId — the target here is
+  // unambiguously the sheet, not the SI.
+  hoursOnSiteSheetId String?
   type               ExternalActionType
   // Customisable context/message shown to the recipient on the public
   // response page — set at send time, not required.
@@ -1983,13 +1993,15 @@ model ExternalAction {
   responseComment String?
   respondedAt     DateTime?
 
-  project               Project                @relation(fields: [projectId], references: [id])
-  variationItem         VariationItem?         @relation(fields: [variationItemId], references: [id])
-  dayWorksSheet         DayWorksSheet?         @relation(fields: [dayWorksSheetId], references: [id])
-  variationPackage      VariationPackage?      @relation(fields: [variationPackageId], references: [id])
-  mainContractorContact MainContractorContact? @relation(fields: [mainContractorContactId], references: [id])
-  sentByUser            User                   @relation(fields: [sentByUserId], references: [id])
-  correspondence        Correspondence?
+  project                  Project                @relation(fields: [projectId], references: [id])
+  variationItem            VariationItem?         @relation(fields: [variationItemId], references: [id])
+  dayWorksSheet            DayWorksSheet?         @relation(fields: [dayWorksSheetId], references: [id])
+  variationPackage         VariationPackage?      @relation(fields: [variationPackageId], references: [id])
+  hoursOnSiteSheet         HoursOnSiteSheet?      @relation("HoursOnSiteSheetExternalActions", fields: [hoursOnSiteSheetId], references: [id])
+  mainContractorContact    MainContractorContact? @relation(fields: [mainContractorContactId], references: [id])
+  sentByUser               User                   @relation(fields: [sentByUserId], references: [id])
+  correspondence           Correspondence?
+  approvedHoursOnSiteSheet HoursOnSiteSheet?      @relation("HoursOnSiteSheetApprovedBy")
 }
 
 // Sliding-window throttle for the public token-lookup/response route —
@@ -2140,10 +2152,25 @@ model HoursOnSiteSheet {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  project       Project             @relation(fields: [projectId], references: [id])
-  variationItem VariationItem?      @relation(fields: [variationItemId], references: [id])
-  createdByUser User                @relation(fields: [createdByUserId], references: [id])
-  workers       HoursOnSiteWorker[]
+  // Set once a Site Manager (or other project contact) approves the sheet
+  // via its secure ExternalAction link — see lib/external-action.ts's
+  // submitExternalActionResponse. Once approvedAt is set, hours/workers/
+  // comments become read-only (see lib/hours-on-site.ts) — approval is a
+  // one-way gate, matching "ready for inclusion in a variation claim" as
+  // commercial evidence. approvedByExternalActionId points at the specific
+  // ExternalAction whose response caused the approval, for audit; the
+  // recipient's self-attested name is copied onto approvedByName since
+  // there's no login identity to attribute it to.
+  approvedAt                 DateTime?
+  approvedByName             String?
+  approvedByExternalActionId String?   @unique
+
+  project          Project             @relation(fields: [projectId], references: [id])
+  variationItem    VariationItem?      @relation(fields: [variationItemId], references: [id])
+  createdByUser    User                @relation(fields: [createdByUserId], references: [id])
+  workers          HoursOnSiteWorker[]
+  externalActions  ExternalAction[]    @relation("HoursOnSiteSheetExternalActions")
+  approvedByAction ExternalAction?     @relation("HoursOnSiteSheetApprovedBy", fields: [approvedByExternalActionId], references: [id])
 }
 
 // One row per worker named on a sheet — plain join, no per-worker hours of

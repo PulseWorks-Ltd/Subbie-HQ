@@ -43,7 +43,9 @@ export default async function HoursOnSiteSheetPage({
         startedAt: sheet.startedAt.toISOString(),
         finishedAt: sheet.finishedAt ? sheet.finishedAt.toISOString() : null,
         totalHours: sheet.totalHours != null ? Number(sheet.totalHours) : null,
-        workers: sheet.workers.map((w) => ({ id: w.worker.id, name: w.worker.name }))
+        workers: sheet.workers.map((w) => ({ id: w.worker.id, name: w.worker.name })),
+        approvedAt: sheet.approvedAt ? sheet.approvedAt.toISOString() : null,
+        approvedByName: sheet.approvedByName
       }}
     />
   );

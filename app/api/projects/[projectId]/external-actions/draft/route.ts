@@ -6,6 +6,7 @@ import { computeValueSnapshot, moduleForExternalActionTarget, requiresValueSnaps
 import { draftExternalActionRequestMessage, draftPackageApprovalMessage } from "@/lib/grok";
 import { AiSpendCapExceededError } from "@/lib/ai-usage";
 import { EXTERNAL_ACTION_TYPES } from "@/lib/external-action-types";
+import { getSheetWithDetail } from "@/lib/hours-on-site";
 
 const requestSchema = z
   .object({
@@ -15,13 +16,20 @@ const requestSchema = z
     // Request Approval on a package is always an approval ask, never the
     // other five generic types.
     variationPackageId: z.string().optional(),
+    // See ExternalAction.hoursOnSiteSheetId's schema comment — set alone,
+    // never alongside the three fields above.
+    hoursOnSiteSheetId: z.string().optional(),
     type: z.enum(EXTERNAL_ACTION_TYPES as [string, ...string[]])
   })
-  .refine((data) => Boolean(data.variationItemId) !== Boolean(data.dayWorksSheetId), {
-    message: "Exactly one of a Variation/SI or a Day Works Sheet must be set."
-  })
+  .refine(
+    (data) => [data.variationItemId, data.dayWorksSheetId, data.hoursOnSiteSheetId].filter(Boolean).length === 1,
+    { message: "Exactly one of a Variation/SI, a Day Works Sheet, or an Hours on Site sheet must be set." }
+  )
   .refine((data) => !data.variationPackageId || data.type === "approve", {
     message: "A package approval request must be type: approve."
+  })
+  .refine((data) => !data.hoursOnSiteSheetId || data.type === "approve", {
+    message: "An Hours on Site approval request must be type: approve."
   });
 
 // Drafts the message shown to the recipient — reused fresh every time the
@@ -46,6 +54,29 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   if (!requiresValueSnapshot(type)) {
     return NextResponse.json({ error: "This action type doesn't need a drafted message." }, { status: 400 });
+  }
+
+  // Hours on Site carries no $ value of its own, so it gets a plain
+  // deterministic message rather than routing through the AI drafting
+  // used for Variation/SI asks below — fewer failure modes (no AI spend
+  // cap to hit) for a message that's short and fully reviewable anyway.
+  // No module check either — see the send route's own comment on this.
+  if (payload.hoursOnSiteSheetId) {
+    const sheet = await getSheetWithDetail(payload.hoursOnSiteSheetId);
+    if (!sheet || sheet.projectId !== projectId) {
+      return NextResponse.json({ error: "Hours on Site sheet not found." }, { status: 404 });
+    }
+    const workOn = sheet.variationItem
+      ? `${sheet.variationItem.reference} — ${sheet.variationItem.title}`
+      : sheet.comments || "general labour";
+    const workerList = sheet.workers.length > 0 ? sheet.workers.map((w) => w.worker.name).join(", ") : "none recorded";
+    const hoursLabel = sheet.totalHours != null ? `${Number(sheet.totalHours).toFixed(2)} hrs` : "not yet totalled";
+    const messageBody = [
+      `Please review and approve the Hours on Site sheet for ${sheet.project.name} (${workOn}).`,
+      `Total hours recorded: ${hoursLabel}`,
+      `Workers on site: ${workerList}`
+    ].join("\n\n");
+    return NextResponse.json({ messageBody });
   }
 
   const module_ = await moduleForExternalActionTarget(projectId, payload);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireProjectAccess, requireUserId } from "@/lib/auth";
-import { finishSheet } from "@/lib/hours-on-site";
+import { HoursOnSiteApprovedError, finishSheet } from "@/lib/hours-on-site";
 
 export async function POST(request: Request, context: { params: { projectId: string; sheetId: string } }) {
   const userId = await requireUserId(request);
@@ -12,6 +12,13 @@ export async function POST(request: Request, context: { params: { projectId: str
   const existing = await prisma.hoursOnSiteSheet.findFirst({ where: { id: sheetId, projectId } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const sheet = await finishSheet(sheetId);
-  return NextResponse.json({ sheet });
+  try {
+    const sheet = await finishSheet(sheetId);
+    return NextResponse.json({ sheet });
+  } catch (error) {
+    if (error instanceof HoursOnSiteApprovedError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    throw error;
+  }
 }

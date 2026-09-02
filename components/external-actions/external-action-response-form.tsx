@@ -11,6 +11,15 @@ type ValueSnapshot = {
   plantTotal: number;
   dayWorksSheets: { fileName: string; createdAt: string }[];
   previousPackage: { grandTotal: number; sentAt: string } | null;
+  hoursOnSite: {
+    totalHours: number | null;
+    workerNames: string[];
+    startedAt: string;
+    finishedAt: string | null;
+    comments: string | null;
+    variationItemReference: string | null;
+    variationItemTitle: string | null;
+  } | null;
 };
 
 type PublicContext = {
@@ -24,7 +33,17 @@ type PublicContext = {
   senderName: string;
   source:
     | { kind: "variation_item"; reference: string; title: string; description: string | null; isSiteInstruction: boolean }
-    | { kind: "day_works_sheet"; fileName: string; createdAt: string; itemReference: string; itemTitle: string };
+    | { kind: "day_works_sheet"; fileName: string; createdAt: string; itemReference: string; itemTitle: string }
+    | {
+        kind: "hours_on_site";
+        startedAt: string;
+        finishedAt: string | null;
+        totalHours: number | null;
+        workerNames: string[];
+        comments: string | null;
+        itemReference: string | null;
+        itemTitle: string | null;
+      };
   existingResponse: { choice: "approved" | "rejected" | null; name: string | null; comment: string | null; respondedAt: string } | null;
 };
 
@@ -136,7 +155,11 @@ export function ExternalActionResponseForm({ token }: { token: string }) {
   const sourceLabel =
     context.source.kind === "variation_item"
       ? `${context.source.isSiteInstruction ? "Site Instruction" : "Variation"} ${context.source.reference} — ${context.source.title}`
-      : `Day Works Sheet — ${context.source.fileName} (from ${context.source.itemReference} — ${context.source.itemTitle})`;
+      : context.source.kind === "day_works_sheet"
+        ? `Day Works Sheet — ${context.source.fileName} (from ${context.source.itemReference} — ${context.source.itemTitle})`
+        : `Hours on Site${
+            context.source.itemReference ? ` — ${context.source.itemReference} — ${context.source.itemTitle}` : ""
+          }`;
   const snapshot = context.valueSnapshot;
 
   return (
@@ -172,7 +195,47 @@ export function ExternalActionResponseForm({ token }: { token: string }) {
         </a>
       )}
 
-      {snapshot && (snapshot.combinedTotal > 0 || snapshot.dayWorksSheets.length > 0) && (
+      {context.source.kind === "hours_on_site" && (
+        <a
+          href={`/api/external-actions/${token}/hours-on-site-file`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 mb-4 text-sm font-bold text-primary hover:bg-[#f6f7f8] dark:hover:bg-slate-800"
+        >
+          <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+          View / Download Hours on Site sheet
+        </a>
+      )}
+
+      {snapshot?.hoursOnSite && (
+        <div className="rounded-lg bg-[#f6f7f8] dark:bg-slate-800 p-3 mb-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-2">
+            Hours &amp; workers
+          </p>
+          <p className="text-sm mb-1">
+            {new Date(snapshot.hoursOnSite.startedAt).toLocaleString("en-NZ")} —{" "}
+            {snapshot.hoursOnSite.finishedAt ? new Date(snapshot.hoursOnSite.finishedAt).toLocaleString("en-NZ") : "not yet finished"}
+          </p>
+          <p className="text-sm font-bold mb-2">
+            Total hours: {snapshot.hoursOnSite.totalHours != null ? `${snapshot.hoursOnSite.totalHours.toFixed(2)} hrs` : "—"}
+          </p>
+          {snapshot.hoursOnSite.comments && !snapshot.hoursOnSite.variationItemReference && (
+            <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-2">{snapshot.hoursOnSite.comments}</p>
+          )}
+          <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-1">Workers on site:</p>
+          {snapshot.hoursOnSite.workerNames.length === 0 ? (
+            <p className="text-sm text-[#4c739a] dark:text-slate-400">(none recorded)</p>
+          ) : (
+            <ul className="text-sm">
+              {snapshot.hoursOnSite.workerNames.map((name, index) => (
+                <li key={index}>• {name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {context.source.kind !== "hours_on_site" && snapshot && (snapshot.combinedTotal > 0 || snapshot.dayWorksSheets.length > 0) && (
         <div className="rounded-lg bg-[#f6f7f8] dark:bg-slate-800 p-3 mb-4">
           <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-2">
             Value &amp; evidence

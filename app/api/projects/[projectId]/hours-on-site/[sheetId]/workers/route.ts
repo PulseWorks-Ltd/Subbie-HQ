@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireProjectAccess, requireUserId } from "@/lib/auth";
-import { addWorkerToSheet, removeWorkerFromSheet, findOrCreateWorker, getSheetWithDetail } from "@/lib/hours-on-site";
+import {
+  HoursOnSiteApprovedError,
+  addWorkerToSheet,
+  removeWorkerFromSheet,
+  findOrCreateWorker,
+  getSheetWithDetail
+} from "@/lib/hours-on-site";
 
 const addSchema = z.object({
   // Either an existing worker's id (picked from the type-ahead list) or a
@@ -36,7 +42,14 @@ export async function POST(request: Request, context: { params: { projectId: str
     workerId = worker.id;
   }
 
-  await addWorkerToSheet({ sheetId, workerId });
+  try {
+    await addWorkerToSheet({ sheetId, workerId });
+  } catch (error) {
+    if (error instanceof HoursOnSiteApprovedError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    throw error;
+  }
   const updated = await getSheetWithDetail(sheetId);
   return NextResponse.json({ sheet: updated }, { status: 201 });
 }
@@ -51,7 +64,14 @@ export async function DELETE(request: Request, context: { params: { projectId: s
   if (!sheet) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const payload = removeSchema.parse(await request.json());
-  await removeWorkerFromSheet({ sheetId, workerId: payload.workerId });
+  try {
+    await removeWorkerFromSheet({ sheetId, workerId: payload.workerId });
+  } catch (error) {
+    if (error instanceof HoursOnSiteApprovedError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    throw error;
+  }
   const updated = await getSheetWithDetail(sheetId);
   return NextResponse.json({ sheet: updated });
 }

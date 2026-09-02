@@ -30,6 +30,7 @@ export async function startSheet(params: {
 // lets totalHours be overridden independently of the two timestamps).
 export async function finishSheet(sheetId: string) {
   const sheet = await prisma.hoursOnSiteSheet.findUniqueOrThrow({ where: { id: sheetId } });
+  if (sheet.approvedAt) throw new HoursOnSiteApprovedError();
   if (sheet.finishedAt) return sheet; // already finished — idempotent, no double-computation
 
   const finishedAt = new Date();
@@ -42,24 +43,42 @@ export async function finishSheet(sheetId: string) {
   });
 }
 
-// Hours must remain editable indefinitely (§ the feature's own key rule) —
-// this is the one place startedAt/finishedAt/totalHours/comments ever
-// change after creation, always a direct, explicit edit, never a
-// recomputation the user didn't ask for.
+// Hours stay editable by the subcontractor right up until the sheet is
+// approved via its secure external-action link (Req 6) — this is the one
+// place startedAt/finishedAt/totalHours/comments ever change after
+// creation, always a direct, explicit edit, never a recomputation the
+// user didn't ask for. Once approvedAt is set the sheet is commercial
+// evidence a Site Manager has signed off on, so every mutation below
+// refuses rather than silently drifting the approved record.
+export class HoursOnSiteApprovedError extends Error {
+  constructor() {
+    super("This sheet has been approved and can no longer be edited.");
+    this.name = "HoursOnSiteApprovedError";
+  }
+}
+
+async function assertNotApproved(sheetId: string) {
+  const sheet = await prisma.hoursOnSiteSheet.findUniqueOrThrow({ where: { id: sheetId }, select: { approvedAt: true } });
+  if (sheet.approvedAt) throw new HoursOnSiteApprovedError();
+}
+
 export async function updateSheet(
   sheetId: string,
   fields: { startedAt?: Date; finishedAt?: Date | null; totalHours?: number | null; comments?: string | null }
 ) {
+  await assertNotApproved(sheetId);
   return prisma.hoursOnSiteSheet.update({ where: { id: sheetId }, data: fields });
 }
 
 export async function addWorkerToSheet(params: { sheetId: string; workerId: string }) {
+  await assertNotApproved(params.sheetId);
   await prisma.hoursOnSiteWorker
     .create({ data: { sheetId: params.sheetId, workerId: params.workerId } })
     .catch(() => undefined); // unique constraint — already on the sheet, harmless no-op
 }
 
 export async function removeWorkerFromSheet(params: { sheetId: string; workerId: string }) {
+  await assertNotApproved(params.sheetId);
   await prisma.hoursOnSiteWorker
     .delete({ where: { sheetId_workerId: { sheetId: params.sheetId, workerId: params.workerId } } })
     .catch(() => undefined);

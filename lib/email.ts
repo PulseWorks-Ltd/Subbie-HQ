@@ -196,6 +196,34 @@ export async function sendExternalActionRequestEmail(params: {
   });
 }
 
+// Confirmation to the sheet's creator (Req 5) once a Site Manager approves
+// an Hours on Site sheet via its secure link — plain HTML, same reasoning
+// as sendReminderEmail: no dedicated SendGrid template exists for this yet.
+export async function sendHoursOnSiteApprovedEmail(params: {
+  to: string;
+  creatorName: string;
+  projectName: string;
+  sourceLabel: string;
+  approvedByName: string;
+  sheetUrl: string;
+}) {
+  const config = getConfiguredSendGrid();
+  if (!config) return;
+
+  await sgMail.send({
+    to: params.to,
+    from: { email: config.fromEmail, name: "Subbie HQ" },
+    subject: `Hours on Site approved — ${params.projectName}`,
+    html: `
+      <p>Hi ${params.creatorName},</p>
+      <p><strong>${params.approvedByName}</strong> has approved the Hours on Site sheet you sent, on <strong>${params.projectName}</strong>:</p>
+      <p>${params.sourceLabel}</p>
+      <p>It's now marked Approved and ready to be included in a variation claim.</p>
+      <p><a href="${params.sheetUrl}">View the sheet</a></p>
+    `
+  });
+}
+
 export async function sendOrganisationInviteEmail(params: {
   to: string;
   organisationName: string;

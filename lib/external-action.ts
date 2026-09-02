@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "./prisma";
-import { sendExternalActionRequestEmail } from "./email";
+import { sendExternalActionRequestEmail, sendHoursOnSiteApprovedEmail } from "./email";
 import { formatUserName } from "./user-display";
 import { EXTERNAL_ACTION_TYPE_LABELS, requiresValueSnapshot } from "./external-action-types";
 import { computePackageTotals, computeSheetRecordTotal } from "./variation-package";
@@ -23,6 +23,19 @@ export type ExternalActionValueSnapshot = {
   // this is the first-ever approval request for this item, or for a non-
   // package request.
   previousPackage: { grandTotal: number; sentAt: string } | null;
+  // Set only for an Hours on Site approval request (hoursOnSiteSheetId
+  // given) — this feature carries no $ value of its own (hours/workers
+  // only), so every $ field above stays zeroed for it; this is the actual
+  // "what's being asked" data shown on the public page instead.
+  hoursOnSite: {
+    totalHours: number | null;
+    workerNames: string[];
+    startedAt: string;
+    finishedAt: string | null;
+    comments: string | null;
+    variationItemReference: string | null;
+    variationItemTitle: string | null;
+  } | null;
 };
 
 // Single source of truth for the value/evidence breakdown shown on the
@@ -48,7 +61,35 @@ export async function computeValueSnapshot(params: {
   variationItemId?: string;
   dayWorksSheetId?: string;
   variationPackageId?: string;
+  hoursOnSiteSheetId?: string;
 }): Promise<ExternalActionValueSnapshot> {
+  if (params.hoursOnSiteSheetId) {
+    const sheet = await prisma.hoursOnSiteSheet.findUnique({
+      where: { id: params.hoursOnSiteSheetId },
+      include: { workers: { include: { worker: true } }, variationItem: { select: { reference: true, title: true } } }
+    });
+    return {
+      combinedTotal: 0,
+      labourTotal: 0,
+      materialsTotal: 0,
+      materialsMarkupTotal: 0,
+      plantTotal: 0,
+      dayWorksSheets: [],
+      previousPackage: null,
+      hoursOnSite: sheet
+        ? {
+            totalHours: sheet.totalHours != null ? Number(sheet.totalHours) : null,
+            workerNames: sheet.workers.map((w) => w.worker.name),
+            startedAt: sheet.startedAt.toISOString(),
+            finishedAt: sheet.finishedAt ? sheet.finishedAt.toISOString() : null,
+            comments: sheet.comments,
+            variationItemReference: sheet.variationItem?.reference ?? null,
+            variationItemTitle: sheet.variationItem?.title ?? null
+          }
+        : null
+    };
+  }
+
   if (params.variationPackageId) {
     const pkg = await prisma.variationPackage.findUnique({ where: { id: params.variationPackageId } });
     if (!pkg) {
@@ -59,7 +100,8 @@ export async function computeValueSnapshot(params: {
         materialsMarkupTotal: 0,
         plantTotal: 0,
         dayWorksSheets: [],
-        previousPackage: null
+        previousPackage: null,
+        hoursOnSite: null
       };
     }
     // "Previously SENT", not "previously generated" — an internal re-
@@ -79,7 +121,8 @@ export async function computeValueSnapshot(params: {
       dayWorksSheets: [],
       previousPackage: previousSentAction?.variationPackage
         ? { grandTotal: Number(previousSentAction.variationPackage.grandTotal), sentAt: previousSentAction.sentAt.toISOString() }
-        : null
+        : null,
+      hoursOnSite: null
     };
   }
 
@@ -96,7 +139,8 @@ export async function computeValueSnapshot(params: {
       materialsMarkupTotal: 0,
       plantTotal: 0,
       dayWorksSheets: sheet ? [{ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() }] : [],
-      previousPackage: null
+      previousPackage: null,
+      hoursOnSite: null
     };
   }
 
@@ -115,7 +159,8 @@ export async function computeValueSnapshot(params: {
     materialsMarkupTotal: totals.materialsMarkupTotal,
     plantTotal: totals.plantTotal,
     dayWorksSheets: dayWorksSheets.map((sheet) => ({ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() })),
-    previousPackage: null
+    previousPackage: null,
+    hoursOnSite: null
   };
 }
 
@@ -143,7 +188,17 @@ export type ExternalActionPublicContext = {
   senderName: string;
   source:
     | { kind: "variation_item"; reference: string; title: string; description: string | null; isSiteInstruction: boolean }
-    | { kind: "day_works_sheet"; fileName: string; createdAt: Date; itemReference: string; itemTitle: string };
+    | { kind: "day_works_sheet"; fileName: string; createdAt: Date; itemReference: string; itemTitle: string }
+    | {
+        kind: "hours_on_site";
+        startedAt: Date;
+        finishedAt: Date | null;
+        totalHours: number | null;
+        workerNames: string[];
+        comments: string | null;
+        itemReference: string | null;
+        itemTitle: string | null;
+      };
   existingResponse: {
     choice: ExternalActionChoice | null;
     name: string | null;
@@ -187,6 +242,9 @@ export async function createAndSendExternalAction(params: {
   // Only valid alongside variationItemId — see ExternalAction.variationPackageId's
   // schema comment. Validated below to actually belong to that item.
   variationPackageId?: string;
+  // Set ALONE (never alongside the three above) — see
+  // ExternalAction.hoursOnSiteSheetId's schema comment.
+  hoursOnSiteSheetId?: string;
   type: ExternalActionType;
   message?: string;
   recipient: { contactId?: string; email?: string };
@@ -198,11 +256,12 @@ export async function createAndSendExternalAction(params: {
   sentByUserId: string;
   baseUrl: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (Boolean(params.variationItemId) === Boolean(params.dayWorksSheetId)) {
-    return { ok: false, error: "Exactly one of a Variation/SI or a Day Works Sheet must be set." };
+  const targetCount = [params.variationItemId, params.dayWorksSheetId, params.hoursOnSiteSheetId].filter(Boolean).length;
+  if (targetCount !== 1) {
+    return { ok: false, error: "Exactly one of a Variation/SI, a Day Works Sheet, or an Hours on Site sheet must be set." };
   }
-  if (params.variationPackageId && params.dayWorksSheetId) {
-    return { ok: false, error: "A package approval must be on a Variation/SI, not a Day Works Sheet." };
+  if (params.variationPackageId && (params.dayWorksSheetId || params.hoursOnSiteSheetId)) {
+    return { ok: false, error: "A package approval must be on a Variation/SI, not a Day Works Sheet or Hours on Site sheet." };
   }
 
   const [sender, project] = await Promise.all([
@@ -236,7 +295,33 @@ export async function createAndSendExternalAction(params: {
 
   let variationItemId = params.variationItemId;
   let sourceLabel: string;
-  if (params.dayWorksSheetId) {
+  // Only populated by the hours-on-site branch below, for the
+  // Correspondence entry's own variationItemId — deliberately NOT folded
+  // into `variationItemId` itself, which becomes this ExternalAction row's
+  // own variationItemId (see the schema comment: an hours-on-site approval
+  // must stay out of the SI's own "External Actions" list, since it's
+  // unambiguously an action on the sheet, not a generic action on the SI's
+  // live state).
+  let hoursOnSiteLinkedVariationItemId: string | undefined;
+  if (params.hoursOnSiteSheetId) {
+    const sheet = await prisma.hoursOnSiteSheet.findFirst({
+      where: { id: params.hoursOnSiteSheetId, projectId: params.projectId },
+      include: { variationItem: { select: { id: true, reference: true, title: true } } }
+    });
+    if (!sheet) {
+      return { ok: false, error: "Hours on Site sheet not found." };
+    }
+    if (!sheet.finishedAt) {
+      return { ok: false, error: "Finish the sheet before requesting approval." };
+    }
+    if (sheet.approvedAt) {
+      return { ok: false, error: "This sheet has already been approved." };
+    }
+    hoursOnSiteLinkedVariationItemId = sheet.variationItem?.id;
+    sourceLabel = sheet.variationItem
+      ? `Hours on Site — ${sheet.variationItem.reference} — ${sheet.variationItem.title}`
+      : `Hours on Site — ${sheet.comments ?? "General labour"}`;
+  } else if (params.dayWorksSheetId) {
     const sheet = await prisma.dayWorksSheet.findFirst({
       where: { id: params.dayWorksSheetId, variationItem: { projectId: params.projectId } },
       include: { variationItem: { select: { id: true, reference: true, title: true } } }
@@ -295,7 +380,8 @@ export async function createAndSendExternalAction(params: {
         projectId: params.projectId,
         variationItemId,
         dayWorksSheetId: params.dayWorksSheetId,
-        variationPackageId: params.variationPackageId
+        variationPackageId: params.variationPackageId,
+        hoursOnSiteSheetId: params.hoursOnSiteSheetId
       })
     : null;
 
@@ -305,6 +391,7 @@ export async function createAndSendExternalAction(params: {
       variationItemId,
       dayWorksSheetId: params.dayWorksSheetId,
       variationPackageId: params.variationPackageId,
+      hoursOnSiteSheetId: params.hoursOnSiteSheetId,
       type: params.type,
       message: params.message,
       valueSnapshot: valueSnapshot ?? undefined,
@@ -324,7 +411,7 @@ export async function createAndSendExternalAction(params: {
   await prisma.correspondence.create({
     data: {
       projectId: params.projectId,
-      variationItemId,
+      variationItemId: variationItemId ?? hoursOnSiteLinkedVariationItemId,
       title: `${typeLabel} requested from ${recipientName ?? recipientEmail}`,
       source: "external_action",
       bodyText: params.message ?? `${typeLabel} requested for ${sourceLabel}.`,
@@ -353,6 +440,16 @@ export async function getExternalActionForToken(
         select: { fileName: true, createdAt: true, variationItem: { select: { reference: true, title: true } } }
       },
       variationPackage: { select: { fileName: true } },
+      hoursOnSiteSheet: {
+        select: {
+          startedAt: true,
+          finishedAt: true,
+          totalHours: true,
+          comments: true,
+          variationItem: { select: { reference: true, title: true } },
+          workers: { select: { worker: { select: { name: true } } } }
+        }
+      },
       sentByUser: { select: { firstName: true, lastName: true, email: true } }
     }
   });
@@ -373,23 +470,34 @@ export async function getExternalActionForToken(
     return { ok: false, error: `This link has expired. Please contact ${senderName} for a new one.` };
   }
 
-  const source = action.dayWorksSheet
+  const source = action.hoursOnSiteSheet
     ? ({
-        kind: "day_works_sheet" as const,
-        fileName: action.dayWorksSheet.fileName,
-        createdAt: action.dayWorksSheet.createdAt,
-        itemReference: action.dayWorksSheet.variationItem.reference,
-        itemTitle: action.dayWorksSheet.variationItem.title
+        kind: "hours_on_site" as const,
+        startedAt: action.hoursOnSiteSheet.startedAt,
+        finishedAt: action.hoursOnSiteSheet.finishedAt,
+        totalHours: action.hoursOnSiteSheet.totalHours != null ? Number(action.hoursOnSiteSheet.totalHours) : null,
+        workerNames: action.hoursOnSiteSheet.workers.map((w) => w.worker.name),
+        comments: action.hoursOnSiteSheet.comments,
+        itemReference: action.hoursOnSiteSheet.variationItem?.reference ?? null,
+        itemTitle: action.hoursOnSiteSheet.variationItem?.title ?? null
       } as const)
-    : action.variationItem
+    : action.dayWorksSheet
       ? ({
-          kind: "variation_item" as const,
-          reference: action.variationItem.reference,
-          title: action.variationItem.title,
-          description: action.variationItem.description,
-          isSiteInstruction: action.variationItem.type === "site_instruction"
+          kind: "day_works_sheet" as const,
+          fileName: action.dayWorksSheet.fileName,
+          createdAt: action.dayWorksSheet.createdAt,
+          itemReference: action.dayWorksSheet.variationItem.reference,
+          itemTitle: action.dayWorksSheet.variationItem.title
         } as const)
-      : null;
+      : action.variationItem
+        ? ({
+            kind: "variation_item" as const,
+            reference: action.variationItem.reference,
+            title: action.variationItem.title,
+            description: action.variationItem.description,
+            isSiteInstruction: action.variationItem.type === "site_instruction"
+          } as const)
+        : null;
 
   if (!source) {
     // Shouldn't happen (exactly one is always set at creation), but never
@@ -492,6 +600,51 @@ export async function submitExternalActionResponse(
       where: { id: correspondence.id },
       data: { bodyText: `${correspondence.bodyText ?? ""}\n\n${summary}`.trim() }
     });
+  }
+
+  // Req 4/5 — the one genuinely new side effect this feature adds on top
+  // of the existing ExternalAction mechanics: an approved Hours on Site
+  // sheet is marked Approved (locking further edits, see
+  // lib/hours-on-site.ts) and its creator gets a confirmation email. Every
+  // other target type (VariationItem/DayWorksSheet/VariationPackage) is
+  // untouched by a response today, and stays that way here.
+  if (action.hoursOnSiteSheetId && choice === "approved") {
+    const sheet = await prisma.hoursOnSiteSheet.update({
+      where: { id: action.hoursOnSiteSheetId },
+      data: {
+        approvedAt: respondedAt,
+        approvedByName: input.name.trim(),
+        approvedByExternalActionId: action.id
+      },
+      include: {
+        createdByUser: { select: { firstName: true, lastName: true, email: true } },
+        project: { select: { name: true } },
+        variationItem: { select: { reference: true, title: true } }
+      }
+    });
+
+    const creatorName = formatUserName(sheet.createdByUser) ?? sheet.createdByUser.email;
+    const sourceLabel = sheet.variationItem
+      ? `Hours on Site — ${sheet.variationItem.reference} — ${sheet.variationItem.title}`
+      : `Hours on Site — ${sheet.comments ?? "General labour"}`;
+    const baseUrl = process.env.AUTH_URL ?? "";
+
+    try {
+      await sendHoursOnSiteApprovedEmail({
+        to: sheet.createdByUser.email,
+        creatorName,
+        projectName: sheet.project.name,
+        sourceLabel,
+        approvedByName: input.name.trim(),
+        sheetUrl: `${baseUrl}/m/dayworks/${sheet.projectId}/${sheet.id}`
+      });
+    } catch (error) {
+      // Non-fatal — the approval itself is already recorded; a hiccup
+      // sending the confirmation email shouldn't fail the recipient's
+      // submission (they've already told the sheet's creator nothing about
+      // whether their own click succeeded).
+      console.error("Failed to send Hours on Site approval confirmation email:", error);
+    }
   }
 
   return { ok: true };

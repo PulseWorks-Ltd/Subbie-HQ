@@ -31,6 +31,7 @@ type NavLink = { href: string; label: string; disabled?: boolean };
 const GUIDE_LINKS: NavLink[] = [
   { href: "/guides/late-or-non-compliant-claims", label: "Why Late or Non-Compliant Claims Cost You Money" },
   { href: "/guides/site-instruction-vs-variation", label: "Site Instruction vs Variation" },
+  { href: "/guides/dayworks-labour-costs", label: "Dayworks – Why Labour Costs Disappear" },
   { href: "/guides/payment-claims-construction-contracts-act", label: "Payment Claims Under the CCA", disabled: true }
 ];
 

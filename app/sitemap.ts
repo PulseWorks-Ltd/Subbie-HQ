@@ -29,7 +29,8 @@ const MARKETING_PATHS = [
   "/industries/residential-builders",
   "/compare/spreadsheets-and-paper",
   "/guides/late-or-non-compliant-claims",
-  "/guides/site-instruction-vs-variation"
+  "/guides/site-instruction-vs-variation",
+  "/guides/dayworks-labour-costs"
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

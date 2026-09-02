@@ -315,6 +315,7 @@ model User {
   closedProjects                 Project[]                      @relation("ProjectClosedBy")
   variationItemClaimAllocations  VariationItemClaimAllocation[]
   recordLifecycleEvents          RecordLifecycleEvent[]
+  hoursOnSiteSheets              HoursOnSiteSheet[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -398,6 +399,7 @@ model Organisation {
   mainContractors         MainContractor[]
   inboundEmails           InboundEmail[]
   accessEvents            OrganisationAccessEvent[]
+  workers                 Worker[]
 }
 
 // One row per accessStatus transition — accessStatus itself (above) is a
@@ -539,6 +541,7 @@ model Project {
   externalActions              ExternalAction[]
   variationScheduleRecipients  VariationScheduleRecipient[]
   variationScheduleRuns        VariationScheduleRun[]
+  hoursOnSiteSheets            HoursOnSiteSheet[]
 }
 
 enum VariationAutomationMode {
@@ -1481,6 +1484,7 @@ model VariationItem {
   claimAllocations          VariationItemClaimAllocation[]
   closedByUser              User?                          @relation("VariationItemClosedBy", fields: [closedByUserId], references: [id])
   reactivatedByUser         User?                          @relation("VariationItemReactivatedBy", fields: [reactivatedByUserId], references: [id])
+  hoursOnSiteSheets         HoursOnSiteSheet[]
 }
 
 // A general-purpose, user-created work item — distinct from ProgrammeItem
@@ -2086,4 +2090,73 @@ model AiModelPricing {
   outputPricePerMillion Decimal  @db.Decimal(10, 4)
   updatedAt             DateTime @updatedAt
   createdAt             DateTime @default(now())
+}
+
+// A subcontractor's own crew, reusable across every one of its projects —
+// mirrors MainContractorContact's own "saved, searchable, reused" role, but
+// for the subbie's own workers rather than the main contractor's people.
+// Deliberately minimal (a name, nothing else) — this is a type-ahead list
+// for the Hours on Site feature below, not a staff-management/HR screen
+// (no role, no rate, no employment details; see that feature's own scope
+// note for what's explicitly excluded).
+model Worker {
+  id             String   @id @default(cuid())
+  organisationId String
+  name           String
+  createdAt      DateTime @default(now())
+
+  organisation Organisation        @relation(fields: [organisationId], references: [id])
+  sheetLinks   HoursOnSiteWorker[]
+
+  @@unique([organisationId, name])
+}
+
+// "Hours on Site" — a live start/finish capture of labour hours, distinct
+// from the existing DayWorksSheet (which is a photographed PAPER sheet,
+// read after the fact by AI). This is the on-site, in-the-moment capture
+// path: tap Start, work, tap Finish, get an editable sheet naming the
+// actual workers involved. Both paths produce the same kind of evidence
+// (supports a variation claim) but via different mechanisms, so this is
+// its own model rather than forcing DayWorksSheet's required
+// variationItemId/photographed-sheet shape to also cover a live timer with
+// an OPTIONAL SI link and free-text comments.
+//
+// totalHours is independently editable from the startedAt/finishedAt
+// delta — set from that delta the moment Finish is tapped, then never
+// recomputed automatically again, so a manual correction (a missed lunch
+// deduction, a forgotten start) always sticks. Hours must remain editable
+// indefinitely — see lib/hours-on-site.ts.
+model HoursOnSiteSheet {
+  id              String    @id @default(cuid())
+  projectId       String
+  // Optional — set only when a Site Instruction was selected; otherwise
+  // `comments` carries the free-text description of the work instead.
+  variationItemId String?
+  comments        String?
+  startedAt       DateTime
+  finishedAt      DateTime?
+  totalHours      Decimal?  @db.Decimal(6, 2)
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project       Project             @relation(fields: [projectId], references: [id])
+  variationItem VariationItem?      @relation(fields: [variationItemId], references: [id])
+  createdByUser User                @relation(fields: [createdByUserId], references: [id])
+  workers       HoursOnSiteWorker[]
+}
+
+// One row per worker named on a sheet — plain join, no per-worker hours of
+// its own (this is a headcount/evidence list, "who was there," not a
+// payroll timesheet apportioning hours per person; see the feature's own
+// explicit scope exclusions).
+model HoursOnSiteWorker {
+  id       String @id @default(cuid())
+  sheetId  String
+  workerId String
+
+  sheet  HoursOnSiteSheet @relation(fields: [sheetId], references: [id])
+  worker Worker           @relation(fields: [workerId], references: [id])
+
+  @@unique([sheetId, workerId])
 }

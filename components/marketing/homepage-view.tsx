@@ -156,7 +156,7 @@ export function HomepageView() {
             <SectionKicker>Your Job, From Start to Finish</SectionKicker>
 
             <div className="flex flex-col md:flex-row items-center gap-12">
-              <div className="w-full md:w-1/2 flex flex-col gap-4">
+              <div className="w-full md:w-[37.5%] flex flex-col gap-4">
                 <StepIcon icon="edit_document" />
                 <h3 className="font-heading text-[1.5625rem] font-bold text-on-surface">Before You Sign</h3>
                 <p className="text-[1.25rem] text-on-surface-variant">
@@ -165,14 +165,14 @@ export function HomepageView() {
                   held to — pulled straight from your own documents.
                 </p>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full md:w-[62.5%]">
                 <div className="bg-surface-card rounded-xl border border-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
                   <Image
                     src="/marketing/contract-review-ui.webp"
                     alt="Subbie HQ contract review screen showing a plain-English comparison and flagged risk clauses"
                     width={1162}
                     height={768}
-                    sizes="(min-width: 768px) 560px, 100vw"
+                    sizes="(min-width: 768px) 700px, 100vw"
                     className="w-full h-auto rounded-lg"
                   />
                 </div>
@@ -180,7 +180,7 @@ export function HomepageView() {
             </div>
 
             <div className="flex flex-col md:flex-row-reverse items-center gap-12">
-              <div className="w-full md:w-1/2 flex flex-col gap-4">
+              <div className="w-full md:w-[37.5%] flex flex-col gap-4">
                 <StepIcon icon="add_a_photo" />
                 <h3 className="font-heading text-[1.5625rem] font-bold text-on-surface">While You&apos;re On Site</h3>
                 <p className="text-[1.25rem] text-on-surface-variant">
@@ -189,14 +189,14 @@ export function HomepageView() {
                   sight.
                 </p>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full md:w-[62.5%]">
                 <div className="bg-surface-card rounded-xl border border-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
                   <Image
                     src="/marketing/evidence-capture-ui.webp"
                     alt="Subbie HQ mobile evidence capture screen with a live timeline of site activity"
                     width={1408}
                     height={768}
-                    sizes="(min-width: 768px) 560px, 100vw"
+                    sizes="(min-width: 768px) 700px, 100vw"
                     className="w-full h-auto rounded-lg"
                   />
                 </div>
@@ -204,7 +204,7 @@ export function HomepageView() {
             </div>
 
             <div className="flex flex-col md:flex-row items-center gap-12">
-              <div className="w-full md:w-1/2 flex flex-col gap-4">
+              <div className="w-full md:w-[37.5%] flex flex-col gap-4">
                 <StepIcon icon="request_quote" />
                 <h3 className="font-heading text-[1.5625rem] font-bold text-on-surface">When It&apos;s Time to Claim</h3>
                 <p className="text-[1.25rem] text-on-surface-variant">
@@ -214,14 +214,14 @@ export function HomepageView() {
                   claim with confidence, without digging for anything after the fact.
                 </p>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full md:w-[62.5%]">
                 <div className="bg-surface-card rounded-xl border border-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
                   <Image
                     src="/marketing/variation-builder-ui.webp"
                     alt="Subbie HQ Variation Builder showing three steps: select linked evidence, apply costing, and export the claim package"
                     width={1162}
                     height={768}
-                    sizes="(min-width: 768px) 560px, 100vw"
+                    sizes="(min-width: 768px) 700px, 100vw"
                     className="w-full h-auto rounded-lg"
                   />
                 </div>
@@ -229,7 +229,7 @@ export function HomepageView() {
             </div>
 
             <div className="flex flex-col md:flex-row-reverse items-center gap-12">
-              <div className="w-full md:w-1/2 flex flex-col gap-4">
+              <div className="w-full md:w-[37.5%] flex flex-col gap-4">
                 <StepIcon icon="gavel" />
                 <h3 className="font-heading text-[1.5625rem] font-bold text-on-surface">When a Dispute Happens</h3>
                 <p className="text-[1.25rem] text-on-surface-variant">
@@ -237,14 +237,14 @@ export function HomepageView() {
                   organised, already dated, already there.
                 </p>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full md:w-[62.5%]">
                 <div className="bg-surface-card rounded-xl border border-white/5 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
                   <Image
                     src="/marketing/dispute-audit-trail-ui.webp"
                     alt="Subbie HQ dispute-proof audit trail showing a verified, timestamped timeline of a disputed variation"
                     width={1408}
                     height={768}
-                    sizes="(min-width: 768px) 560px, 100vw"
+                    sizes="(min-width: 768px) 700px, 100vw"
                     className="w-full h-auto rounded-lg"
                   />
                 </div>
@@ -361,10 +361,10 @@ export function HomepageView() {
                   <div className="flex gap-4 items-start">
                     <span className="material-symbols-outlined text-accent-electric text-[24px] mt-1">construction</span>
                     <div>
-                      <h4 className="font-bold text-on-surface mb-2">
+                      <h4 className="text-[1.25rem] font-bold text-on-surface mb-2">
                         Built for subcontractors, not the head contractor&apos;s paperwork.
                       </h4>
-                      <p className="text-on-surface-variant">
+                      <p className="text-[1.25rem] text-on-surface-variant">
                         Most software in this space exists to make main contractors&apos; lives easier, and subbies
                         get forced onto it. Subbie HQ exists because you chose it.
                       </p>
@@ -390,8 +390,8 @@ export function HomepageView() {
                   <div className="flex gap-4 items-start">
                     <span className="material-symbols-outlined text-accent-electric text-[24px] mt-1">payments</span>
                     <div>
-                      <h4 className="font-bold text-on-surface mb-2">Priced for a sole trader, not a head office.</h4>
-                      <p className="text-on-surface-variant">
+                      <h4 className="text-[1.25rem] font-bold text-on-surface mb-2">Priced for a sole trader, not a head office.</h4>
+                      <p className="text-[1.25rem] text-on-surface-variant">
                         Plans start at $49/month, unlimited users, unlimited projects. You&apos;re never charged more
                         for being busy — and as your team grows, each person gets exactly the access their role
                         needs.
@@ -400,13 +400,13 @@ export function HomepageView() {
                   </div>
                 </div>
                 <div className="w-full md:w-1/2">
-                  <div className="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden">
+                  <div className="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden max-w-[75%] mx-auto">
                     <Image
                       src="/marketing/pricing-tablet.webp"
                       alt="A hand holding a tablet showing a subscription plan with pricing and features"
                       width={1024}
                       height={1024}
-                      sizes="(min-width: 768px) 480px, 100vw"
+                      sizes="(min-width: 768px) 360px, 75vw"
                       className="w-full h-auto rounded object-cover"
                     />
                   </div>
@@ -418,8 +418,8 @@ export function HomepageView() {
                   <div className="flex gap-4 items-start">
                     <span className="material-symbols-outlined text-accent-electric text-[24px] mt-1">public</span>
                     <div>
-                      <h4 className="font-bold text-on-surface mb-2">Built for NZ and Australian contracts.</h4>
-                      <p className="text-on-surface-variant">
+                      <h4 className="text-[1.25rem] font-bold text-on-surface mb-2">Built for NZ and Australian contracts.</h4>
+                      <p className="text-[1.25rem] text-on-surface-variant">
                         Compared against SA-2017 and the obligations you actually operate under — not a generic
                         platform retrofitted for this market.
                       </p>
@@ -427,13 +427,13 @@ export function HomepageView() {
                   </div>
                 </div>
                 <div className="w-full md:w-1/2">
-                  <div className="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden">
+                  <div className="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden max-w-[75%] mx-auto">
                     <Image
                       src="/marketing/nz-contract-review-tablet.webp"
                       alt="A hand holding a tablet showing a Subbie HQ plain-English breakdown of a subcontract clause"
                       width={1024}
                       height={1024}
-                      sizes="(min-width: 768px) 480px, 100vw"
+                      sizes="(min-width: 768px) 360px, 75vw"
                       className="w-full h-auto rounded object-cover"
                     />
                   </div>
@@ -445,8 +445,8 @@ export function HomepageView() {
                   <div className="flex gap-4 items-start">
                     <span className="material-symbols-outlined text-accent-electric text-[24px] mt-1">dashboard</span>
                     <div>
-                      <h4 className="font-bold text-on-surface mb-2">Everything, across every job, in one place.</h4>
-                      <p className="text-on-surface-variant">
+                      <h4 className="text-[1.25rem] font-bold text-on-surface mb-2">Everything, across every job, in one place.</h4>
+                      <p className="text-[1.25rem] text-on-surface-variant">
                         Running more than one project? A single Dashboard shows what needs your attention across
                         all of them — no logging into each job separately to check.
                       </p>

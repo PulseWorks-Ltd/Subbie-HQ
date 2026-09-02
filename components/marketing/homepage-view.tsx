@@ -12,11 +12,13 @@ export function HomepageView() {
       <main>
         <section className="max-w-4xl mx-auto px-4 py-20 text-center flex flex-col items-center gap-6">
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight">
-            Know What Your Contract Requires. Capture the Evidence. Get Paid.
+            The Work Gets Done. The Money Doesn&apos;t Always Follow.
           </h1>
           <p className="text-lg text-[#4c739a] dark:text-slate-400 max-w-2xl">
-            Manage contracts, Site Instructions, Dayworks and Variations from one place, and build the evidence
-            base every payment claim needs — so nothing gets missed, and nothing gets left unpaid.
+            Every unproven Site Instruction, every unsigned dayworks sheet, every variation submitted without the
+            right evidence is money quietly left on the table. Subbie HQ captures the proof as the job happens, so
+            what you&apos;re owed is what you actually get paid — not what you&apos;re still arguing for three
+            months later.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
@@ -32,6 +34,9 @@ export function HomepageView() {
               See How It Works
             </Link>
           </div>
+          <p className="text-sm font-bold text-[#0d141b] dark:text-slate-50">
+            Site Managers approve via a secure link — no app, no login required.
+          </p>
           <p className="text-sm italic text-[#4c739a] dark:text-slate-400">
             Built specifically for subcontractors — not a main contractor&apos;s compliance tool you got forced
             onto.
@@ -76,9 +81,9 @@ export function HomepageView() {
                 <h3 className="font-bold mb-2">When It&apos;s Time to Claim</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Build a complete Variation package — instruction, dayworks, materials, photos, correspondence —
-                  then send it for approval with a secure link the Main Contractor can act on without a login, and
-                  track the response. It&apos;s the evidence base you need to prepare a payment claim with
-                  confidence, without digging for anything after the fact.
+                  then send it for approval with a secure link. No app, no login required: the Main Contractor
+                  opens it and acts, and you track the response. It&apos;s the evidence base you need to prepare a
+                  payment claim with confidence, without digging for anything after the fact.
                 </p>
               </div>
               <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
@@ -125,8 +130,8 @@ export function HomepageView() {
             <div>
               <h3 className="font-bold mb-2">Get Sign-Off Without Chasing a Signature</h3>
               <p className="text-sm text-[#4c739a] dark:text-slate-400">
-                Send it for approval with a secure link the Main Contractor can act on with no login — track every
-                request from sent to responded, or let the whole monthly cycle send itself.
+                Site Managers and Main Contractors approve via a secure link — no app, no login required. Track
+                every request from sent to responded, or let the whole monthly cycle send itself.
               </p>
             </div>
             <div>

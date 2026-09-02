@@ -12,12 +12,21 @@ export default function LateOrNonCompliantClaimsGuidePage() {
     <GuideArticleView h1="Why Late or Non-Compliant Claims Cost Subcontractors Money">
       <div className="flex flex-col gap-3">
         <p className="text-[#4c739a] dark:text-slate-400">
-          Most subcontractors operate under contracts based on the standard SA-2017 Subcontract Agreement (and the
-          Construction Contracts Act 2002). These documents set clear rules around when and how payment claims and
-          variation claims must be submitted. Getting these wrong affects cash flow and can strain the relationship
-          with the main contractor.
+          A payment claim that misses its deadline by a single day, or a variation submitted in the wrong format,
+          doesn&rsquo;t just create paperwork. It can push real money out of this month&rsquo;s payment run and
+          into next month&rsquo;s — or out of the job entirely. For a subcontractor running on tight cash flow,
+          that&rsquo;s not a technicality. That&rsquo;s income you&rsquo;ve already earned, sitting somewhere you
+          can&rsquo;t touch it.
         </p>
-        <p className="text-[#4c739a] dark:text-slate-400">Here is what the rules typically require and why they matter.</p>
+        <p className="text-[#4c739a] dark:text-slate-400">
+          Most subcontractors operate under contracts based on the standard SA-2017 Subcontract Agreement (and the
+          Construction Contracts Act 2002). These documents set clear, strict rules around when and how payment
+          claims and variation claims must be submitted — and the rules aren&rsquo;t forgiving of a day&rsquo;s
+          delay or a missing detail.
+        </p>
+        <p className="text-[#4c739a] dark:text-slate-400">
+          Here&rsquo;s what those rules actually require, and what it costs when they&rsquo;re not followed.
+        </p>
       </div>
 
       <section>

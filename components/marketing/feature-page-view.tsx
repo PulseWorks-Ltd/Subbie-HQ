@@ -2,6 +2,7 @@ import Link from "next/link";
 
 export function FeaturePageView({
   h1,
+  dek,
   problem,
   consequence,
   helps,
@@ -9,6 +10,12 @@ export function FeaturePageView({
   disclaimer
 }: {
   h1: string;
+  // Short, prominent lead-in shown directly under the H1 — for stating a
+  // page's single clearest benefit before the reader has to read into
+  // "The Problem"/"How Subbie HQ Helps". Optional so existing pages that
+  // don't pass one render exactly as before. Same purpose as
+  // GuideArticleView's own `dek` prop.
+  dek?: string;
   problem: string;
   consequence: string;
   helps: string[];
@@ -17,7 +24,8 @@ export function FeaturePageView({
 }) {
   return (
     <div className="max-w-3xl mx-auto px-4 py-16">
-      <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-10">{h1}</h1>
+      <h1 className={`text-3xl sm:text-4xl font-black tracking-tight ${dek ? "mb-3" : "mb-10"}`}>{h1}</h1>
+      {dek && <p className="text-lg font-bold text-primary mb-10">{dek}</p>}
 
       <section className="mb-8">
         <h2 className="text-lg font-bold mb-2">The Problem</h2>

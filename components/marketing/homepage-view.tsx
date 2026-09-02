@@ -389,13 +389,32 @@ export function HomepageView() {
                 </div>
               </div>
 
-              <div className="flex flex-col items-center gap-4 max-w-xl mx-auto text-center">
-                <span className="material-symbols-outlined text-accent-electric text-[24px]">payments</span>
-                <h4 className="font-bold text-on-surface">Priced for a sole trader, not a head office.</h4>
-                <p className="text-on-surface-variant">
-                  Plans start at $49/month, unlimited users, unlimited projects. You&apos;re never charged more for
-                  being busy — and as your team grows, each person gets exactly the access their role needs.
-                </p>
+              <div className="flex flex-col md:flex-row-reverse items-center gap-12">
+                <div className="w-full md:w-1/2 flex flex-col gap-4">
+                  <div className="flex gap-4 items-start">
+                    <span className="material-symbols-outlined text-accent-electric text-[24px] mt-1">payments</span>
+                    <div>
+                      <h4 className="font-bold text-on-surface mb-2">Priced for a sole trader, not a head office.</h4>
+                      <p className="text-on-surface-variant">
+                        Plans start at $49/month, unlimited users, unlimited projects. You&apos;re never charged more
+                        for being busy — and as your team grows, each person gets exactly the access their role
+                        needs.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="w-full md:w-1/2">
+                  <div className="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden">
+                    <Image
+                      src="/marketing/pricing-tablet.webp"
+                      alt="A hand holding a tablet showing a subscription plan with pricing and features"
+                      width={1024}
+                      height={1024}
+                      sizes="(min-width: 768px) 480px, 100vw"
+                      className="w-full h-auto rounded object-cover"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col md:flex-row items-center gap-12">
@@ -414,10 +433,10 @@ export function HomepageView() {
                 <div className="w-full md:w-1/2">
                   <div className="bg-surface-card rounded-xl border border-white/5 p-2 shadow-lg overflow-hidden">
                     <Image
-                      src="/marketing/contract-review-ui.webp"
-                      alt="Subbie HQ contract review screen showing a plain-English comparison and flagged risk clauses"
-                      width={1162}
-                      height={768}
+                      src="/marketing/nz-contract-review-tablet.webp"
+                      alt="A hand holding a tablet showing a Subbie HQ plain-English breakdown of a subcontract clause"
+                      width={1024}
+                      height={1024}
                       sizes="(min-width: 768px) 480px, 100vw"
                       className="w-full h-auto rounded object-cover"
                     />

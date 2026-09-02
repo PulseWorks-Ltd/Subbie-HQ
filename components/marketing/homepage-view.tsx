@@ -158,8 +158,8 @@ export function HomepageView() {
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="w-full md:w-1/2 flex flex-col gap-4">
                 <StepIcon icon="edit_document" />
-                <h3 className="font-heading text-xl font-bold text-on-surface">Before You Sign</h3>
-                <p className="text-on-surface-variant">
+                <h3 className="font-heading text-[1.5625rem] font-bold text-on-surface">Before You Sign</h3>
+                <p className="text-[1.25rem] text-on-surface-variant">
                   Understand what your contract actually expects of you. Identify the commercial risks before
                   you&apos;re committed to them. Know your scope of works and the programme milestones you&apos;re
                   held to — pulled straight from your own documents.
@@ -182,8 +182,8 @@ export function HomepageView() {
             <div className="flex flex-col md:flex-row-reverse items-center gap-12">
               <div className="w-full md:w-1/2 flex flex-col gap-4">
                 <StepIcon icon="add_a_photo" />
-                <h3 className="font-heading text-xl font-bold text-on-surface">While You&apos;re On Site</h3>
-                <p className="text-on-surface-variant">
+                <h3 className="font-heading text-[1.5625rem] font-bold text-on-surface">While You&apos;re On Site</h3>
+                <p className="text-[1.25rem] text-on-surface-variant">
                   Capture Site Instructions the moment they&apos;re given. Record Updates. Take photos. Upload
                   Dayworks Sheets. Everything organised against the job, from your phone, without a spreadsheet in
                   sight.
@@ -206,8 +206,8 @@ export function HomepageView() {
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="w-full md:w-1/2 flex flex-col gap-4">
                 <StepIcon icon="request_quote" />
-                <h3 className="font-heading text-xl font-bold text-on-surface">When It&apos;s Time to Claim</h3>
-                <p className="text-on-surface-variant">
+                <h3 className="font-heading text-[1.5625rem] font-bold text-on-surface">When It&apos;s Time to Claim</h3>
+                <p className="text-[1.25rem] text-on-surface-variant">
                   Build a complete Variation package — instruction, dayworks, materials, photos, correspondence —
                   then send it for approval with a secure link. No app, no login required: the Main Contractor opens
                   it and acts, and you track the response. It&apos;s the evidence base you need to prepare a payment
@@ -231,8 +231,8 @@ export function HomepageView() {
             <div className="flex flex-col md:flex-row-reverse items-center gap-12">
               <div className="w-full md:w-1/2 flex flex-col gap-4">
                 <StepIcon icon="gavel" />
-                <h3 className="font-heading text-xl font-bold text-on-surface">When a Dispute Happens</h3>
-                <p className="text-on-surface-variant">
+                <h3 className="font-heading text-[1.5625rem] font-bold text-on-surface">When a Dispute Happens</h3>
+                <p className="text-[1.25rem] text-on-surface-variant">
                   Every email. Every photo. Every Site Instruction. Every Dayworks Sheet. Every Update. Already
                   organised, already dated, already there.
                 </p>
@@ -253,103 +253,99 @@ export function HomepageView() {
           </div>
         </section>
 
-        {/* ============ HOW SUBBIE HQ HELPS (bento grid) ============ */}
+        {/* ============ HOW SUBBIE HQ HELPS (commercial lifecycle) ============ */}
+        {/* Restructured 2026-09 from a 6-item feature bento grid into five
+            sequential lifecycle stages (Know → Capture → Prove → Claim →
+            Protect) — same card visual language as before (bg-surface-card,
+            rounded-xl, border, accent-electric icon), just re-grouped
+            around the commercial process rather than one card per feature.
+            The lead word of each h4 is coloured so scanning just those five
+            words left-to-right/top-to-bottom reads the whole progression
+            without needing a new "stage number" component. */}
         <section id="how-subbie-hq-helps" className="py-section-gap-sm md:py-section-gap-lg px-gutter">
           <div className="max-w-container-max mx-auto">
             <SectionKicker>How Subbie HQ Helps</SectionKicker>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p className="text-on-surface-variant text-center max-w-2xl mx-auto -mt-4 mb-10">
+              Five connected stages of the same commercial process — not five separate tools.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
                 <div className="mb-4 text-accent-electric">
-                  <span className="material-symbols-outlined text-[32px]">find_in_page</span>
+                  <span className="material-symbols-outlined text-[32px]">fact_check</span>
                 </div>
-                <h4 className="font-bold text-on-surface mb-2">Understand Your Contract Before You Sign</h4>
-                <p className="text-sm text-on-surface-variant">
-                  Upload your subcontract and get a plain-English breakdown of what&apos;s different from standard
-                  terms, what it means for your business, and what to do about it.
+                <h4 className="font-bold text-on-surface mb-2">
+                  <span className="text-accent-electric">Know</span> what you&apos;re entitled to
+                </h4>
+                <p className="text-sm text-on-surface-variant mb-3">
+                  Understand your contract, scope, programme and obligations before they become problems.
+                </p>
+                <p className="text-xs text-on-surface-variant/70">
+                  Contract review · Scope · Programme · Key obligations
                 </p>
               </div>
 
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
                 <div className="mb-4 text-accent-electric">
-                  <span className="material-symbols-outlined text-[32px]">bookmark_added</span>
+                  <span className="material-symbols-outlined text-[32px]">camera_alt</span>
                 </div>
-                <h4 className="font-bold text-on-surface mb-2">Never Lose Track of a Site Instruction Again</h4>
-                <p className="text-sm text-on-surface-variant">
-                  Forward the email the moment it lands. Log a verbal instruction on site. Either way, it&apos;s
-                  recorded, timestamped, and ready to turn into a claim.
+                <h4 className="font-bold text-on-surface mb-2">
+                  <span className="text-accent-electric">Capture</span> what happens
+                </h4>
+                <p className="text-sm text-on-surface-variant mb-3">
+                  Record instructions, site events, photos, dayworks and project records while they&apos;re
+                  happening — not months later when someone asks for proof.
+                </p>
+                <p className="text-xs text-on-surface-variant/70">
+                  Site Instructions · Project Diary · Photos · H&amp;S · QA · Dayworks
                 </p>
               </div>
 
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
                 <div className="mb-4 text-accent-electric">
-                  <span className="material-symbols-outlined text-[32px]">timer</span>
+                  <span className="material-symbols-outlined text-[32px]">verified</span>
                 </div>
-                <h4 className="font-bold text-on-surface mb-2">Never Lose Labour Costs Again</h4>
-                <p className="text-sm text-on-surface-variant">
-                  Photograph the dayworks sheet. Confirm the crew, hours, and rate. No re-typing timesheets from
-                  memory at the end of the week.
+                <h4 className="font-bold text-on-surface mb-2">
+                  <span className="text-accent-electric">Prove</span> it
+                </h4>
+                <p className="text-sm text-on-surface-variant mb-3">
+                  Keep the evidence, correspondence and approvals together so there&apos;s a clear record of what
+                  was instructed, completed and agreed.
+                </p>
+                <p className="text-xs text-on-surface-variant/70">
+                  Evidence · Correspondence · Approvals · Recorded sign-off
                 </p>
               </div>
 
-              <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors lg:col-span-2 flex flex-col sm:flex-row gap-6 items-center">
-                <div className="flex-1">
-                  <div className="mb-4 text-accent-electric">
-                    <span className="material-symbols-outlined text-[32px]">receipt_long</span>
-                  </div>
-                  <h4 className="font-bold text-on-surface mb-2">Build Professional Variation Claims in Minutes</h4>
-                  <p className="text-sm text-on-surface-variant">
-                    One button bundles the instruction, the evidence, and the costing into a document ready to send.
-                  </p>
+              <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
+                <div className="mb-4 text-accent-electric">
+                  <span className="material-symbols-outlined text-[32px]">request_quote</span>
                 </div>
-                <div className="flex-1 w-full bg-surface-deep rounded-lg p-3 border border-white/5">
-                  <div className="h-20 bg-gradient-to-r from-surface-variant to-transparent rounded opacity-50 mb-2" />
-                  <div className="h-3 w-3/4 bg-surface-variant rounded mb-2" />
-                  <div className="h-3 w-1/2 bg-surface-variant rounded" />
-                </div>
+                <h4 className="font-bold text-on-surface mb-2">
+                  <span className="text-accent-electric">Claim</span> it
+                </h4>
+                <p className="text-sm text-on-surface-variant mb-3">
+                  Turn completed work, approved dayworks and variations into properly supported claims — with the
+                  evidence to back them up.
+                </p>
+                <p className="text-xs text-on-surface-variant/70">
+                  Variations · Dayworks · Payment claims · Claim allocations
+                </p>
               </div>
 
-              <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors flex gap-4 items-start">
-                <div className="w-16 sm:w-20 shrink-0 rounded-lg overflow-hidden border border-white/10">
-                  <Image
-                    src="/marketing/secure-approval-phone.jpg"
-                    alt="A phone screen showing a secure approval request that requires no login"
-                    width={784}
-                    height={1168}
-                    sizes="80px"
-                    className="w-full h-auto"
-                  />
+              <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
+                <div className="mb-4 text-accent-electric">
+                  <span className="material-symbols-outlined text-[32px]">shield</span>
                 </div>
-                <div>
-                  <h4 className="font-bold text-on-surface mb-2">Get Sign-Off Without Chasing a Signature</h4>
-                  <p className="text-sm text-on-surface-variant">
-                    Site Managers and Main Contractors approve via a secure link — no app, no login required. Track
-                    every request from sent to responded, or let the whole monthly cycle send itself.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors md:col-span-2 lg:col-span-3 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
-                <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-accent-electric/5 to-transparent pointer-events-none" />
-                <div className="flex-1 z-10">
-                  <div className="mb-4 text-accent-electric">
-                    <span className="material-symbols-outlined text-[32px]">alarm_on</span>
-                  </div>
-                  <h4 className="font-bold text-on-surface mb-2">Nothing Quietly Goes Overdue</h4>
-                  <p className="text-sm text-on-surface-variant max-w-2xl">
-                    Variation and Site Instruction deadlines, H&amp;S document expiry, insurance renewal — staged
-                    email and push alerts before anything lapses, not after.
-                  </p>
-                </div>
-                <div className="w-full md:w-auto flex flex-col gap-2 z-10">
-                  <div className="bg-surface-deep px-4 py-2 rounded border border-status-warning/30 flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-status-warning" />
-                    <span className="text-xs text-on-surface">Variation #45 Due in 2 days</span>
-                  </div>
-                  <div className="bg-surface-deep px-4 py-2 rounded border border-status-error/30 flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-status-error" />
-                    <span className="text-xs text-on-surface">Insurance Expiring Soon</span>
-                  </div>
-                </div>
+                <h4 className="font-bold text-on-surface mb-2">
+                  <span className="text-accent-electric">Protect</span> it
+                </h4>
+                <p className="text-sm text-on-surface-variant mb-3">
+                  Keep a permanent, searchable project record so the evidence is still there months or years later
+                  when a payment issue or dispute comes up.
+                </p>
+                <p className="text-xs text-on-surface-variant/70">
+                  Project history · Closed &amp; archived records · Dispute evidence
+                </p>
               </div>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
@@ -41,6 +42,17 @@ export function HomepageView() {
             Built specifically for subcontractors — not a main contractor&apos;s compliance tool you got forced
             onto.
           </p>
+          <div className="w-full max-w-2xl rounded-2xl overflow-hidden border border-[#e7edf3] dark:border-slate-800 mt-2">
+            <Image
+              src="/marketing/hero-site-supervisor.jpg"
+              alt="A construction site supervisor in a high-vis vest checking his phone on a building site"
+              width={1168}
+              height={784}
+              priority
+              sizes="(min-width: 640px) 672px, 100vw"
+              className="w-full h-auto"
+            />
+          </div>
         </section>
 
         <section className="max-w-3xl mx-auto px-4 py-14">
@@ -62,6 +74,16 @@ export function HomepageView() {
             <h2 className="text-2xl font-bold mb-8 text-center">Your Job, From Start to Finish</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
+                <div className="rounded-lg overflow-hidden mb-4 border border-[#e7edf3] dark:border-slate-800">
+                  <Image
+                    src="/marketing/contract-review-tablet.jpg"
+                    alt="A subcontract document displayed on a tablet screen"
+                    width={1168}
+                    height={784}
+                    sizes="(min-width: 768px) 480px, 100vw"
+                    className="w-full h-auto"
+                  />
+                </div>
                 <h3 className="font-bold mb-2">Before You Sign</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Understand what your contract actually expects of you. Identify the commercial risks before
@@ -127,12 +149,24 @@ export function HomepageView() {
                 One button bundles the instruction, the evidence, and the costing into a document ready to send.
               </p>
             </div>
-            <div>
-              <h3 className="font-bold mb-2">Get Sign-Off Without Chasing a Signature</h3>
-              <p className="text-sm text-[#4c739a] dark:text-slate-400">
-                Site Managers and Main Contractors approve via a secure link — no app, no login required. Track
-                every request from sent to responded, or let the whole monthly cycle send itself.
-              </p>
+            <div className="flex gap-4 items-start">
+              <div className="w-24 sm:w-28 shrink-0 rounded-lg overflow-hidden border border-[#e7edf3] dark:border-slate-800">
+                <Image
+                  src="/marketing/secure-approval-phone.jpg"
+                  alt="A phone screen showing a secure approval request that requires no login"
+                  width={784}
+                  height={1168}
+                  sizes="112px"
+                  className="w-full h-auto"
+                />
+              </div>
+              <div>
+                <h3 className="font-bold mb-2">Get Sign-Off Without Chasing a Signature</h3>
+                <p className="text-sm text-[#4c739a] dark:text-slate-400">
+                  Site Managers and Main Contractors approve via a secure link — no app, no login required. Track
+                  every request from sent to responded, or let the whole monthly cycle send itself.
+                </p>
+              </div>
             </div>
             <div>
               <h3 className="font-bold mb-2">Nothing Quietly Goes Overdue</h3>
@@ -170,6 +204,16 @@ export function HomepageView() {
                 </p>
               </div>
               <div>
+                <div className="rounded-lg overflow-hidden mb-4 border border-[#e7edf3] dark:border-slate-800">
+                  <Image
+                    src="/marketing/dashboard-multi-project.jpg"
+                    alt="A laptop screen showing a project dashboard with several active projects and their status"
+                    width={1168}
+                    height={784}
+                    sizes="(min-width: 768px) 340px, 100vw"
+                    className="w-full h-auto"
+                  />
+                </div>
                 <h3 className="font-bold mb-2">Everything, across every job, in one place.</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Running more than one project? A single Dashboard shows what needs your attention across all of

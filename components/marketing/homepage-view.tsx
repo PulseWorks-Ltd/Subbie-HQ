@@ -76,8 +76,8 @@ export function HomepageView() {
               <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
                 <div className="rounded-lg overflow-hidden mb-4 border border-[#e7edf3] dark:border-slate-800">
                   <Image
-                    src="/marketing/contract-review-tablet.jpg"
-                    alt="A subcontract document displayed on a tablet screen"
+                    src="/marketing/contract-documents-desk.jpg"
+                    alt="Contract documents and a tablet laid out on a desk"
                     width={1168}
                     height={784}
                     sizes="(min-width: 768px) 480px, 100vw"
@@ -92,6 +92,16 @@ export function HomepageView() {
                 </p>
               </div>
               <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
+                <div className="rounded-lg overflow-hidden mb-4 border border-[#e7edf3] dark:border-slate-800">
+                  <Image
+                    src="/marketing/site-instruction-leading-hand.jpg"
+                    alt="A leading hand on site in high-vis, checking a clipboard and phone"
+                    width={1168}
+                    height={784}
+                    sizes="(min-width: 768px) 480px, 100vw"
+                    className="w-full h-auto"
+                  />
+                </div>
                 <h3 className="font-bold mb-2">While You&apos;re On Site</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Capture Site Instructions the moment they&apos;re given. Record Updates. Take photos. Upload
@@ -100,6 +110,16 @@ export function HomepageView() {
                 </p>
               </div>
               <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark p-6">
+                <div className="rounded-lg overflow-hidden mb-4 border border-[#e7edf3] dark:border-slate-800">
+                  <Image
+                    src="/marketing/variation-claim-package.jpg"
+                    alt="A Site Instruction, Dayworks Sheet, photos, and a tablet showing a Variation Claim Package laid out together"
+                    width={1168}
+                    height={784}
+                    sizes="(min-width: 768px) 480px, 100vw"
+                    className="w-full h-auto"
+                  />
+                </div>
                 <h3 className="font-bold mb-2">When It&apos;s Time to Claim</h3>
                 <p className="text-sm text-[#4c739a] dark:text-slate-400">
                   Build a complete Variation package — instruction, dayworks, materials, photos, correspondence —

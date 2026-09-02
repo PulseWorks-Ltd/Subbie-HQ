@@ -270,8 +270,8 @@ export function HomepageView() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
-                <div className="mb-4 text-accent-electric">
-                  <span className="material-symbols-outlined text-[32px]">fact_check</span>
+                <div className="mb-4 text-accent-electric flex justify-center">
+                  <span className="material-symbols-outlined text-[128px]">fact_check</span>
                 </div>
                 <h4 className="font-bold text-on-surface mb-2">
                   <span className="text-accent-electric">Know</span> what you&apos;re entitled to
@@ -285,8 +285,8 @@ export function HomepageView() {
               </div>
 
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
-                <div className="mb-4 text-accent-electric">
-                  <span className="material-symbols-outlined text-[32px]">camera_alt</span>
+                <div className="mb-4 text-accent-electric flex justify-center">
+                  <span className="material-symbols-outlined text-[128px]">camera_alt</span>
                 </div>
                 <h4 className="font-bold text-on-surface mb-2">
                   <span className="text-accent-electric">Capture</span> what happens
@@ -301,8 +301,8 @@ export function HomepageView() {
               </div>
 
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
-                <div className="mb-4 text-accent-electric">
-                  <span className="material-symbols-outlined text-[32px]">verified</span>
+                <div className="mb-4 text-accent-electric flex justify-center">
+                  <span className="material-symbols-outlined text-[128px]">verified</span>
                 </div>
                 <h4 className="font-bold text-on-surface mb-2">
                   <span className="text-accent-electric">Prove</span> it
@@ -317,8 +317,8 @@ export function HomepageView() {
               </div>
 
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
-                <div className="mb-4 text-accent-electric">
-                  <span className="material-symbols-outlined text-[32px]">request_quote</span>
+                <div className="mb-4 text-accent-electric flex justify-center">
+                  <span className="material-symbols-outlined text-[128px]">request_quote</span>
                 </div>
                 <h4 className="font-bold text-on-surface mb-2">
                   <span className="text-accent-electric">Claim</span> it
@@ -333,8 +333,8 @@ export function HomepageView() {
               </div>
 
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
-                <div className="mb-4 text-accent-electric">
-                  <span className="material-symbols-outlined text-[32px]">shield</span>
+                <div className="mb-4 text-accent-electric flex justify-center">
+                  <span className="material-symbols-outlined text-[128px]">shield</span>
                 </div>
                 <h4 className="font-bold text-on-surface mb-2">
                   <span className="text-accent-electric">Protect</span> it

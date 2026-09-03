@@ -316,6 +316,7 @@ model User {
   variationItemClaimAllocations  VariationItemClaimAllocation[]
   recordLifecycleEvents          RecordLifecycleEvent[]
   hoursOnSiteSheets              HoursOnSiteSheet[]
+  contractItemProgressEntries    ContractItemProgressEntry[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -547,6 +548,7 @@ model Project {
   variationScheduleRecipients  VariationScheduleRecipient[]
   variationScheduleRuns        VariationScheduleRun[]
   hoursOnSiteSheets            HoursOnSiteSheet[]
+  contractSchedule             ContractSchedule?
 }
 
 enum VariationAutomationMode {
@@ -1192,6 +1194,166 @@ model ClaimEvidenceLink {
   @@unique([paymentClaimId, evidenceType, evidenceId])
 }
 
+// ============================================================
+// Contract Schedule of Values — the "Original Subcontract Sum" side of a
+// Payment Claim (Appendix B2's equivalent), extracted from the subbie's own
+// priced quote. Deliberately separate from ProjectQuote above: ProjectQuote
+// is a lightweight one-shot text-extracted summary (quotedValue, a loose
+// lineItems Json blob) shown on the Contract tab, with no components,
+// phases, or rental tracking — kept exactly as-is, untouched, for that
+// purpose. This is the real, structured schedule Payment Claims needs;
+// building a second thing rather than reshaping ProjectQuote follows this
+// codebase's established pattern of leaving a superseded simpler model
+// alone rather than migrating it (see ClaimEvidenceLink's own comment re:
+// the dormant Evidence model).
+model ContractSchedule {
+  id                      String     @id @default(cuid())
+  projectId               String     @unique
+  // The uploaded quote this was extracted from — nullable, since a schedule
+  // can equally be built entirely by hand with no source document at all.
+  sourceFileName          String?
+  sourceStorageKey        String?
+  sourceContentType       String?
+  // draft = AI-extracted, not yet reviewed; confirmed = a human has checked
+  // it over. A hand-built schedule (no extraction) starts confirmed.
+  status                  ItemStatus @default(confirmed)
+  // The default Erect/Dismantle phase split offered when adding a new
+  // erect-and-dismantle-shaped component (e.g. 70/30, from the quote's own
+  // "Breakdown of Charges" note) — a starting point, not enforced; any
+  // individual component's phases can differ from this default.
+  defaultErectPercent     Float?
+  defaultDismantlePercent Float?
+  extractedAt             DateTime?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
+  project Project        @relation(fields: [projectId], references: [id])
+  items   ContractItem[]
+}
+
+model ContractItem {
+  id           String   @id @default(cuid())
+  scheduleId   String
+  // Optional grouping heading, matching how real quotes are laid out (e.g.
+  // "NORTH ELEVATION") — purely organisational, not used in any calculation.
+  sectionLabel String?
+  description  String
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  schedule   ContractSchedule        @relation(fields: [scheduleId], references: [id])
+  components ContractItemComponent[]
+}
+
+// fixed = any lump-sum priced component (Supply, Install, Erect, Dismantle,
+// Remove, Transport, Engineer's Fee, or any combination — see phases below
+// for how a single component can still represent "supply and install" or
+// "supply, install, dismantle and remove" as one priced amount broken into
+// claimable portions). weekly_hire = an ongoing rental charged for as long
+// as (and to whatever % of) the item is actually on site — see
+// ContractItemProgressEntry for how that % is tracked over time.
+enum ContractItemComponentKind {
+  fixed
+  weekly_hire
+}
+
+model ContractItemComponent {
+  id                  String                    @id @default(cuid())
+  contractItemId      String
+  kind                ContractItemComponentKind
+  // A short label for this component within its item (e.g. "Erect &
+  // Dismantle", "Transport", "Weekly Hire") — free text, not an enum,
+  // deliberately: the whole point of this model is that different trades'
+  // quotes carve up a priced item differently, and forcing a fixed set of
+  // labels would break the very next trade whose quote doesn't match
+  // scaffolding's shape.
+  label               String
+  // fixed only — the total priced amount, split across phases below.
+  amount              Decimal?                  @db.Decimal(12, 2)
+  // weekly_hire only — the rate actually charged per week while on hire.
+  weeklyRate          Decimal?                  @db.Decimal(12, 2)
+  // weekly_hire only, informational — the quote's OWN assumed duration,
+  // used only to reconstruct what this component's originally quoted total
+  // contract value was (Duration × Weekly Hire, as printed on the quote).
+  // Real claiming never uses this — it always follows the real, dated %-
+  // on-hire history in ContractItemProgressEntry instead, which is free to
+  // run longer or shorter than what was originally quoted.
+  quotedDurationWeeks Float?
+  sortOrder           Int                       @default(0)
+  createdAt           DateTime                  @default(now())
+
+  contractItem    ContractItem                 @relation(fields: [contractItemId], references: [id])
+  phases          ContractItemComponentPhase[]
+  // weekly_hire progress attaches directly here (no phase concept for an
+  // ongoing rental) — see ContractItemProgressEntry.componentId.
+  progressEntries ContractItemProgressEntry[]
+}
+
+// One or more phases per FIXED component — sharePercent across a
+// component's phases should sum to 100. A simple "Supply only" component
+// has exactly one phase at 100%; the quote's "Erect & Dismantle" becomes
+// two (Erect 70%, Dismantle 30%, from the schedule's default); a trade
+// quoting "Supply, Install, Dismantle and Remove" as one lump sum gets four.
+// Each phase tracks its own % complete history independently — this is
+// what lets a portion of a fixed labour cost be claimed at Dismantle even
+// though Erect was claimed (and paid) months earlier.
+model ContractItemComponentPhase {
+  id           String @id @default(cuid())
+  componentId  String
+  label        String
+  sharePercent Float
+  sortOrder    Int    @default(0)
+
+  component       ContractItemComponent       @relation(fields: [componentId], references: [id])
+  progressEntries ContractItemProgressEntry[]
+}
+
+enum ContractItemProgressSource {
+  manual
+  project_diary
+}
+
+// The one dated-checkpoint mechanism behind BOTH kinds of % this feature
+// tracks — a fixed component phase's % complete, and a weekly_hire
+// component's % of the item currently on hire. On any given day, the
+// applicable % is whichever checkpoint has the latest effectiveDate on or
+// before that day (0% before the first checkpoint ever recorded) — see
+// lib/contract-schedule.ts for the read-side logic this enables: a fixed
+// phase is read as "the latest % as of the claim date" (point-in-time),
+// while a weekly_hire component is read as a day-by-day weighted sum across
+// the claim period (continuous accrual) — same underlying checkpoint
+// history, two different aggregations, because the two kinds of value
+// accrue differently in real life.
+//
+// Exactly one of phaseId/componentId is set — a fixed phase's progress, or
+// a weekly_hire component's progress, never both on the same row. Enforced
+// in application code (see lib/contract-schedule.ts), the same way
+// PaymentClaim's own claimedAmount invariant is — no DB-level CHECK
+// constraint, consistent with this codebase's existing convention.
+model ContractItemProgressEntry {
+  id                   String                     @id @default(cuid())
+  phaseId              String?
+  componentId          String?
+  effectiveDate        DateTime
+  percent              Float
+  source               ContractItemProgressSource @default(manual)
+  // Set only when source = project_diary — which Update contributed this
+  // checkpoint (Phase 3 of this feature; the column exists now so Phase 1's
+  // schema doesn't need a follow-up migration once that's wired).
+  projectDiaryUpdateId String?
+  note                 String?
+  createdByUserId      String?
+  createdAt            DateTime                   @default(now())
+
+  phase         ContractItemComponentPhase? @relation(fields: [phaseId], references: [id])
+  component     ContractItemComponent?      @relation(fields: [componentId], references: [id])
+  sourceUpdate  Update?                     @relation(fields: [projectDiaryUpdateId], references: [id])
+  createdByUser User?                       @relation(fields: [createdByUserId], references: [id])
+
+  @@index([phaseId, effectiveDate])
+  @@index([componentId, effectiveDate])
+}
+
 model Invoice {
   id            String        @id @default(cuid())
   projectId     String
@@ -1357,16 +1519,17 @@ model Update {
   externalBody    String?
   externalSentAt  DateTime?
 
-  project        Project            @relation(fields: [projectId], references: [id])
-  author         User               @relation(fields: [authorId], references: [id])
-  parent         Update?            @relation("UpdateReplies", fields: [parentId], references: [id])
-  replies        Update[]           @relation("UpdateReplies")
-  variationItem  VariationItem?     @relation(fields: [variationItemId], references: [id])
-  qaRecord       QARecord?          @relation(fields: [qaRecordId], references: [id])
-  attachments    UpdateAttachment[]
-  recipients     UpdateRecipient[]
-  correspondence Correspondence[]
-  reads          UpdateRead[]
+  project                     Project                     @relation(fields: [projectId], references: [id])
+  author                      User                        @relation(fields: [authorId], references: [id])
+  parent                      Update?                     @relation("UpdateReplies", fields: [parentId], references: [id])
+  replies                     Update[]                    @relation("UpdateReplies")
+  variationItem               VariationItem?              @relation(fields: [variationItemId], references: [id])
+  qaRecord                    QARecord?                   @relation(fields: [qaRecordId], references: [id])
+  attachments                 UpdateAttachment[]
+  recipients                  UpdateRecipient[]
+  correspondence              Correspondence[]
+  reads                       UpdateRead[]
+  contractItemProgressEntries ContractItemProgressEntry[]
 }
 
 // Per-user read state for an Update — private to each user (one user

@@ -998,6 +998,167 @@ export async function extractQuoteFromText(
   return ExtractedQuoteSchema.parse(JSON.parse(raw));
 }
 
+// ============================================================
+// Contract Schedule of Values extraction (Phase 2 of that feature — see
+// lib/contract-schedule.ts for Phase 1's schema/calculation engine). A
+// genuinely separate, much richer extraction from extractQuoteFromText
+// above: that one is a flat summary (a total + optional plain description/
+// amount lines) for the Contract tab's lightweight display; this reads a
+// PRICED SCHEDULE with real column structure (Supply/Install/Erect &
+// Dismantle/Transport/Weekly Hire/etc, sometimes a global Erect/Dismantle
+// split note) and turns it into the component/phase shape Payment Claims
+// actually calculates against.
+//
+// Vision, not text — confirmed directly against a real scaffold quote
+// (Cintra Apartments) that plain pdftotext-style extraction reorders this
+// exact kind of multi-column table badly enough to silently misassign
+// dollar figures to the wrong column. Mirrors
+// extractDayWorksSheetSummariesFromImages's proven shape: multiple images
+// (every page — the priced table and any notes/schedule-of-rates page
+// describing a global split are often on different pages), per-item
+// confidence + notes, never guess.
+// ============================================================
+
+const ExtractedScheduleComponentPhaseSchema = z.object({
+  label: z.string(),
+  sharePercent: z.number()
+});
+
+// .nullish() (not just .nullable()) throughout this schema — confirmed
+// necessary against a real response: Grok frequently OMITS a key it
+// considers not applicable (e.g. no "weeklyRate" property at all on a
+// fixed component) rather than explicitly setting it to JSON null, and a
+// strictly-required field failing validation on every single not-
+// applicable field is exactly what happened the first time this was
+// tried against the real Cintra quote (every component rejected with
+// "Required" on 3-4 fields at once) — not a genuine parsing failure.
+const ExtractedScheduleComponentSchema = z.object({
+  kind: z.enum(["fixed", "weekly_hire"]),
+  label: z.string(),
+  // fixed only:
+  amount: z.number().nullish(),
+  // fixed only, and ONLY when this specific line item's charge is genuinely
+  // split into stages (e.g. Erect & Dismantle) — a plain single-stage
+  // amount (Supply only, Transport, a lump-sum fee) should have this as
+  // null, not a single 100%-share phase; the caller defaults an unsplit
+  // fixed component to one implicit 100% phase.
+  phases: z.array(ExtractedScheduleComponentPhaseSchema).nullish(),
+  // weekly_hire only:
+  weeklyRate: z.number().nullish(),
+  quotedDurationWeeks: z.number().nullish()
+});
+
+const ExtractedScheduleItemSchema = z.object({
+  sectionLabel: z.string().nullish(),
+  description: z.string(),
+  components: z.array(ExtractedScheduleComponentSchema),
+  confidence: z.number(),
+  notes: z.string().nullish()
+});
+
+const ExtractedContractScheduleSchema = z.object({
+  items: z.array(ExtractedScheduleItemSchema),
+  // A GLOBAL split stated once for the whole quote (e.g. "70% Erect / 30%
+  // Dismantle"), often on a different page from the priced table itself —
+  // applied by the caller as the default phase split offered for any
+  // erect/dismantle-shaped fixed component that didn't get its own
+  // explicit per-line split above. Null if the quote never states one.
+  defaultErectPercent: z.number().nullish(),
+  defaultDismantlePercent: z.number().nullish(),
+  // The document's OWN printed grand total (excl. GST, matching how these
+  // quotes are conventionally priced), if shown anywhere — used for a
+  // deterministic self-verification cross-check in code afterward, never
+  // trusted as the actual schedule total itself.
+  printedGrandTotal: z.number().nullish()
+});
+
+export type ExtractedScheduleItem = z.infer<typeof ExtractedScheduleItemSchema>;
+export type ExtractedContractSchedule = z.infer<typeof ExtractedContractScheduleSchema> & {
+  // Added by resolveExtractedContractSchedule below, not the model itself.
+  computedTotal: number;
+  totalMismatchWarning: string | null;
+};
+
+export async function extractContractScheduleFromImages(
+  images: { dataUrl: string }[],
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ExtractedContractSchedule> {
+  const response = await callGrok(
+    {
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You read a subcontractor's priced quote for construction work (one or more pages, possibly including a schedule-of-rates or terms page as well as the priced table itself) and extract a structured schedule of values. Look carefully at every row and every dollar figure — a quote's pricing table often has several dollar columns per line (e.g. a lump-sum charge, a transport/delivery charge, a weekly rental rate, a duration in weeks), and reading a column's value against the wrong row or column is a real, costly mistake — check alignment carefully, especially where the table is dense. Respond with only a JSON object matching this exact shape: " +
+            '{"items": [{"sectionLabel": string | null, "description": string, "components": [{"kind": "fixed" | "weekly_hire", "label": string, "amount": number | null, "phases": [{"label": string, "sharePercent": number}] | null, "weeklyRate": number | null, "quotedDurationWeeks": number | null}], "confidence": number, "notes": string | null}], "defaultErectPercent": number | null, "defaultDismantlePercent": number | null, "printedGrandTotal": number | null}. ' +
+            "items: one entry per priced line on the quote (a row like 'Stage A' or 'SAS 01 - Stair Access to Stair 1'), in the order they appear, preserving any section/elevation grouping heading above them (sectionLabel, e.g. 'NORTH ELEVATION') — null if the quote has no such grouping. " +
+            "components: every distinct dollar column actually priced on this line becomes its own component — do not invent a component for a column that's blank/dashed/not priced on this particular row. A column charging for supply/install/erect/dismantle/remove work (however labelled — 'Erect & Dismantle', 'Supply & Install', 'Install', etc.) is kind \"fixed\", amount = that column's value. A separate transport/delivery/freight column is its OWN fixed component (do not merge it into the erect/install component), amount = that column's value. Any other named lump-sum column (e.g. an Engineer's Fee, a one-off inspection charge) is also its own fixed component. A weekly rental/hire column paired with a duration-in-weeks column is kind \"weekly_hire\": weeklyRate = the rental column's value, quotedDurationWeeks = the paired duration column's value (null if no duration column exists). Never create a component for the row's own TOTAL/total cost column — that is the sum of the other columns, not a component of its own, and is not needed in the output. " +
+            "phases: ONLY set this (as an array) when a fixed component's charge is genuinely staged (most commonly Erect & Dismantle, or Supply/Install/Dismantle/Remove) AND you can find a stated split for it — either printed against this specific line, or a global split stated once elsewhere in the document (see defaultErectPercent below), in which case apply that global split here using its exact stage labels (e.g. 'Erect'/'Dismantle'). Leave this null for a plain single-stage charge (Supply only, Transport, a flat fee) — the caller treats null as one implicit 100% stage, so do not invent a single-entry phases array yourself. " +
+            "defaultErectPercent/defaultDismantlePercent: read from a note stated ONCE for the whole quote (e.g. a 'Breakdown of Charges' box saying '70% Erect / 30% Dismantle') — null if no such global note exists anywhere in the document. " +
+            "printedGrandTotal: the quote's own overall total figure, exactly as printed (excluding GST unless no other total is given) — null if the document never states one. " +
+            "confidence: your own honest 0-1 confidence in THIS line's extraction — lower it for anything genuinely hard to read or ambiguous (a merged/split table cell, a figure that could belong to either of two adjacent columns); a component genuinely not priced on this line is normal and should NOT by itself lower confidence. " +
+            "notes: a brief plain-English note on anything uncertain about this line, so a human reviewer knows exactly what to double-check — null if nothing is uncertain. " +
+            "Never guess or invent a figure you can't reasonably support from what's visible — use null instead."
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Read the priced quote in the following image(s) and extract the structured schedule of values described." },
+            ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image.dataUrl } }))
+          ]
+        }
+      ]
+    },
+    { ...usageContext, feature: "contract_schedule_extraction" }
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  const parsed = ExtractedContractScheduleSchema.parse(JSON.parse(raw));
+  return resolveExtractedContractSchedule(parsed);
+}
+
+// Self-verification (deterministic, in code — never trust the model's own
+// arithmetic): recomputes the schedule's total the exact same way
+// lib/contract-schedule.ts's computeScheduleTotalValue does (fixed amounts
+// summed directly, weekly_hire valued at rate x quoted duration) and
+// compares it against the quote's own printed grand total, when one was
+// found. A mismatch doesn't block the extraction — it's surfaced as one
+// schedule-level warning for the reviewer, the same "flag it, don't hide
+// it, don't block on it" principle as the Day Works crew-size cross-check.
+const TOTAL_MISMATCH_TOLERANCE_FRACTION = 0.02; // 2% — printed totals are sometimes rounded
+const TOTAL_MISMATCH_TOLERANCE_ABSOLUTE = 50; // and small quotes need an absolute floor, not just a %
+
+function resolveExtractedContractSchedule(
+  parsed: z.infer<typeof ExtractedContractScheduleSchema>
+): ExtractedContractSchedule {
+  let computedTotal = 0;
+  for (const item of parsed.items) {
+    for (const component of item.components) {
+      if (component.kind === "weekly_hire") {
+        computedTotal += (component.weeklyRate ?? 0) * (component.quotedDurationWeeks ?? 0);
+      } else {
+        computedTotal += component.amount ?? 0;
+      }
+    }
+  }
+
+  let totalMismatchWarning: string | null = null;
+  if (parsed.printedGrandTotal != null) {
+    const tolerance = Math.max(TOTAL_MISMATCH_TOLERANCE_ABSOLUTE, parsed.printedGrandTotal * TOTAL_MISMATCH_TOLERANCE_FRACTION);
+    if (Math.abs(computedTotal - parsed.printedGrandTotal) > tolerance) {
+      totalMismatchWarning = `The extracted line items add up to $${computedTotal.toFixed(2)}, but the quote's own printed total is $${parsed.printedGrandTotal.toFixed(2)} — please check the extracted items against the original quote before confirming.`;
+    }
+  }
+
+  return { ...parsed, computedTotal, totalMismatchWarning };
+}
+
 const PriorContractDeviationSchema = BucketDeviationSchema.extend({ topicBucket: z.string() });
 const PriorContractComparisonResultSchema = z.object({ deviations: z.array(PriorContractDeviationSchema) });
 

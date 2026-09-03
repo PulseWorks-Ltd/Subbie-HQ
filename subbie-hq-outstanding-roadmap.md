@@ -8,19 +8,86 @@ scheduled
 
 ## 1. The app's own namesake feature — Payment Claims
 
-📋 **Not built.** Confirmed via the full app audit: the page renders a
-placeholder ("coming in the next build phase"). A backend exists but is
-structurally disconnected — its generate route sums two orphaned legacy
-models (`Variation`, `MonthlyWorkRecord`) that nothing in the current
-UI writes to; running it today would produce a total near $0. Zero
-CCA s.20 deadline-tracking exists anywhere.
+**Superseded by the `record-lifecycle-and-filing` initiative — re-verified
+directly against the codebase, this section was stale.** The backend
+described below as "not built" now genuinely exists:
 
-**A complete, previously-designed implementation plan already exists**
-(schema, routes, UI, deadline logic, reminders) — this is an unstarted
-build, not an unsolved design problem. Sequencing note: automation for
-Payment Claims (auto-scheduling/sending, mirroring what was just built
-for Variation Packages) is explicitly deferred until Payment Claims
-itself is real.
+- ✅ `PaymentClaim` extended with `claimMonth`, `allocations`
+  (`VariationItemClaimAllocation` — real per-month Variation allocations
+  against the live `VariationItem`) and `claimEvidenceLinks`
+  (`ClaimEvidenceLink` — a real polymorphic link into the actual live
+  evidence chain: VariationPackage/Correspondence/ExternalAction/
+  QARecord, deliberately not the old orphaned `Evidence*` models).
+- ✅ `lib/payment-claim.ts` — real, non-stub business logic
+  (`recomputeClaimTotal`, `setVariationAllocation`,
+  `linkClaimEvidence`/`unlinkClaimEvidence`, `getClaimEvidence`).
+- ✅ The wider lifecycle layer this shipped alongside also exists in full:
+  `VariationItem`/`Project`/`Task` close-and-reactivate state
+  (`closedAt`/`reactivatedAt`/`completedAt`), a shared
+  `RecordLifecycleEvent` audit log, `components/lifecycle/closure-review-
+  dialog.tsx`, and a real `Task` model with its own UI (`app/(app)/
+  projects/[projectId]/tasks`).
+- 📋 **What's still actually missing is the UI only**: `app/(app)/
+  projects/[projectId]/payment-claims/page.tsx` still renders
+  `PlaceholderSection` — none of the real backend above is wired to a
+  page yet. Two more lib files shipped with no UI consumer at all yet
+  either: `lib/archive-queries.ts` (Year → Month → Record Type drill-down
+  — no `/archive` route exists) and `lib/global-search.ts`
+  (`searchProjectHistory` — not called from anywhere in `app/` or
+  `components/`).
+
+Net effect: this is now a **UI-only build**, not a schema-and-logic
+build — the highest-leverage remaining item in this whole file, because
+the expensive part (data model + business rules + evidence linking) is
+already done and verified, only the pages that call it are missing.
+Zero CCA s.20 deadline-tracking still exists anywhere (that part of the
+original plan was schema/UI, not lib — still genuinely open).
+
+✅ **Update, same session: the Payment Claims UI gap above is now closed**,
+via a new **Contract Schedule of Values** feature (`lib/contract-schedule.ts`,
+new `ContractSchedule`/`ContractItem`/`ContractItemComponent`/
+`ContractItemComponentPhase`/`ContractItemProgressEntry` models, a new
+`/projects/[projectId]/contract-schedule` page, and a real Payment Claims
+list + detail page replacing the placeholder). This is the "Original
+Subcontract Sum" side of a claim (Appendix B2's equivalent) — extracted
+from a subbie's own priced quote (manual entry only so far; AI extraction
+from an uploaded quote is a deliberately separate, not-yet-built follow-up
+phase). Key mechanism: one dated %-checkpoint history per fixed-component
+phase (Supply/Install/Erect/Dismantle/etc., point-in-time read) and per
+weekly-hire component (day-weighted read across a claim period, correctly
+handling a % that changes mid-period — the one thing the subbie's own
+Excel payment-claim template flagged as unsolved in its own header text).
+Verified against 10 real assertions, including the exact real dollar
+figures from `docs/Standard Documents/Cintra Apartments - Scaffold Quote
+(27.01).pdf`'s own "Stage A" line ($12,600 Erect & Dismantle + $750
+Transport + $504/wk hire = $13,854, matching the quote's own printed
+total) and a from-scratch reproduction of a user-supplied worked example
+for rental proration across a facade-by-facade handover. Payment Claims'
+existing `generate/route.ts` (the orphaned legacy path described above)
+was deliberately left untouched rather than repurposed — a new route in
+the same file handles real claim creation instead. ✅ **Phase 2, same session: AI-driven quote extraction, now built.**
+`extractContractScheduleFromImages` (`lib/grok.ts`) reads an uploaded
+quote via Grok vision (never plain text — confirmed the real quote's
+multi-column table gets reordered badly by pdftotext-style extraction)
+and returns a full draft schedule: every line, its components (Supply/
+Install/Erect & Dismantle/Transport/Weekly Hire/etc.), any per-line or
+global phase split, and a deterministic self-verification against the
+quote's own printed grand total (never trusting the model's arithmetic —
+same principle as the Day Works crew-size cross-check). New `/extract`
+and `/confirm-extraction` routes and an `ExtractQuoteDialog` review screen
+on the Contract Schedule page — nothing is saved until a human reviews
+and confirms it. **Real run against the actual Cintra Apartments quote**:
+28 items extracted, the global "70% Erect / 30% Dismantle" note correctly
+read, and the quote's own printed grand total ($344,911.20) matched
+exactly, with the independently-reconstructed line-item total landing
+within 0.04% of it. One real bug found and fixed during this verification:
+the extraction schema required every optional field present-with-null,
+but Grok frequently omits a not-applicable key entirely rather than
+setting it to JSON null — switched to Zod's `.nullish()` throughout.
+
+Not yet built: Project Diary → contract-item % complete assignment
+(Phase 3) — scoped as a separate follow-up phase from the start, not an
+oversight.
 
 ---
 
@@ -240,6 +307,37 @@ relevance:
 3. **Get real pilot users onto what's live** — this is still the actual
    gate on Phase 2, and increasingly on several other "wait and see"
    decisions stacking up across this roadmap.
-4. **Payment Claims** — the biggest single gap between what the product
-   is named and what it currently does; a real design plan already
-   exists, ready to execute when prioritised.
+4. **Payment Claims UI** — see the corrected §1 above: the backend is
+   already built and verified; only the page (and Archive/Global Search's
+   pages, same situation) remain. Now the single highest-leverage item in
+   this file precisely because the expensive part is already done.
+
+---
+
+## 8. Reconciled against the "Where SubcontractorOS Is Ahead" competitive
+   doc (separate document, same session)
+
+That doc's 7 areas assessed against this codebase directly (not just
+against its own text, which pre-dates some of this session's work):
+
+- **Area 01 (messaging)** and **Area 04 (no-app messaging)** — largely
+  ✅ already shipped: the live homepage hero is already outcome/leakage-
+  framed ("The Work Gets Done. The Money Doesn't Always Follow" / "money
+  quietly left on the table") and already states the secure-link, no-app
+  approval flow above the fold; `features/approvals-automation` exists as
+  a dedicated page. Genuinely still open from that doc: the Leakage
+  Calculator (not built), reframing the guides index as "leak points" (not
+  done), and a public/self-serve Contract Review teaser tool (not built).
+- **Area 02 (Delay/EOT) and Area 03 (Retention)** — confirmed genuinely
+  **not built**: no `Retention` or `DelayEvent` model exists anywhere in
+  `prisma/schema.prisma`. Both docs agree here; this is real, unclaimed
+  work.
+- **Area 05 (founder/social proof) and Area 06 (sales process)** — no
+  About/Founder page, no testimonials anywhere in the marketing routes,
+  confirmed absent. Pure content/process work, nothing to build.
+- **Area 07 (unified commercial view)** — the competitive doc assumed this
+  was blocked on Retention/EOT existing first. Half-true: the *aggregation
+  layer* (Dashboard feed, a Commercial Position snapshot) does need those
+  two models. But **Claims itself — the other half of "unified" — is not
+  blocked on anything anymore**, per §1's correction above: its schema and
+  evidence-linking logic already exist, only its page doesn't.

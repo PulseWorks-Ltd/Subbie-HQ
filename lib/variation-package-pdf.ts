@@ -16,6 +16,7 @@ import type {
 } from "@prisma/client";
 import { downloadFromS3 } from "./s3";
 import { formatUserName } from "./user-display";
+import { getOrganisationLogo, embedOrganisationLogo, drawLogo } from "./pdf-branding";
 import {
   computeSheetRecordTotal,
   computeLabourSummary,
@@ -427,6 +428,7 @@ export async function generateVariationPackagePdf(params: {
   updates: UpdateWithRelations[];
   contractTerms: { materialsMarkupPercent: number | null } | null;
   generatedByName: string;
+  organisationId?: string | null;
 }): Promise<Uint8Array> {
   const { item, photos, correspondence, dayWorksSheets, sheetRecords, materials, plant, updates, contractTerms, generatedByName } = params;
 
@@ -434,6 +436,16 @@ export async function generateVariationPackagePdf(params: {
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
   const w = new PdfWriter(doc, font, boldFont);
+
+  // Org logo, top-right corner of the cover page only — deliberately drawn
+  // independently of PdfWriter's own y-cursor (not folded into the header
+  // below) so adding it can't disturb this file's already-tuned vertical
+  // layout math anywhere else.
+  const logo = await getOrganisationLogo(params.organisationId ?? null);
+  const logoImage = await embedOrganisationLogo(doc, logo);
+  if (logoImage) {
+    drawLogo(w.page, logoImage, { x: PAGE_WIDTH - MARGIN - 110, y: PAGE_HEIGHT - MARGIN + 12, maxWidth: 110, maxHeight: 40 });
+  }
 
   const packageTotals = computePackageTotals(sheetRecords, materials, plant, contractTerms);
 

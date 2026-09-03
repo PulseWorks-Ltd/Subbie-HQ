@@ -20,9 +20,10 @@ export async function generateAndStoreVariationPackage(params: {
   const includedCategories = params.includedCategories ?? [...PACKAGE_CATEGORIES];
   const isIncluded = (category: PackageCategory) => includedCategories.includes(category);
 
-  const [item, user] = await Promise.all([
+  const [item, user, project] = await Promise.all([
     prisma.variationItem.findFirst({ where: { id: params.itemId, projectId: params.projectId } }),
-    prisma.user.findUnique({ where: { id: params.generatedByUserId }, select: { firstName: true, lastName: true, email: true } })
+    prisma.user.findUnique({ where: { id: params.generatedByUserId }, select: { firstName: true, lastName: true, email: true } }),
+    prisma.project.findUnique({ where: { id: params.projectId }, select: { organisationId: true } })
   ]);
   if (!item) {
     return null;
@@ -78,7 +79,8 @@ export async function generateAndStoreVariationPackage(params: {
     plant: filteredPlant,
     updates: filteredUpdates,
     contractTerms,
-    generatedByName
+    generatedByName,
+    organisationId: project?.organisationId ?? null
   });
 
   const uploadKey = `projects/${params.projectId}/variation-items/${params.itemId}/packages/${Date.now()}-variation-package-${item.reference}.pdf`;

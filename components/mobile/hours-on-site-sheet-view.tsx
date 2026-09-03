@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { postWithOfflineRetry } from "@/lib/offline-retry-client";
 import { RequestHoursOnSiteApprovalDialog } from "@/components/external-actions/request-hours-on-site-approval-dialog";
+import { SignaturePad, type SignaturePadHandle } from "@/components/mobile/signature-pad";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type WorkerOption = { id: string; name: string };
@@ -11,6 +12,13 @@ type VariationItemRef = { id: string; reference: string; title: string };
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// Same "DWS-000123" display convention as lib/hours-on-site-pdf.ts's
+// formatDayWorksSheetNumber — duplicated rather than imported since that
+// module pulls in pdf-lib/S3, which have no business in a client bundle.
+function formatSheetNumber(n: number): string {
+  return `DWS-${String(n).padStart(6, "0")}`;
 }
 
 function toDateTimeLocal(iso: string | null): string {
@@ -29,6 +37,7 @@ export function HoursOnSiteSheetView({
   contacts: ContactOption[];
   sheet: {
     id: string;
+    dayWorksSheetNumber: number;
     projectName: string;
     variationItem: VariationItemRef | null;
     comments: string | null;
@@ -38,10 +47,15 @@ export function HoursOnSiteSheetView({
     workers: WorkerOption[];
     approvedAt: string | null;
     approvedByName: string | null;
+    signatureImageUrl: string | null;
   };
 }) {
   const router = useRouter();
   const isApproved = Boolean(sheet.approvedAt);
+  const signaturePadRef = useRef<SignaturePadHandle>(null);
+  const [signerName, setSignerName] = useState("");
+  const [isSigning, setIsSigning] = useState(false);
+  const [signError, setSignError] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState(toDateTimeLocal(sheet.startedAt));
   const [finishedAt, setFinishedAt] = useState(toDateTimeLocal(sheet.finishedAt));
   const [totalHours, setTotalHours] = useState(sheet.totalHours != null ? String(sheet.totalHours) : "");
@@ -124,6 +138,35 @@ export function HoursOnSiteSheetView({
     router.refresh();
   }
 
+  async function handleSignOnDevice() {
+    setSignError(null);
+    if (!signerName.trim()) {
+      setSignError("Enter the Site Manager's name.");
+      return;
+    }
+    const signatureDataUrl = signaturePadRef.current?.toDataUrl();
+    if (!signatureDataUrl) {
+      setSignError("Please sign in the box above first.");
+      return;
+    }
+
+    setIsSigning(true);
+    const response = await fetch(`/api/projects/${projectId}/hours-on-site/${sheet.id}/sign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: signerName.trim(), signatureDataUrl })
+    });
+    setIsSigning(false);
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setSignError(typeof body?.error === "string" ? body.error : "Could not save the signature.");
+      return;
+    }
+
+    router.refresh();
+  }
+
   const exactMatch = workerResults.find((w) => w.name.toLowerCase() === workerQuery.trim().toLowerCase());
 
   return (
@@ -134,6 +177,9 @@ export function HoursOnSiteSheetView({
         </a>
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-bold">Hours on Site</h1>
+          <span className="text-[10px] font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 bg-[#f6f7f8] dark:bg-slate-800 border border-[#e7edf3] dark:border-slate-700 rounded-full px-2 py-0.5">
+            {formatSheetNumber(sheet.dayWorksSheetNumber)}
+          </span>
           {isApproved && (
             <span className="text-[10px] font-bold uppercase tracking-wide text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-full px-2 py-0.5">
               Approved
@@ -147,6 +193,14 @@ export function HoursOnSiteSheetView({
           <p className="text-xs text-green-700 dark:text-green-400 mt-1">
             Approved by {sheet.approvedByName ?? "the recipient"} on {formatDate(sheet.approvedAt)} — ready for a variation claim.
           </p>
+        )}
+        {isApproved && sheet.signatureImageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={sheet.signatureImageUrl}
+            alt={`Signature of ${sheet.approvedByName ?? "the approver"}`}
+            className="h-14 mt-2 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white px-2"
+          />
         )}
       </div>
 
@@ -262,6 +316,51 @@ export function HoursOnSiteSheetView({
           </div>
         )}
       </div>
+
+      {!isApproved && sheet.finishedAt && (
+        <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col gap-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">
+            Sign on this device
+          </p>
+          <p className="text-xs text-[#4c739a] dark:text-slate-400">
+            If the Site Manager is with you now, hand them this phone or tablet to sign directly — no need to send a
+            link.
+          </p>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Site Manager&apos;s name
+            <input
+              type="text"
+              value={signerName}
+              onChange={(event) => setSignerName(event.target.value)}
+              placeholder="Full name"
+              className="h-11 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </label>
+          <SignaturePad ref={signaturePadRef} />
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => signaturePadRef.current?.clear()}
+              className="h-10 px-4 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={handleSignOnDevice}
+              disabled={isSigning}
+              className="flex-1 h-10 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
+            >
+              {isSigning ? "Saving..." : "Confirm sign-off"}
+            </button>
+          </div>
+          {signError && <p className="text-xs text-red-600">{signError}</p>}
+          <p className="text-xs text-[#4c739a] dark:text-slate-400">
+            This records a signature and typed name as an acknowledgement with a timestamp — it is not a certified
+            electronic signature.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-xl border border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col gap-3">
         <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">Share</p>

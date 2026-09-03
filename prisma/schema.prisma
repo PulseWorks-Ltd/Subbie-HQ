@@ -392,6 +392,11 @@ model Organisation {
   planTier                PlanTier?
   trialEndsAt             DateTime?
   createdAt               DateTime                  @default(now())
+  // Org-wide branding stamped onto every generated PDF (Hours on Site,
+  // Variation Package, Payment Claim) — see lib/pdf-branding.ts. Nullable:
+  // no logo means those PDFs render exactly as before, no placeholder box.
+  logoStorageKey          String?
+  logoContentType         String?
   members                 OrganisationMember[]
   invites                 OrganisationInvite[]
   projects                Project[]
@@ -2164,6 +2169,22 @@ model HoursOnSiteSheet {
   approvedAt                 DateTime?
   approvedByName             String?
   approvedByExternalActionId String?   @unique
+  // Set only when approval happened by handing the device straight to the
+  // Site Manager/foreman to sign there and then (see lib/hours-on-site.ts's
+  // signSheetOnDevice) — an ALTERNATIVE route to approval alongside the
+  // secure-link ExternalAction above, not a second lock: both routes set
+  // approvedAt/approvedByName identically, this just additionally has a
+  // drawn signature image to show. Null for a link-approved sheet (no
+  // device was ever handed over, so there's no signature to draw).
+  signatureImageStorageKey   String?
+  // Unique, permanent reference number for this sheet — printed on the
+  // PDF exactly like a pre-numbered paper dayworks pad (see the DWS 01/02
+  // reference templates in docs/Standard Documents). A plain Postgres-
+  // backed autoincrement: globally unique and gap-free-under-concurrency
+  // by construction, so no custom counter/transaction logic is needed.
+  // Deliberately global rather than per-organisation — see
+  // lib/hours-on-site.ts's startSheet comment.
+  dayWorksSheetNumber        Int       @unique @default(autoincrement())
 
   project          Project             @relation(fields: [projectId], references: [id])
   variationItem    VariationItem?      @relation(fields: [variationItemId], references: [id])

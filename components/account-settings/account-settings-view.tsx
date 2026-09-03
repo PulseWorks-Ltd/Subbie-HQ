@@ -44,6 +44,7 @@ export function AccountSettingsView({
     planTier: string | null;
     trialEndsAt: Date | null;
     hasStripeCustomer: boolean;
+    logoUrl: string | null;
   } | null;
 }) {
   const [tab, setTab] = useState<AccountSettingsTab>(initialTab);

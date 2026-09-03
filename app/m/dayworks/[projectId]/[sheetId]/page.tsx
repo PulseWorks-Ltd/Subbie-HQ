@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireProjectAccess } from "@/lib/auth";
 import { getSheetWithDetail } from "@/lib/hours-on-site";
+import { getSignedDownloadUrl } from "@/lib/s3";
 import { HoursOnSiteSheetView } from "@/components/mobile/hours-on-site-sheet-view";
 
 export default async function HoursOnSiteSheetPage({
@@ -31,12 +32,17 @@ export default async function HoursOnSiteSheetPage({
       })
     : [];
 
+  const signatureImageUrl = sheet.signatureImageStorageKey
+    ? await getSignedDownloadUrl(sheet.signatureImageStorageKey, 300)
+    : null;
+
   return (
     <HoursOnSiteSheetView
       projectId={projectId}
       contacts={contacts}
       sheet={{
         id: sheet.id,
+        dayWorksSheetNumber: sheet.dayWorksSheetNumber,
         projectName: sheet.project.name,
         variationItem: sheet.variationItem,
         comments: sheet.comments,
@@ -45,7 +51,8 @@ export default async function HoursOnSiteSheetPage({
         totalHours: sheet.totalHours != null ? Number(sheet.totalHours) : null,
         workers: sheet.workers.map((w) => ({ id: w.worker.id, name: w.worker.name })),
         approvedAt: sheet.approvedAt ? sheet.approvedAt.toISOString() : null,
-        approvedByName: sheet.approvedByName
+        approvedByName: sheet.approvedByName,
+        signatureImageUrl
       }}
     />
   );

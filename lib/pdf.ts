@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { getOrganisationLogo, embedOrganisationLogo, drawLogo } from "./pdf-branding";
 
 export async function generatePaymentClaimPdf(params: {
   projectName: string;
@@ -6,10 +7,17 @@ export async function generatePaymentClaimPdf(params: {
   referenceDate: Date;
   claimedAmount: string;
   statutoryWording: string;
+  organisationId?: string | null;
 }) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const logo = await getOrganisationLogo(params.organisationId ?? null);
+  const logoImage = await embedOrganisationLogo(pdfDoc, logo);
+  if (logoImage) {
+    drawLogo(page, logoImage, { x: 595.28 - 50 - 110, y: 841.89 - 40, maxWidth: 110, maxHeight: 40 });
+  }
 
   const title = `Payment Claim #${params.claimNumber}`;
 

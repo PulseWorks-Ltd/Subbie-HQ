@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getOrganisationMembership } from "@/lib/organisation";
+import { getSignedDownloadUrl } from "@/lib/s3";
 import type { AccountSettingsTab } from "@/components/account-settings/account-settings-view";
 import { AccountSettingsView } from "@/components/account-settings/account-settings-view";
 
@@ -25,6 +26,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   }
 
   const isAdmin = membership?.isAdmin ?? false;
+
+  // Short-lived preview URL for the settings page only — the actual PDFs
+  // stamp the logo in themselves at generation time (see
+  // lib/pdf-branding.ts), never by referencing this URL.
+  const logoUrl =
+    isAdmin && membership?.organisation.logoStorageKey
+      ? await getSignedDownloadUrl(membership.organisation.logoStorageKey, 300)
+      : null;
 
   // Never trust the requested tab for what gets fetched/rendered — a
   // non-admin asking for ?tab=team or ?tab=organisation directly falls back
@@ -65,7 +74,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               accessStatus: membership!.organisation.accessStatus,
               planTier: membership!.organisation.planTier,
               trialEndsAt: membership!.organisation.trialEndsAt,
-              hasStripeCustomer: membership!.organisation.stripeCustomerId !== null
+              hasStripeCustomer: membership!.organisation.stripeCustomerId !== null,
+              logoUrl
             }
           : null
       }

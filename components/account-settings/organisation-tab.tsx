@@ -93,6 +93,95 @@ function BillingSection({
   );
 }
 
+// Stamped onto every generated PDF (Hours on Site, Variation Package,
+// Payment Claim) — see lib/pdf-branding.ts. Upload is a plain multipart
+// POST (a file, not JSON), so this doesn't reuse the name/trade form's
+// fetch pattern above.
+function LogoSection({ initialLogoUrl }: { initialLogoUrl: string | null }) {
+  const router = useRouter();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialLogoUrl);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    setError(null);
+    setIsUploading(true);
+
+    // Local instant preview while the upload is in flight — replaced by
+    // router.refresh()'s server-rendered signed URL once it lands.
+    const localPreview = URL.createObjectURL(file);
+    setPreviewUrl(localPreview);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch("/api/organisation/logo", { method: "POST", body: formData });
+    setIsUploading(false);
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(typeof body?.error === "string" ? body.error : "Could not upload the logo.");
+      setPreviewUrl(initialLogoUrl);
+      return;
+    }
+
+    router.refresh();
+  }
+
+  async function handleRemove() {
+    setError(null);
+    setIsUploading(true);
+    const response = await fetch("/api/organisation/logo", { method: "DELETE" });
+    setIsUploading(false);
+
+    if (!response.ok) {
+      setError("Could not remove the logo.");
+      return;
+    }
+
+    setPreviewUrl(null);
+    router.refresh();
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5 flex flex-col gap-3 max-w-lg">
+      <h3 className="text-sm font-bold">Logo</h3>
+      <p className="text-xs text-[#4c739a] dark:text-slate-400">
+        Shown on every PDF this organisation generates — Hours on Site sheets, Variation Packages, and payment
+        claims. PNG or JPEG, up to 2MB.
+      </p>
+
+      {previewUrl && (
+        <div className="h-16 w-40 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-[#f6f7f8] dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewUrl} alt="Organisation logo" className="max-h-full max-w-full object-contain" />
+        </div>
+      )}
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <div className="flex gap-3">
+        <label className="h-10 px-4 flex items-center rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-bold hover:bg-[#e7edf3] dark:hover:bg-slate-800 cursor-pointer disabled:opacity-60">
+          {isUploading ? "Uploading..." : previewUrl ? "Replace logo" : "Upload logo"}
+          <input type="file" accept="image/png,image/jpeg" onChange={handleFileChange} disabled={isUploading} className="hidden" />
+        </label>
+        {previewUrl && (
+          <button
+            onClick={handleRemove}
+            disabled={isUploading}
+            className="h-10 px-4 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-60"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function OrganisationTab({
   organisation
 }: {
@@ -105,6 +194,7 @@ export function OrganisationTab({
     planTier: string | null;
     trialEndsAt: Date | null;
     hasStripeCustomer: boolean;
+    logoUrl: string | null;
   };
 }) {
   const router = useRouter();
@@ -222,6 +312,8 @@ export function OrganisationTab({
           </button>
         </div>
       </form>
+
+      <LogoSection initialLogoUrl={organisation.logoUrl} />
 
       <BillingSection organisation={organisation} />
     </div>

@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { uploadToS3 } from "./s3";
 
 // "Hours on Site" — the live start/finish capture path (see
 // HoursOnSiteSheet's schema comment for how this differs from the existing
@@ -24,6 +25,16 @@ export async function startSheet(params: {
   });
 }
 
+// Real elapsed time almost never lands on a clean quarter-hour, and a
+// paper dayworks sheet is normally rounded by hand anyway (see the DWS 02
+// reference template's own printed instruction: "accurate to the quarter
+// hour (15 min)"). Rounds UP only — never down, so the subcontractor is
+// never short-changed by a few minutes of real, worked time.
+const QUARTER_HOUR = 0.25;
+function roundUpToQuarterHour(hours: number): number {
+  return Math.ceil(hours / QUARTER_HOUR) * QUARTER_HOUR;
+}
+
 // Sets finishedAt and computes totalHours from the startedAt/finishedAt
 // delta, ONCE — this is a starting point for the user to correct, never
 // recomputed automatically again afterward (see updateSheet below, which
@@ -35,7 +46,7 @@ export async function finishSheet(sheetId: string) {
 
   const finishedAt = new Date();
   const rawHours = (finishedAt.getTime() - sheet.startedAt.getTime()) / (1000 * 60 * 60);
-  const totalHours = Math.round(Math.max(0, rawHours) * 100) / 100;
+  const totalHours = roundUpToQuarterHour(Math.max(0, rawHours));
 
   return prisma.hoursOnSiteSheet.update({
     where: { id: sheetId },
@@ -77,6 +88,44 @@ export async function addWorkerToSheet(params: { sheetId: string; workerId: stri
     .catch(() => undefined); // unique constraint — already on the sheet, harmless no-op
 }
 
+// On-device signing — the creator hands their phone/tablet straight to
+// the Site Manager/foreman to sign there and then, rather than sending a
+// secure link by email (see lib/external-action.ts's createAndSendExternalAction
+// for that other route). Both routes land on the exact same lock
+// (approvedAt/approvedByName) — this one additionally stores the drawn
+// signature image, since there's a real device in hand to draw on.
+export class HoursOnSiteNotReadyError extends Error {
+  constructor() {
+    super("Finish the sheet before it can be signed.");
+    this.name = "HoursOnSiteNotReadyError";
+  }
+}
+
+export async function signSheetOnDevice(
+  sheetId: string,
+  params: { name: string; signatureImageBytes: Uint8Array; contentType: string }
+) {
+  const sheet = await prisma.hoursOnSiteSheet.findUniqueOrThrow({ where: { id: sheetId } });
+  if (sheet.approvedAt) throw new HoursOnSiteApprovedError();
+  if (!sheet.finishedAt) throw new HoursOnSiteNotReadyError();
+
+  const extension = params.contentType === "image/jpeg" ? "jpg" : "png";
+  const { storageKey } = await uploadToS3({
+    key: `hours-on-site/${sheetId}/signature-${Date.now()}.${extension}`,
+    body: params.signatureImageBytes,
+    contentType: params.contentType
+  });
+
+  return prisma.hoursOnSiteSheet.update({
+    where: { id: sheetId },
+    data: {
+      approvedAt: new Date(),
+      approvedByName: params.name.trim(),
+      signatureImageStorageKey: storageKey
+    }
+  });
+}
+
 export async function removeWorkerFromSheet(params: { sheetId: string; workerId: string }) {
   await assertNotApproved(params.sheetId);
   await prisma.hoursOnSiteWorker
@@ -113,7 +162,7 @@ export async function getSheetWithDetail(sheetId: string) {
   return prisma.hoursOnSiteSheet.findUnique({
     where: { id: sheetId },
     include: {
-      project: { select: { id: true, name: true } },
+      project: { select: { id: true, name: true, organisationId: true, organisation: { select: { name: true } } } },
       variationItem: { select: { id: true, reference: true, title: true } },
       workers: { include: { worker: true } },
       createdByUser: { select: { firstName: true, lastName: true, email: true } }

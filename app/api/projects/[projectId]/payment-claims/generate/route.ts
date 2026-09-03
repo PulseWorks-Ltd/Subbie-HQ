@@ -38,7 +38,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       where: { projectId },
       orderBy: { claimNumber: "desc" }
     }),
-    prisma.project.findUnique({ where: { id: projectId } }),
+    prisma.project.findUnique({ where: { id: projectId }, select: { name: true, organisationId: true } }),
     prisma.monthlyWorkRecord.findMany({
       where: {
         projectId,
@@ -85,7 +85,8 @@ export async function POST(request: Request, context: { params: { projectId: str
     claimNumber,
     referenceDate: new Date(payload.referenceDate),
     claimedAmount: `$${claimedAmount.toFixed(2)}`,
-    statutoryWording
+    statutoryWording,
+    organisationId: project.organisationId
   });
 
   const pdfKey = `projects/${projectId}/claims/claim-${claimNumber}.pdf`;

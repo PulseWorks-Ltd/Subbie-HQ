@@ -317,6 +317,7 @@ model User {
   recordLifecycleEvents          RecordLifecycleEvent[]
   hoursOnSiteSheets              HoursOnSiteSheet[]
   contractItemProgressEntries    ContractItemProgressEntry[]
+  createdDelayEvents             DelayEvent[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -550,6 +551,7 @@ model Project {
   hoursOnSiteSheets            HoursOnSiteSheet[]
   contractSchedule             ContractSchedule?
   retention                    Retention?
+  delayEvents                  DelayEvent[]
 }
 
 enum VariationAutomationMode {
@@ -805,6 +807,12 @@ model ContractTerms {
   paymentClaimDay            Int?
   variationNoticePeriodDays  Int?
   variationNoticeMethod      String?
+  // Clause 10 (delay/EOT) notice period — deliberately separate from
+  // variationNoticePeriodDays/variationNoticeMethod above (clause 9) even
+  // though the two are structurally identical, since a real contract
+  // routinely states different day counts/methods for the two clauses.
+  delayNoticePeriodDays      Int?
+  delayNoticeMethod          String?
   retentionPercent           Float?
   defectsLiabilityPeriodDays Int?
   disputeNoticeMethod        String?
@@ -814,6 +822,8 @@ model ContractTerms {
   suggestedPaymentClaimDay            Int?
   suggestedVariationNoticePeriodDays  Int?
   suggestedVariationNoticeMethod      String?
+  suggestedDelayNoticePeriodDays      Int?
+  suggestedDelayNoticeMethod          String?
   suggestedRetentionPercent           Float?
   suggestedDefectsLiabilityPeriodDays Int?
   suggestedDisputeNoticeMethod        String?
@@ -1202,6 +1212,64 @@ model Retention {
   updatedAt DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id])
+}
+
+// Delay / Extension of Time tracking (SA-2017 clause 10) — the same
+// "a missed written notice silently forfeits relief" failure mode as
+// Variations (clause 9), tracked the same way: log it, notify by the
+// deadline, remind if it's about to slip, record the outcome. Explicitly
+// scoped to "log, notify, remind, evidence" — no adjudication/dispute-
+// resolution tracking is modelled here, deliberately.
+enum DelayEventStatus {
+  open // logged, notice not yet sent
+  notice_sent // ExternalAction sent, awaiting the Main Contractor/CA's response
+  awarded // resolved — some or all days awarded (see daysAwarded)
+  rejected // resolved — no days awarded
+  closed // administratively closed (e.g. superseded, withdrawn)
+}
+
+model DelayEvent {
+  id              String    @id @default(cuid())
+  projectId       String
+  // Optional — a delay can exist on its own (e.g. weather) or be tied to
+  // the Site Instruction/Variation that caused it (e.g. a principal-
+  // directed change that also disrupted the programme).
+  variationItemId String?
+  cause           String
+  // Free text, not an enforced enum — mirrors ContractTerms.delayNoticeMethod's
+  // own "method" fields being free text throughout this schema (contracts
+  // state notice clauses in enough different ways that a fixed list would
+  // fight the real documents more often than it'd help).
+  clauseReference String?
+  startDate       DateTime
+  endDate         DateTime?
+  // The subbie's own assessed claim; awarded can differ once the Main
+  // Contractor/Contract Administrator responds — set manually by the
+  // subbie after reading that response (see ExternalAction's own
+  // responseChoice/responseComment, reused unchanged rather than adding a
+  // structured "days" field there — a deliberate scoping choice, not an
+  // oversight).
+  daysClaimed     Int?
+  daysAwarded     Int?
+
+  // Defaults (in application code, not the database — same pattern as
+  // Retention's tranche2ExpectedDate) to startDate + ContractTerms.
+  // delayNoticePeriodDays, but stored and editable here since it can
+  // genuinely be adjusted independently of the contract's stated terms.
+  noticeDeadline    DateTime?
+  noticeSentAt      DateTime?
+  lastReminderStage ReminderStage?
+
+  status          DelayEventStatus @default(open)
+  resolvedAt      DateTime?
+  createdByUserId String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  project         Project          @relation(fields: [projectId], references: [id])
+  variationItem   VariationItem?   @relation(fields: [variationItemId], references: [id])
+  createdByUser   User             @relation(fields: [createdByUserId], references: [id])
+  externalActions ExternalAction[]
 }
 
 // One row per Variation claimed, in one specific month's claim — the
@@ -1710,6 +1778,7 @@ model VariationItem {
   closedByUser              User?                          @relation("VariationItemClosedBy", fields: [closedByUserId], references: [id])
   reactivatedByUser         User?                          @relation("VariationItemReactivatedBy", fields: [reactivatedByUserId], references: [id])
   hoursOnSiteSheets         HoursOnSiteSheet[]
+  delayEvents               DelayEvent[]
 }
 
 // A general-purpose, user-created work item — distinct from ProgrammeItem
@@ -2166,6 +2235,14 @@ model ExternalAction {
   // NOT set as this row's own variationItemId — the target here is
   // unambiguously the sheet, not the SI.
   hoursOnSiteSheetId String?
+  // Set ALONE (never alongside the three above) — a delay/EOT notice, sent
+  // as type: approve (asking the Main Contractor/Contract Administrator to
+  // approve a specific number of EOT days). Same "kept out of the linked
+  // SI/Variation's own External Actions list" rule as hoursOnSiteSheetId
+  // above, for the same reason: unambiguously an action on the delay
+  // event, not a generic action on the SI's live state, even when that
+  // delay event happens to be linked to one.
+  delayEventId       String?
   type               ExternalActionType
   // Customisable context/message shown to the recipient on the public
   // response page — set at send time, not required.
@@ -2223,6 +2300,7 @@ model ExternalAction {
   dayWorksSheet            DayWorksSheet?         @relation(fields: [dayWorksSheetId], references: [id])
   variationPackage         VariationPackage?      @relation(fields: [variationPackageId], references: [id])
   hoursOnSiteSheet         HoursOnSiteSheet?      @relation("HoursOnSiteSheetExternalActions", fields: [hoursOnSiteSheetId], references: [id])
+  delayEvent               DelayEvent?            @relation(fields: [delayEventId], references: [id])
   mainContractorContact    MainContractorContact? @relation(fields: [mainContractorContactId], references: [id])
   sentByUser               User                   @relation(fields: [sentByUserId], references: [id])
   correspondence           Correspondence?

@@ -11,7 +11,8 @@ const TYPE_ICONS: Record<DashboardItem["type"], string> = {
   "site-instruction": "assignment",
   "payment-claim": "payments",
   "safety-document": "health_and_safety",
-  retention: "savings"
+  retention: "savings",
+  "delay-event": "hourglass_top"
 };
 
 function toDateInputValue(date: Date) {
@@ -77,6 +78,12 @@ export function DashboardItemRow({ item }: { item: DashboardItem }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [item.rescheduleField]: isoDate })
+      });
+    } else if (item.type === "delay-event") {
+      await fetch(`/api/projects/${item.projectId}/delay-events/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ noticeDeadline: isoDate })
       });
     }
 

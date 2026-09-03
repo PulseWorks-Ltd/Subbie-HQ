@@ -129,6 +129,7 @@ export type ReminderRunSummary = {
   checkedSafetyDocuments: number;
   checkedInsuranceCertificates: number;
   checkedRetentions: number;
+  checkedDelayEvents: number;
   remindersSent: number;
   details: string[];
 };
@@ -140,6 +141,7 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
     checkedSafetyDocuments: 0,
     checkedInsuranceCertificates: 0,
     checkedRetentions: 0,
+    checkedDelayEvents: 0,
     remindersSent: 0,
     details: []
   };
@@ -165,7 +167,15 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
         where: { expiresAt: { not: null } },
         select: { id: true, title: true, expiresAt: true, lastReminderStage: true }
       },
-      retention: { select: { tranche1LastReminderStage: true, tranche2LastReminderStage: true } }
+      retention: { select: { tranche1LastReminderStage: true, tranche2LastReminderStage: true } },
+      // Only unnotified, still-open events with a deadline need a
+      // reminder — once the notice is actually sent (or the event
+      // resolved/closed), there's no "you're about to miss it" left to
+      // warn about.
+      delayEvents: {
+        where: { status: "open", noticeSentAt: null, noticeDeadline: { not: null } },
+        select: { id: true, cause: true, noticeDeadline: true, lastReminderStage: true }
+      }
     }
   });
 
@@ -284,6 +294,25 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
 
       summary.remindersSent += recipients.length;
       summary.details.push(`Retention ${tranche.key} (project ${project.id}): stage=${stage}, recipients=${recipients.length}`);
+    }
+
+    for (const delayEvent of project.delayEvents) {
+      summary.checkedDelayEvents++;
+      if (!delayEvent.noticeDeadline) continue;
+
+      const stage = stageForDaysUntil(daysBetween(today, delayEvent.noticeDeadline));
+      if (!stage || stageRank(stage) <= stageRank(delayEvent.lastReminderStage)) continue;
+
+      const recipients = await recipientsFor(project, "delay_events");
+      const headline = `Delay/EOT notice — ${delayEvent.cause}`;
+      const detail = `Notice ${stageLabel(stage, "due")}`;
+      const itemUrl = `${baseUrl()}/projects/${project.id}/delay-events/${delayEvent.id}`;
+
+      await notifyRecipients(recipients, { subject: headline, headline, detail, projectName: project.name, itemUrl });
+      await prisma.delayEvent.update({ where: { id: delayEvent.id }, data: { lastReminderStage: stage } });
+
+      summary.remindersSent += recipients.length;
+      summary.details.push(`DelayEvent ${delayEvent.id} (${delayEvent.cause}): stage=${stage}, recipients=${recipients.length}`);
     }
   }
 

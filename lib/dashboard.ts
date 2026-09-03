@@ -9,10 +9,18 @@ const MODULE_FOR_TYPE: Record<DashboardItemType, ModuleKey> = {
   "site-instruction": "site_instructions",
   "payment-claim": "payment_claims",
   "safety-document": "health_safety",
-  retention: "payment_claims"
+  retention: "payment_claims",
+  "delay-event": "delay_events"
 };
 
-export type DashboardItemType = "programme" | "variation" | "site-instruction" | "payment-claim" | "safety-document" | "retention";
+export type DashboardItemType =
+  | "programme"
+  | "variation"
+  | "site-instruction"
+  | "payment-claim"
+  | "safety-document"
+  | "retention"
+  | "delay-event";
 export type DashboardRescheduleField =
   | "startDate"
   | "endDate"
@@ -20,7 +28,8 @@ export type DashboardRescheduleField =
   | "nextClaimDate"
   | "expiresAt"
   | "tranche1ExpectedDate"
-  | "tranche2ExpectedDate";
+  | "tranche2ExpectedDate"
+  | "noticeDeadline";
 
 export type DashboardItem = {
   id: string;
@@ -70,7 +79,12 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
     include: {
       programmeItems: { where: { completedAt: null } },
       variationItems: { where: { status: { not: "complete" }, dueAt: { not: null } } },
-      safetyDocuments: { where: { expiresAt: { not: null } } }
+      safetyDocuments: { where: { expiresAt: { not: null } } },
+      // Only unnotified, still-open events with a deadline need a reminder
+      // — once the notice is actually sent (or the event is resolved/
+      // closed), there's no "you're about to miss the notice window" left
+      // to warn about.
+      delayEvents: { where: { status: "open", noticeSentAt: null, noticeDeadline: { not: null } } }
     }
   });
 
@@ -92,6 +106,7 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
     const canSeePaymentClaims = canSeeType(project, "payment-claim");
     const canSeeSafetyDocuments = canSeeType(project, "safety-document");
     const canSeeRetention = canSeeType(project, "retention");
+    const canSeeDelayEvents = canSeeType(project, "delay-event");
 
     for (const item of canSeeProgramme ? project.programmeItems : []) {
       if (!item.startDate && !item.endDate) continue;
@@ -224,6 +239,27 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
           rescheduleField
         });
       }
+    }
+
+    for (const delayEvent of canSeeDelayEvents ? project.delayEvents : []) {
+      if (!delayEvent.noticeDeadline) continue;
+      const anchorDay = startOfDay(delayEvent.noticeDeadline);
+      if (!inWindow(anchorDay)) continue;
+
+      const isOverdue = anchorDay.getTime() < today.getTime();
+      items.push({
+        id: delayEvent.id,
+        type: "delay-event",
+        projectId: project.id,
+        projectName: project.name,
+        headline: `Delay/EOT notice — ${delayEvent.cause}`,
+        detail: `Notice ${isOverdue ? "overdue" : "due"} ${formatShortDate(delayEvent.noticeDeadline, today)}`,
+        date: delayEvent.noticeDeadline,
+        isOverdue,
+        href: `/projects/${project.id}/delay-events/${delayEvent.id}`,
+        canComplete: false,
+        rescheduleField: "noticeDeadline"
+      });
     }
   }
 

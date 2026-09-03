@@ -9,6 +9,8 @@ type FieldKey =
   | "paymentClaimDay"
   | "variationNoticePeriodDays"
   | "variationNoticeMethod"
+  | "delayNoticePeriodDays"
+  | "delayNoticeMethod"
   | "retentionPercent"
   | "defectsLiabilityPeriodDays"
   | "disputeNoticeMethod"
@@ -19,6 +21,8 @@ const FIELDS: { key: FieldKey; label: string; type: "text" | "number"; suffix?: 
   { key: "paymentClaimDay", label: "Payment claim due day of month", type: "number" },
   { key: "variationNoticePeriodDays", label: "Variation notice period", type: "number", suffix: "days" },
   { key: "variationNoticeMethod", label: "Variation notice method", type: "text" },
+  { key: "delayNoticePeriodDays", label: "Delay / EOT notice period", type: "number", suffix: "days" },
+  { key: "delayNoticeMethod", label: "Delay / EOT notice method", type: "text" },
   { key: "retentionPercent", label: "Retention", type: "number", suffix: "%" },
   { key: "defectsLiabilityPeriodDays", label: "Defects liability period", type: "number", suffix: "days" },
   { key: "disputeNoticeMethod", label: "Dispute notice method", type: "text" },

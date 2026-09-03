@@ -523,6 +523,8 @@ async function runContractReviewWork(
       suggestedPaymentClaimDay: extractedTerms.paymentClaimDay,
       suggestedVariationNoticePeriodDays: extractedTerms.variationNoticePeriodDays,
       suggestedVariationNoticeMethod: extractedTerms.variationNoticeMethod,
+      suggestedDelayNoticePeriodDays: extractedTerms.delayNoticePeriodDays,
+      suggestedDelayNoticeMethod: extractedTerms.delayNoticeMethod,
       suggestedRetentionPercent: extractedTerms.retentionPercent,
       suggestedDefectsLiabilityPeriodDays: extractedTerms.defectsLiabilityPeriodDays,
       suggestedDisputeNoticeMethod: extractedTerms.disputeNoticeMethod,
@@ -548,6 +550,8 @@ async function runContractReviewWork(
         existingTerms?.variationNoticeMethod,
         extractedTerms.variationNoticeMethod
       ),
+      suggestedDelayNoticePeriodDays: suggestIfUnconfirmed(existingTerms?.delayNoticePeriodDays, extractedTerms.delayNoticePeriodDays),
+      suggestedDelayNoticeMethod: suggestIfUnconfirmed(existingTerms?.delayNoticeMethod, extractedTerms.delayNoticeMethod),
       suggestedRetentionPercent: suggestIfUnconfirmed(existingTerms?.retentionPercent, extractedTerms.retentionPercent),
       suggestedDefectsLiabilityPeriodDays: suggestIfUnconfirmed(
         existingTerms?.defectsLiabilityPeriodDays,

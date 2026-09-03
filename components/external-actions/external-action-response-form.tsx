@@ -20,6 +20,13 @@ type ValueSnapshot = {
     variationItemReference: string | null;
     variationItemTitle: string | null;
   } | null;
+  delayEvent: {
+    cause: string;
+    clauseReference: string | null;
+    startDate: string;
+    endDate: string | null;
+    daysClaimed: number | null;
+  } | null;
 };
 
 type PublicContext = {
@@ -41,6 +48,16 @@ type PublicContext = {
         totalHours: number | null;
         workerNames: string[];
         comments: string | null;
+        itemReference: string | null;
+        itemTitle: string | null;
+      }
+    | {
+        kind: "delay_event";
+        cause: string;
+        clauseReference: string | null;
+        startDate: string;
+        endDate: string | null;
+        daysClaimed: number | null;
         itemReference: string | null;
         itemTitle: string | null;
       };
@@ -157,9 +174,11 @@ export function ExternalActionResponseForm({ token }: { token: string }) {
       ? `${context.source.isSiteInstruction ? "Site Instruction" : "Variation"} ${context.source.reference} — ${context.source.title}`
       : context.source.kind === "day_works_sheet"
         ? `Day Works Sheet — ${context.source.fileName} (from ${context.source.itemReference} — ${context.source.itemTitle})`
-        : `Hours on Site${
-            context.source.itemReference ? ` — ${context.source.itemReference} — ${context.source.itemTitle}` : ""
-          }`;
+        : context.source.kind === "delay_event"
+          ? `Delay/EOT — ${context.source.cause}`
+          : `Hours on Site${
+              context.source.itemReference ? ` — ${context.source.itemReference} — ${context.source.itemTitle}` : ""
+            }`;
   const snapshot = context.valueSnapshot;
 
   return (
@@ -235,7 +254,22 @@ export function ExternalActionResponseForm({ token }: { token: string }) {
         </div>
       )}
 
-      {context.source.kind !== "hours_on_site" && snapshot && (snapshot.combinedTotal > 0 || snapshot.dayWorksSheets.length > 0) && (
+      {snapshot?.delayEvent && (
+        <div className="rounded-lg bg-[#f6f7f8] dark:bg-slate-800 p-3 mb-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-2">Delay / Extension of Time</p>
+          <p className="text-sm mb-1">Cause: {snapshot.delayEvent.cause}</p>
+          <p className="text-sm mb-1">
+            Period: {formatDate(snapshot.delayEvent.startDate)}
+            {snapshot.delayEvent.endDate ? ` – ${formatDate(snapshot.delayEvent.endDate)}` : " (ongoing)"}
+          </p>
+          {snapshot.delayEvent.clauseReference && <p className="text-sm mb-1">Notice given under {snapshot.delayEvent.clauseReference}.</p>}
+          <p className="text-sm font-bold">
+            {snapshot.delayEvent.daysClaimed != null ? `Claiming ${snapshot.delayEvent.daysClaimed} day(s) EOT` : "No day count assessed yet"}
+          </p>
+        </div>
+      )}
+
+      {context.source.kind !== "hours_on_site" && context.source.kind !== "delay_event" && snapshot && (snapshot.combinedTotal > 0 || snapshot.dayWorksSheets.length > 0) && (
         <div className="rounded-lg bg-[#f6f7f8] dark:bg-slate-800 p-3 mb-4">
           <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400 mb-2">
             Value &amp; evidence

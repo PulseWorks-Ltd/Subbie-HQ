@@ -877,6 +877,8 @@ const ExtractedContractTermsSchema = z.object({
   paymentClaimDay: z.number().int().nullable(),
   variationNoticePeriodDays: z.number().int().nullable(),
   variationNoticeMethod: z.string().nullable(),
+  delayNoticePeriodDays: z.number().int().nullable(),
+  delayNoticeMethod: z.string().nullable(),
   retentionPercent: z.number().nullable(),
   defectsLiabilityPeriodDays: z.number().int().nullable(),
   disputeNoticeMethod: z.string().nullable(),
@@ -916,11 +918,13 @@ export async function extractContractTermsFromClauses(
         content:
           "You extract actionable reference data from a construction subcontract agreement's clauses, for a subcontractor's project settings. " +
           "Respond with only a JSON object matching this exact shape: " +
-          '{"paymentClaimMethod": string | null, "paymentClaimDay": number | null, "variationNoticePeriodDays": number | null, "variationNoticeMethod": string | null, "retentionPercent": number | null, "defectsLiabilityPeriodDays": number | null, "disputeNoticeMethod": string | null, "generalNoticeMethod": string | null, "materialsMarkupPercent": number | null, "dayWorksRateNormal": number | null, "dayWorksRateNight": number | null, "dayWorksRateSundayHoliday": number | null, "dayWorksRateNotes": string | null, "variationScheduleType": "fixed_date" | "working_days_before_month_end" | null, "variationScheduleValue": number | null}. ' +
+          '{"paymentClaimMethod": string | null, "paymentClaimDay": number | null, "variationNoticePeriodDays": number | null, "variationNoticeMethod": string | null, "delayNoticePeriodDays": number | null, "delayNoticeMethod": string | null, "retentionPercent": number | null, "defectsLiabilityPeriodDays": number | null, "disputeNoticeMethod": string | null, "generalNoticeMethod": string | null, "materialsMarkupPercent": number | null, "dayWorksRateNormal": number | null, "dayWorksRateNight": number | null, "dayWorksRateSundayHoliday": number | null, "dayWorksRateNotes": string | null, "variationScheduleType": "fixed_date" | "working_days_before_month_end" | null, "variationScheduleValue": number | null}. ' +
           "paymentClaimMethod: how/where payment claims must be submitted (e.g. 'email to accounts@...', 'post to registered office'), or null if not stated. " +
           "paymentClaimDay: the day of the month payment claims are due, if a fixed day is stated, else null. " +
-          "variationNoticePeriodDays: the number of days' notice required for a variation claim/instruction, if stated, else null. " +
+          "variationNoticePeriodDays: the number of days' notice required for a variation claim/instruction (usually a distinct clause from delay/EOT notices below), if stated, else null. " +
           "variationNoticeMethod: how variation notices must be given, if stated, else null. " +
+          "delayNoticePeriodDays: the number of days' notice required to claim an Extension of Time / delay event (often a SEPARATE clause from the variation notice period above, sometimes with a different day count) — if stated, else null. " +
+          "delayNoticeMethod: how delay/Extension of Time notices must be given, if stated, else null. " +
           "retentionPercent: the retention percentage withheld from payments, if stated, else null. " +
           "defectsLiabilityPeriodDays: the defects liability period in days, if stated (convert months/years to days), else null. " +
           "disputeNoticeMethod: how a notice of dispute must be given, if stated, else null. " +
@@ -1432,6 +1436,58 @@ export async function draftPackageApprovalMessage(
       {
         role: "user",
         content: `${itemKind}: ${params.itemReference} — ${params.itemTitle}\n${valueLine}`
+      }
+    ]
+  }, { ...usageContext, feature: "external_action_draft" });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return DraftedExternalActionMessageSchema.parse(JSON.parse(raw));
+}
+
+// Drafts a formal Delay/EOT notice (SA-2017 clause 10) — same pattern/
+// conventions as draftExternalActionRequestMessage above (short,
+// professional, one Grok call, honest about figures, never invents scope/
+// cause details beyond what's given). The one real difference: this asks
+// for a specific number of EOT DAYS to be approved, not a cost figure, and
+// states the clause reference when one's on file so the notice itself
+// reads as a real contractual notice, not a generic request.
+export async function draftDelayNoticeMessage(
+  params: {
+    cause: string;
+    startDate: string; // formatted for display, e.g. "12 Aug 2026"
+    endDate: string | null;
+    clauseReference: string | null;
+    daysClaimed: number | null;
+  },
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<DraftedExternalActionMessage> {
+  const dateLine = params.endDate ? `${params.startDate} to ${params.endDate}` : `from ${params.startDate}, ongoing`;
+  const daysLine = params.daysClaimed != null ? `Claiming ${params.daysClaimed} day(s) Extension of Time.` : "No specific day count assessed yet.";
+  const clauseLine = params.clauseReference ? `Notice given under ${params.clauseReference}.` : "";
+
+  const response = await callGrok({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You draft a short, formal Extension of Time (delay) notice from a construction subcontractor to a Main Contractor/" +
+          "Contract Administrator, under a NZ standard-form subcontract. Respond with only a JSON object matching this exact shape: " +
+          '{"messageBody": string}. ' +
+          "messageBody: 2-4 plain sentences, no greeting/sign-off (those are added separately by the app). State plainly that " +
+          "this is formal written notice of a delay event, citing the cause and date range EXACTLY as given — never invent, " +
+          "embellish, or guess at a cause/date/clause/day-count beyond what's given below. If a day count is stated, request " +
+          "that number of days' Extension of Time; if not, state that an assessment will follow. End with a clear request for " +
+          "the recipient to review and confirm the Extension of Time granted."
+      },
+      {
+        role: "user",
+        content: `Cause: ${params.cause}\nDelay period: ${dateLine}\n${daysLine}\n${clauseLine}`.trim()
       }
     ]
   }, { ...usageContext, feature: "external_action_draft" });

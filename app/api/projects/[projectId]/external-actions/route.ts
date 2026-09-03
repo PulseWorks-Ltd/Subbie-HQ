@@ -13,14 +13,16 @@ const requestSchema = z
     // See ExternalAction.hoursOnSiteSheetId's schema comment — set alone,
     // never alongside the three fields above.
     hoursOnSiteSheetId: z.string().optional(),
+    // See ExternalAction.delayEventId's schema comment — set alone.
+    delayEventId: z.string().optional(),
     type: z.enum(EXTERNAL_ACTION_TYPES as [string, ...string[]]),
     message: z.string().optional(),
     contactId: z.string().optional(),
     email: z.string().email().optional()
   })
   .refine(
-    (data) => [data.variationItemId, data.dayWorksSheetId, data.hoursOnSiteSheetId].filter(Boolean).length === 1,
-    { message: "Exactly one of a Variation/SI, a Day Works Sheet, or an Hours on Site sheet must be set." }
+    (data) => [data.variationItemId, data.dayWorksSheetId, data.hoursOnSiteSheetId, data.delayEventId].filter(Boolean).length === 1,
+    { message: "Exactly one of a Variation/SI, a Day Works Sheet, an Hours on Site sheet, or a Delay Event must be set." }
   )
   .refine((data) => !data.variationPackageId || data.type === "approve", {
     message: "A package approval request must be type: approve."
@@ -55,6 +57,15 @@ export async function POST(request: Request, context: { params: { projectId: str
     if (!sheet) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+  } else if (payload.delayEventId) {
+    const delayEvent = await prisma.delayEvent.findFirst({ where: { id: payload.delayEventId, projectId } });
+    if (!delayEvent) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const canAccessModule = await requireModuleAccess(projectId, userId, "delay_events");
+    if (!canAccessModule) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   } else {
     const module_ = await moduleForExternalActionTarget(projectId, payload);
     if (!module_) {
@@ -73,6 +84,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     dayWorksSheetId: payload.dayWorksSheetId,
     variationPackageId: payload.variationPackageId,
     hoursOnSiteSheetId: payload.hoursOnSiteSheetId,
+    delayEventId: payload.delayEventId,
     type: payload.type as (typeof EXTERNAL_ACTION_TYPES)[number],
     message: payload.message?.trim() || undefined,
     recipient: { contactId: payload.contactId, email: payload.email },

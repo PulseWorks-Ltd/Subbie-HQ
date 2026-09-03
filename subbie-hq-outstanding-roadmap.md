@@ -370,9 +370,37 @@ against its own text, which pre-dates some of this session's work):
   processes every project in the shared staging database and could have
   sent real emails/push notifications to real staging users — the new
   persistence mechanism was exercised directly instead.
-- **Area 02 (Delay/EOT)** — confirmed genuinely **not built yet**: no
-  `DelayEvent` model exists. Planned as the next build (Retention first,
-  per this session's own agreed sequencing).
+- **Area 02 (Delay/EOT)** — ✅ **now built, same session, right after
+  Retention as agreed.** New `DelayEvent` model (cause, dates, clause
+  reference, days claimed vs. days AWARDED — tracked separately since they
+  can genuinely differ once the Main Contractor responds) and
+  `lib/delay-events.ts`. Notice deadline defaults from a new
+  `ContractTerms.delayNoticePeriodDays`/`delayNoticeMethod` pair — mirrors
+  `variationNoticePeriodDays` exactly, including AI-suggested values from
+  the same contract-terms extraction call, and a new "Delay / EOT" section
+  in the Contract Terms settings UI. Reused the existing `ExternalAction`
+  framework as-is for sending the notice (a new `delayEventId` target,
+  same mutually-exclusive-target pattern as `hoursOnSiteSheetId`, sent as
+  type `approve` — no new enum value) rather than building a second
+  notification mechanism; a new `draftDelayNoticeMessage` in `lib/grok.ts`
+  mirrors the existing external-action drafting pattern. One deliberate
+  scoping choice, not an oversight: `daysAwarded` is a MANUAL field the
+  subbie sets after reading the response — `ExternalAction`'s response
+  schema (`responseChoice`/`responseComment`) was deliberately left
+  untouched rather than growing a structured "days" field onto a model
+  shared by several other target types. New `delay_events` permission
+  module, nav entry, list/detail pages, Dashboard feed type, and reminders
+  wiring (same `lastReminderStage` engine, again). Verified with 21 real
+  staging assertions — including one genuine send through the real
+  `createAndSendExternalAction` path (to a safe, IANA-reserved
+  `@example.com` test address) confirming the notice send correctly flips
+  `DelayEvent.status` to `notice_sent`, the linked SI's id reaches the
+  Correspondence trail without ever polluting the SI's own External
+  Actions list (matching the `hoursOnSiteSheetId` precedent exactly), and
+  a resolved event correctly drops out of the Dashboard's pending-notice
+  feed. Explicitly out of scope, per the original brief: no adjudication/
+  dispute-resolution tracking. **Deferred to Phase 2** (not started): the
+  Programme milestone-slippage cross-reference.
 - **Area 05 (founder/social proof) and Area 06 (sales process)** — no
   About/Founder page, no testimonials anywhere in the marketing routes,
   confirmed absent. Pure content/process work, nothing to build.

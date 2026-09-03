@@ -21,6 +21,7 @@ const NAV_ITEMS: {
   { label: "Tasks", segment: "tasks", module: null },
   { label: "Payment Claims", segment: "payment-claims", module: "payment_claims" },
   { label: "Contract Schedule", segment: "contract-schedule", module: "payment_claims" },
+  { label: "Delay / EOT", segment: "delay-events", module: "delay_events" },
   { label: "Health & Safety", segment: "health-safety", module: "health_safety" },
   { label: "Quality Assurance", segment: "quality-assurance", module: "quality_assurance" },
   { label: "Pictures", segment: "pictures", module: "pictures" },

@@ -36,6 +36,17 @@ export type ExternalActionValueSnapshot = {
     variationItemReference: string | null;
     variationItemTitle: string | null;
   } | null;
+  // Set only for a Delay/EOT notice (delayEventId given) — same "no $
+  // value of its own" shape as hoursOnSite above; the actual "what's
+  // being asked" here is the cause/date range/days claimed, not a cost
+  // figure.
+  delayEvent: {
+    cause: string;
+    clauseReference: string | null;
+    startDate: string;
+    endDate: string | null;
+    daysClaimed: number | null;
+  } | null;
 };
 
 // Single source of truth for the value/evidence breakdown shown on the
@@ -62,7 +73,31 @@ export async function computeValueSnapshot(params: {
   dayWorksSheetId?: string;
   variationPackageId?: string;
   hoursOnSiteSheetId?: string;
+  delayEventId?: string;
 }): Promise<ExternalActionValueSnapshot> {
+  if (params.delayEventId) {
+    const delayEvent = await prisma.delayEvent.findUnique({ where: { id: params.delayEventId } });
+    return {
+      combinedTotal: 0,
+      labourTotal: 0,
+      materialsTotal: 0,
+      materialsMarkupTotal: 0,
+      plantTotal: 0,
+      dayWorksSheets: [],
+      previousPackage: null,
+      hoursOnSite: null,
+      delayEvent: delayEvent
+        ? {
+            cause: delayEvent.cause,
+            clauseReference: delayEvent.clauseReference,
+            startDate: delayEvent.startDate.toISOString(),
+            endDate: delayEvent.endDate ? delayEvent.endDate.toISOString() : null,
+            daysClaimed: delayEvent.daysClaimed
+          }
+        : null
+    };
+  }
+
   if (params.hoursOnSiteSheetId) {
     const sheet = await prisma.hoursOnSiteSheet.findUnique({
       where: { id: params.hoursOnSiteSheetId },
@@ -86,7 +121,8 @@ export async function computeValueSnapshot(params: {
             variationItemReference: sheet.variationItem?.reference ?? null,
             variationItemTitle: sheet.variationItem?.title ?? null
           }
-        : null
+        : null,
+      delayEvent: null
     };
   }
 
@@ -101,7 +137,8 @@ export async function computeValueSnapshot(params: {
         plantTotal: 0,
         dayWorksSheets: [],
         previousPackage: null,
-        hoursOnSite: null
+        hoursOnSite: null,
+        delayEvent: null
       };
     }
     // "Previously SENT", not "previously generated" — an internal re-
@@ -122,7 +159,8 @@ export async function computeValueSnapshot(params: {
       previousPackage: previousSentAction?.variationPackage
         ? { grandTotal: Number(previousSentAction.variationPackage.grandTotal), sentAt: previousSentAction.sentAt.toISOString() }
         : null,
-      hoursOnSite: null
+      hoursOnSite: null,
+      delayEvent: null
     };
   }
 
@@ -140,7 +178,8 @@ export async function computeValueSnapshot(params: {
       plantTotal: 0,
       dayWorksSheets: sheet ? [{ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() }] : [],
       previousPackage: null,
-      hoursOnSite: null
+      hoursOnSite: null,
+      delayEvent: null
     };
   }
 
@@ -160,7 +199,8 @@ export async function computeValueSnapshot(params: {
     plantTotal: totals.plantTotal,
     dayWorksSheets: dayWorksSheets.map((sheet) => ({ fileName: sheet.fileName, createdAt: sheet.createdAt.toISOString() })),
     previousPackage: null,
-    hoursOnSite: null
+    hoursOnSite: null,
+    delayEvent: null
   };
 }
 
@@ -196,6 +236,16 @@ export type ExternalActionPublicContext = {
         totalHours: number | null;
         workerNames: string[];
         comments: string | null;
+        itemReference: string | null;
+        itemTitle: string | null;
+      }
+    | {
+        kind: "delay_event";
+        cause: string;
+        clauseReference: string | null;
+        startDate: Date;
+        endDate: Date | null;
+        daysClaimed: number | null;
         itemReference: string | null;
         itemTitle: string | null;
       };
@@ -245,6 +295,9 @@ export async function createAndSendExternalAction(params: {
   // Set ALONE (never alongside the three above) — see
   // ExternalAction.hoursOnSiteSheetId's schema comment.
   hoursOnSiteSheetId?: string;
+  // Set ALONE (never alongside the three above) — see
+  // ExternalAction.delayEventId's schema comment.
+  delayEventId?: string;
   type: ExternalActionType;
   message?: string;
   recipient: { contactId?: string; email?: string };
@@ -256,9 +309,11 @@ export async function createAndSendExternalAction(params: {
   sentByUserId: string;
   baseUrl: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const targetCount = [params.variationItemId, params.dayWorksSheetId, params.hoursOnSiteSheetId].filter(Boolean).length;
+  const targetCount = [params.variationItemId, params.dayWorksSheetId, params.hoursOnSiteSheetId, params.delayEventId].filter(
+    Boolean
+  ).length;
   if (targetCount !== 1) {
-    return { ok: false, error: "Exactly one of a Variation/SI, a Day Works Sheet, or an Hours on Site sheet must be set." };
+    return { ok: false, error: "Exactly one of a Variation/SI, a Day Works Sheet, an Hours on Site sheet, or a Delay Event must be set." };
   }
   if (params.variationPackageId && (params.dayWorksSheetId || params.hoursOnSiteSheetId)) {
     return { ok: false, error: "A package approval must be on a Variation/SI, not a Day Works Sheet or Hours on Site sheet." };
@@ -303,7 +358,24 @@ export async function createAndSendExternalAction(params: {
   // unambiguously an action on the sheet, not a generic action on the SI's
   // live state).
   let hoursOnSiteLinkedVariationItemId: string | undefined;
-  if (params.hoursOnSiteSheetId) {
+  // Same reasoning as hoursOnSiteLinkedVariationItemId above, for a delay
+  // event's own optional link to an SI/Variation — kept out of this row's
+  // own variationItemId (and so out of that item's "External Actions"
+  // list) since the notice is unambiguously an action on the delay event.
+  let delayEventLinkedVariationItemId: string | undefined;
+  if (params.delayEventId) {
+    const delayEvent = await prisma.delayEvent.findFirst({
+      where: { id: params.delayEventId, projectId: params.projectId },
+      include: { variationItem: { select: { id: true, reference: true, title: true } } }
+    });
+    if (!delayEvent) {
+      return { ok: false, error: "Delay event not found." };
+    }
+    delayEventLinkedVariationItemId = delayEvent.variationItem?.id;
+    sourceLabel = delayEvent.variationItem
+      ? `Delay/EOT — ${delayEvent.cause} (${delayEvent.variationItem.reference} — ${delayEvent.variationItem.title})`
+      : `Delay/EOT — ${delayEvent.cause}`;
+  } else if (params.hoursOnSiteSheetId) {
     const sheet = await prisma.hoursOnSiteSheet.findFirst({
       where: { id: params.hoursOnSiteSheetId, projectId: params.projectId },
       include: { variationItem: { select: { id: true, reference: true, title: true } } }
@@ -381,7 +453,8 @@ export async function createAndSendExternalAction(params: {
         variationItemId,
         dayWorksSheetId: params.dayWorksSheetId,
         variationPackageId: params.variationPackageId,
-        hoursOnSiteSheetId: params.hoursOnSiteSheetId
+        hoursOnSiteSheetId: params.hoursOnSiteSheetId,
+        delayEventId: params.delayEventId
       })
     : null;
 
@@ -392,6 +465,7 @@ export async function createAndSendExternalAction(params: {
       dayWorksSheetId: params.dayWorksSheetId,
       variationPackageId: params.variationPackageId,
       hoursOnSiteSheetId: params.hoursOnSiteSheetId,
+      delayEventId: params.delayEventId,
       type: params.type,
       message: params.message,
       valueSnapshot: valueSnapshot ?? undefined,
@@ -411,7 +485,7 @@ export async function createAndSendExternalAction(params: {
   await prisma.correspondence.create({
     data: {
       projectId: params.projectId,
-      variationItemId: variationItemId ?? hoursOnSiteLinkedVariationItemId,
+      variationItemId: variationItemId ?? hoursOnSiteLinkedVariationItemId ?? delayEventLinkedVariationItemId,
       title: `${typeLabel} requested from ${recipientName ?? recipientEmail}`,
       source: "external_action",
       bodyText: params.message ?? `${typeLabel} requested for ${sourceLabel}.`,
@@ -419,6 +493,13 @@ export async function createAndSendExternalAction(params: {
       sourceExternalActionId: externalAction.id
     }
   });
+
+  if (params.delayEventId) {
+    await prisma.delayEvent.update({
+      where: { id: params.delayEventId },
+      data: { noticeSentAt: new Date(), status: "notice_sent" }
+    });
+  }
 
   return { ok: true };
 }
@@ -450,6 +531,16 @@ export async function getExternalActionForToken(
           workers: { select: { worker: { select: { name: true } } } }
         }
       },
+      delayEvent: {
+        select: {
+          cause: true,
+          clauseReference: true,
+          startDate: true,
+          endDate: true,
+          daysClaimed: true,
+          variationItem: { select: { reference: true, title: true } }
+        }
+      },
       sentByUser: { select: { firstName: true, lastName: true, email: true } }
     }
   });
@@ -470,7 +561,18 @@ export async function getExternalActionForToken(
     return { ok: false, error: `This link has expired. Please contact ${senderName} for a new one.` };
   }
 
-  const source = action.hoursOnSiteSheet
+  const source = action.delayEvent
+    ? ({
+        kind: "delay_event" as const,
+        cause: action.delayEvent.cause,
+        clauseReference: action.delayEvent.clauseReference,
+        startDate: action.delayEvent.startDate,
+        endDate: action.delayEvent.endDate,
+        daysClaimed: action.delayEvent.daysClaimed,
+        itemReference: action.delayEvent.variationItem?.reference ?? null,
+        itemTitle: action.delayEvent.variationItem?.title ?? null
+      } as const)
+    : action.hoursOnSiteSheet
     ? ({
         kind: "hours_on_site" as const,
         startedAt: action.hoursOnSiteSheet.startedAt,

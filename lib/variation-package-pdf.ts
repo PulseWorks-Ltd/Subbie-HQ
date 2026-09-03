@@ -1,4 +1,4 @@
-import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFImage, PDFName, PDFPage, PDFString, StandardFonts, rgb } from "pdf-lib";
 import { loadImage, createCanvas } from "@napi-rs/canvas";
 import type {
   Correspondence,
@@ -29,6 +29,11 @@ const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
 const MARGIN = 50;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
+// The app's own brand blue (matches --primary/#137fec in the live product)
+// — used sparingly, only where this document should draw the eye: the
+// grand total, and a thin rule under the cover page's header.
+const ACCENT: [number, number, number] = [0.075, 0.498, 0.925];
+const ACCENT_TINT: [number, number, number] = [0.91, 0.95, 0.99];
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -95,6 +100,12 @@ class PdfWriter {
   boldFont: PDFFont;
   page: PDFPage;
   y: number;
+  // Every navigation point recorded during generation (Task 3.1/3.2) — one
+  // entry per markOutline()/markContentsSectionOnly() call, in document
+  // order. Serves two purposes that mostly, but not entirely, overlap: the
+  // real PDF outline/bookmark tree (every `sidebar: true` entry) and the
+  // printed Contents page's page-range rows (every `contents: true` entry).
+  outline: { title: string; page: PDFPage; contents: boolean; sidebar: boolean }[] = [];
 
   constructor(doc: PDFDocument, font: PDFFont, boldFont: PDFFont) {
     this.doc = doc;
@@ -102,6 +113,27 @@ class PdfWriter {
     this.boldFont = boldFont;
     this.page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     this.y = PAGE_HEIGHT - MARGIN;
+  }
+
+  // Records the CURRENT page under `title` — always called immediately
+  // after the heading it names has actually been drawn, so the recorded
+  // page is the one the reader lands on. `contents: true` additionally
+  // marks this as a section boundary for the printed Contents page's page-
+  // range rows (see attachContentsPageAndOutline); every entry regardless
+  // of that flag becomes its own row in the real PDF bookmark sidebar.
+  markOutline(title: string, opts: { contents?: boolean } = {}) {
+    this.outline.push({ title, page: this.page, contents: opts.contents ?? false, sidebar: true });
+  }
+
+  // Marks a Contents-page section boundary WITHOUT its own sidebar
+  // bookmark row — used for the embedded-evidence appendix's per-type
+  // "section start" markers (e.g. "Day Works Sheets", ahead of the first
+  // actual sheet). The adjacent specific item title ("Day Works Sheet 1 of
+  // 2") already covers that exact page in the sidebar, so a second, more
+  // generic bookmark right next to it would just be noise there — but it's
+  // still exactly what the Contents page's page-range row needs.
+  markContentsSectionOnly(title: string) {
+    this.outline.push({ title, page: this.page, contents: true, sidebar: false });
   }
 
   ensureSpace(height: number) {
@@ -138,11 +170,22 @@ class PdfWriter {
     return lines.length > 0 ? lines : [""];
   }
 
+  // Wraps across as many lines as needed instead of the single drawText
+  // call this used to be — a long filename or Site Instruction title used
+  // to run straight off the page edge with no indication anything was
+  // cut off (confirmed in a real generated package: "Correspondence — FW:
+  // 20 St Lukes Gardens: Site Instruction - SI-255 (F2, F3 and" simply
+  // stopped there). Multi-line headings cost a little more vertical
+  // space, which ensureSpace already accounts for.
   heading(text: string) {
     text = sanitizeForPdf(this.boldFont, text);
-    this.ensureSpace(28);
-    this.page.drawText(text, { x: MARGIN, y: this.y, size: 14, font: this.boldFont, color: rgb(0.05, 0.08, 0.12) });
-    this.y -= 22;
+    const lines = this.wrap(text, this.boldFont, 14, CONTENT_WIDTH);
+    this.ensureSpace(lines.length * 19 + 8);
+    for (const line of lines) {
+      this.page.drawText(line, { x: MARGIN, y: this.y, size: 14, font: this.boldFont, color: rgb(0.05, 0.08, 0.12) });
+      this.y -= 19;
+    }
+    this.y -= 3;
   }
 
   subheading(text: string) {
@@ -152,50 +195,87 @@ class PdfWriter {
     this.y -= 16;
   }
 
+  // Splits on real line breaks FIRST, then word-wraps each line
+  // independently — the previous version's wrap() split the entire input
+  // on /\s+/ before rejoining, which silently flattened every paragraph
+  // break in a real email or letter into one run-on wall of text (a
+  // genuine forwarded email in production rendered as a single
+  // continuous paragraph mixing the message, headers, and tracking
+  // links). An empty line is preserved as a blank line (paragraph gap),
+  // not collapsed away.
   text(text: string, opts: { size?: number; bold?: boolean; indent?: number; color?: [number, number, number] } = {}) {
     const size = opts.size ?? 10;
     const font = opts.bold ? this.boldFont : this.font;
     const indent = opts.indent ?? 0;
     const color = opts.color ? rgb(...opts.color) : rgb(0.15, 0.15, 0.18);
-    const lines = this.wrap(sanitizeForPdf(font, text), font, size, CONTENT_WIDTH - indent);
-    for (const line of lines) {
-      this.ensureSpace(size + 5);
-      this.page.drawText(line, { x: MARGIN + indent, y: this.y, size, font, color });
-      this.y -= size + 5;
+    // Split on the RAW newline before sanitizing, not after — pdf-lib's
+    // widthOfTextAtSize (what canEncode probes) doesn't treat "\n" as an
+    // encodable WinAnsi glyph, so sanitizing the whole blob first was
+    // silently stripping every line break before this method ever got a
+    // chance to split on them, which is exactly what flattened real
+    // emails into one run-on paragraph.
+    for (const rawLine of text.split("\n")) {
+      if (!rawLine.trim()) {
+        this.ensureSpace(size + 5);
+        this.y -= size + 5;
+        continue;
+      }
+      const lines = this.wrap(sanitizeForPdf(font, rawLine), font, size, CONTENT_WIDTH - indent);
+      for (const line of lines) {
+        this.ensureSpace(size + 5);
+        this.page.drawText(line, { x: MARGIN + indent, y: this.y, size, font, color });
+        this.y -= size + 5;
+      }
     }
   }
 
-  row(left: string, right: string, opts: { bold?: boolean; indent?: number } = {}) {
-    this.ensureSpace(15);
+  row(left: string, right: string, opts: { bold?: boolean; indent?: number; size?: number; color?: [number, number, number] } = {}) {
+    const size = opts.size ?? 10;
+    this.ensureSpace(size + 5);
     const font = opts.bold ? this.boldFont : this.font;
     const indent = opts.indent ?? 0;
+    const color = opts.color ? rgb(...opts.color) : rgb(0.15, 0.15, 0.18);
     left = sanitizeForPdf(font, left);
     right = sanitizeForPdf(font, right);
-    this.page.drawText(left, { x: MARGIN + indent, y: this.y, size: 10, font, color: rgb(0.15, 0.15, 0.18) });
-    const rightWidth = font.widthOfTextAtSize(right, 10);
+    this.page.drawText(left, { x: MARGIN + indent, y: this.y, size, font, color });
+    const rightWidth = font.widthOfTextAtSize(right, size);
     this.page.drawText(right, {
       x: PAGE_WIDTH - MARGIN - rightWidth,
       y: this.y,
-      size: 10,
+      size,
       font,
-      color: rgb(0.15, 0.15, 0.18)
+      color
     });
-    this.y -= 15;
+    this.y -= size + 5;
   }
 
   spacer(height = 10) {
     this.y -= height;
   }
 
-  divider() {
+  divider(opts: { color?: [number, number, number]; thickness?: number } = {}) {
     this.ensureSpace(12);
     this.page.drawLine({
       start: { x: MARGIN, y: this.y },
       end: { x: PAGE_WIDTH - MARGIN, y: this.y },
-      thickness: 0.5,
-      color: rgb(0.85, 0.87, 0.9)
+      thickness: opts.thickness ?? 0.5,
+      color: opts.color ? rgb(...opts.color) : rgb(0.85, 0.87, 0.9)
     });
     this.y -= 12;
+  }
+
+  // A light tinted panel behind the block the caller draws between
+  // beginPanel/endPanel — used once, for the grand total, so the one
+  // number a Main Contractor's QS actually needs is impossible to miss
+  // on a page that's otherwise plain black-on-white.
+  panelRect(topY: number, height: number, color: [number, number, number] = ACCENT_TINT) {
+    this.page.drawRectangle({
+      x: MARGIN - 12,
+      y: topY - height,
+      width: CONTENT_WIDTH + 24,
+      height,
+      color: rgb(...color)
+    });
   }
 }
 
@@ -253,18 +333,37 @@ async function embedImageSmart(doc: PDFDocument, bytes: Uint8Array, kind: "image
   return doc.embedJpg(resized);
 }
 
-function drawImageFitted(page: PDFPage, image: PDFImage) {
+// Fits an image into the space BELOW a given y (rather than centred on a
+// blank page) so a caption can sit directly above it on the same page —
+// see embedSourceFile, which used to spend one entire near-blank page on
+// just the caption before the image even started.
+function drawImageFittedBelow(page: PDFPage, image: PDFImage, topY: number) {
   const availWidth = PAGE_WIDTH - MARGIN * 2;
-  const availHeight = PAGE_HEIGHT - MARGIN * 2;
+  const availHeight = topY - MARGIN;
   const scale = Math.min(availWidth / image.width, availHeight / image.height, 1);
   const drawWidth = image.width * scale;
   const drawHeight = image.height * scale;
   page.drawImage(image, {
     x: (PAGE_WIDTH - drawWidth) / 2,
-    y: (PAGE_HEIGHT - drawHeight) / 2,
+    y: topY - drawHeight,
     width: drawWidth,
     height: drawHeight
   });
+}
+
+// Targeted cleanup for the specific clutter seen in a real forwarded
+// email rendered into a package: raw tracking/attachment URLs written as
+// "label[https://...]" or "label<https://...>" by the sending mail
+// client. Strips just the bracketed/angle-bracketed URL itself, keeping
+// the surrounding human text — never touches a URL that isn't wrapped
+// this way, so a genuine plain-text link a person typed is left alone.
+function cleanEmailBodyForPdf(body: string): string {
+  return body
+    .replace(/\[https?:\/\/[^\]]+\]/gi, "")
+    .replace(/<https?:\/\/[^>]+>/gi, "")
+    .replace(/<mailto:[^>]+>/gi, "")
+    .replace(/[ \t]+\n/g, "\n") // trailing spaces left behind by a stripped link
+    .replace(/\n{3,}/g, "\n\n"); // collapse any resulting run of blank lines
 }
 
 // The core "embed real content, or fall back gracefully" primitive every
@@ -274,20 +373,36 @@ function drawImageFitted(page: PDFPage, image: PDFImage) {
 // unusually large (Task 2.4); anything else — an unrecognised file type,
 // a download failure, a corrupt/encrypted PDF pdf-lib can't parse — falls
 // through to a placeholder notice rather than failing the whole
-// generation. Always draws one label page first (so a big bundle of
-// concatenated evidence stays navigable), then either the real content
-// or the placeholder explanation lands on/after that same page. Doesn't
-// force a trailing fresh page on success — every caller of this function
-// (and renderTextEvidencePage) already starts with its own w.newPage(),
-// so an extra one here would just be a wasted blank page between every
-// pair of evidence items.
+// generation.
+//
+// An IMAGE's caption is drawn directly above the image on the SAME page
+// — this used to always burn one separate, almost entirely blank page
+// per photo/dayworks-sheet-scan just for a one-line label before the real
+// content even started (confirmed in a real 14-page package: roughly a
+// third of its pages were exactly this). A copied real PDF still gets its
+// own short divider page first, since we can't safely draw our own
+// caption on top of someone else's actual document content without
+// risking obscuring it — that divider now also says how many pages
+// follow, so it's a useful transition, not just dead space.
 async function embedSourceFile(
   w: PdfWriter,
   file: { fileName: string; storageKey: string; contentType?: string | null },
-  label: string
+  heading: string,
+  opts: { contentsSection?: string } = {}
 ): Promise<void> {
-  w.newPage();
-  w.heading(label);
+  // Every branch below draws `heading` (now a meaningful label like "Day
+  // Works Sheet 3 of 5", never the raw uploaded filename — Task 3.3: a
+  // real generated package used to head every one of these pages with
+  // something like "2026.08 - St Lukes - B20 - SI-250 (DWS).pdf", which
+  // tells a reader nothing about what they're looking at or how many more
+  // follow it) then records the outline entry and, underneath, the
+  // original filename itself at a small size — so that detail isn't lost,
+  // just demoted from the heading to a caption.
+  function markHeadingAndOutline() {
+    w.markOutline(heading);
+    if (opts.contentsSection) w.markContentsSectionOnly(opts.contentsSection);
+    w.text(file.fileName, { size: 8, color: [0.5, 0.5, 0.55] });
+  }
 
   try {
     const kind = resolveEmbedKind(file.fileName, file.contentType);
@@ -299,6 +414,14 @@ async function embedSourceFile(
 
     if (kind === "pdf") {
       const srcDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const pageCount = srcDoc.getPageCount();
+      w.newPage();
+      w.heading(heading);
+      markHeadingAndOutline();
+      w.text(`${pageCount} page${pageCount === 1 ? "" : "s"} follow${pageCount === 1 ? "s" : ""} — the original document, unaltered.`, {
+        size: 9,
+        color: [0.45, 0.45, 0.5]
+      });
       const copiedPages = await w.doc.copyPages(srcDoc, srcDoc.getPageIndices());
       for (const page of copiedPages) {
         w.doc.addPage(page);
@@ -306,17 +429,29 @@ async function embedSourceFile(
     } else {
       const image = await embedImageSmart(w.doc, bytes, kind);
       const page = w.doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      drawImageFitted(page, image);
+      w.page = page;
+      w.y = PAGE_HEIGHT - MARGIN;
+      w.heading(heading);
+      markHeadingAndOutline();
+      drawImageFittedBelow(page, image, w.y);
     }
   } catch {
+    w.newPage();
+    w.heading(heading);
+    markHeadingAndOutline();
     w.text(`"${file.fileName}" could not be embedded inline in this package.`, { bold: true, color: [0.6, 0.15, 0.15] });
     w.text("The original file remains available in Subbie HQ under this item's evidence.");
   }
 }
 
-function renderTextEvidencePage(w: PdfWriter, opts: { heading: string; meta: { label: string; value: string }[]; body: string }) {
+function renderTextEvidencePage(
+  w: PdfWriter,
+  opts: { heading: string; meta: { label: string; value: string }[]; body: string; contentsSection?: string }
+) {
   w.newPage();
   w.heading(opts.heading);
+  w.markOutline(opts.heading);
+  if (opts.contentsSection) w.markContentsSectionOnly(opts.contentsSection);
   for (const m of opts.meta) {
     w.row(m.label, m.value);
   }
@@ -337,10 +472,10 @@ type CorrespondenceWithRelations = Correspondence & {
 // text, not a real attached document), so this pulls whichever source
 // actually holds the text for this entry, rather than showing just a
 // one-line summary as the cover page's checklist already does.
-async function embedCorrespondenceEntry(w: PdfWriter, item: CorrespondenceWithRelations): Promise<void> {
+async function embedCorrespondenceEntry(w: PdfWriter, item: CorrespondenceWithRelations, contentsSection?: string): Promise<void> {
   const kind = resolveEmbedKind(item.fileName, null);
   if (item.fileName && item.storageKey && kind !== "unknown") {
-    await embedSourceFile(w, { fileName: item.fileName, storageKey: item.storageKey }, `Correspondence — ${item.title}`);
+    await embedSourceFile(w, { fileName: item.fileName, storageKey: item.storageKey }, `Correspondence — ${item.title}`, { contentsSection });
     return;
   }
 
@@ -352,15 +487,11 @@ async function embedCorrespondenceEntry(w: PdfWriter, item: CorrespondenceWithRe
     if (item.inboundEmail.ccAddresses.length > 0) {
       meta.push({ label: "Cc", value: item.inboundEmail.ccAddresses.join(", ") });
     }
-    renderTextEvidencePage(w, { heading: `Correspondence — ${item.inboundEmail.subject}`, meta, body: item.inboundEmail.body });
-    return;
-  }
-
-  if (item.source === "response_letter_draft" && item.bodyText) {
     renderTextEvidencePage(w, {
-      heading: `Correspondence — ${item.title}`,
-      meta: [{ label: "Date", value: formatDate(item.createdAt) }],
-      body: item.bodyText
+      heading: `Correspondence — ${item.inboundEmail.subject}`,
+      meta,
+      body: cleanEmailBodyForPdf(item.inboundEmail.body),
+      contentsSection
     });
     return;
   }
@@ -373,19 +504,36 @@ async function embedCorrespondenceEntry(w: PdfWriter, item: CorrespondenceWithRe
         { label: "From", value: formatUserName(item.sourceUpdate.author) ?? item.sourceUpdate.author.email },
         { label: "To", value: item.sourceUpdate.recipients.map((r) => r.email).join(", ") || "—" }
       ],
-      body: item.sourceUpdate.externalBody ?? ""
+      body: cleanEmailBodyForPdf(item.sourceUpdate.externalBody ?? ""),
+      contentsSection
     });
     return;
   }
 
-  // No file and no linked content to draw text from (e.g. an "upload"-
-  // source row whose file has since gone missing) — still surfaces the
-  // entry rather than silently dropping it from the package.
-  renderTextEvidencePage(w, {
-    heading: `Correspondence — ${item.title}`,
-    meta: [{ label: "Date", value: formatDate(item.createdAt) }],
-    body: "No file or content available for this correspondence entry."
-  });
+  // Covers response_letter_draft AND — new — external_action (a Request
+  // Approval/Sign/etc link): that source's own message plus any response
+  // summary is stored directly on this row's bodyText (see
+  // lib/external-action.ts), but nothing above ever read it, so every
+  // external_action entry fell straight to the "no content" fallback
+  // below regardless of whether it actually had something to show.
+  // Confirmed in a real generated package: two "Approve requested from
+  // ...@nss.co.nz" entries rendered as bare "No file or content
+  // available" pages despite the request having been sent with a real
+  // drafted message.
+  if (item.bodyText && item.bodyText.trim()) {
+    renderTextEvidencePage(w, {
+      heading: `Correspondence — ${item.title}`,
+      meta: [{ label: "Date", value: formatDate(item.createdAt) }],
+      body: item.bodyText,
+      contentsSection
+    });
+    return;
+  }
+
+  // Genuinely nothing to show (e.g. an "upload"-source row whose file has
+  // since gone missing) — the cover page's Correspondence list already
+  // names this entry, so skip spending a whole page on a page that would
+  // only say "no content" and add it back here.
 }
 
 type UpdateWithRelations = Update & {
@@ -397,7 +545,7 @@ type UpdateWithRelations = Update & {
 // attached to that same Update. Externally-sent updates show the actual
 // emailed subject/body (externalSubject/externalBody), the human-reviewed
 // final content, not the author's original rough draft in `body`.
-async function embedUpdateEntry(w: PdfWriter, update: UpdateWithRelations): Promise<void> {
+async function embedUpdateEntry(w: PdfWriter, update: UpdateWithRelations, contentsSection?: string): Promise<void> {
   const wasSentExternally = update.isExternal && update.externalSentAt;
   renderTextEvidencePage(w, {
     heading: wasSentExternally ? `Update — ${update.externalSubject ?? "Sent update"}` : "Update",
@@ -405,16 +553,123 @@ async function embedUpdateEntry(w: PdfWriter, update: UpdateWithRelations): Prom
       { label: "Date", value: formatDate(wasSentExternally ? update.externalSentAt : update.createdAt) },
       { label: "Author", value: formatUserName(update.author) ?? update.author.email }
     ],
-    body: (wasSentExternally ? update.externalBody : update.body) || update.body
+    body: cleanEmailBodyForPdf((wasSentExternally ? update.externalBody : update.body) || update.body),
+    contentsSection
   });
 
-  for (const attachment of update.attachments) {
+  for (let i = 0; i < update.attachments.length; i++) {
+    const attachment = update.attachments[i];
     await embedSourceFile(
       w,
       { fileName: attachment.fileName, storageKey: attachment.storageKey, contentType: attachment.contentType },
-      `Update photo — ${attachment.fileName}`
+      `Update photo ${i + 1} of ${update.attachments.length}`
     );
   }
+}
+
+// Inserts a short, page-numbered Contents index as the document's second
+// page, right after the cover (Task 3.2). Section boundaries are exactly
+// the markOutline(..., { contents: true }) calls recorded while the rest
+// of the document was being written, in the order they were recorded —
+// which is document order, since each one fires right as its own heading
+// is actually drawn. A section's printed range then just runs from its
+// own start page to one page before the NEXT section's start (or to the
+// document's last page, for the final section) — no separate grouping
+// logic needed, because the sections are already contiguous by
+// construction (each evidence type is written as one unbroken run).
+function insertContentsPage(doc: PDFDocument, w: PdfWriter) {
+  const sections = w.outline.filter((entry) => entry.contents);
+  if (sections.length === 0) return;
+
+  // Captured BEFORE inserting the Contents page itself, so these are
+  // stable 0-based positions in the pre-insertion page list.
+  const pagesBeforeInsert = doc.getPages();
+  // Index 0 is the cover page, which the Contents page is inserted
+  // immediately after (doc.insertPage(1, ...)) — it isn't shifted by that
+  // insertion. Everything from index 1 onward moves one page later.
+  const toDisplayNumber = (index: number) => (index === 0 ? 1 : index + 2);
+
+  const rows = sections.map((section, i) => {
+    const startIndex = pagesBeforeInsert.indexOf(section.page);
+    const nextStartIndex = i < sections.length - 1 ? pagesBeforeInsert.indexOf(sections[i + 1].page) : pagesBeforeInsert.length;
+    const endIndex = Math.max(startIndex, nextStartIndex - 1);
+    return { title: section.title, startPage: toDisplayNumber(startIndex), endPage: toDisplayNumber(endIndex) };
+  });
+
+  const contentsPage = doc.insertPage(1, [PAGE_WIDTH, PAGE_HEIGHT]);
+  w.page = contentsPage;
+  w.y = PAGE_HEIGHT - MARGIN;
+  w.heading("Contents");
+  w.spacer(4);
+  w.divider();
+  w.spacer(6);
+  for (const row of rows) {
+    const label = row.startPage === row.endPage ? `Page ${row.startPage}` : `Pages ${row.startPage}–${row.endPage}`;
+    w.row(row.title, label);
+  }
+
+  // The Contents page gets its own bookmark too, spliced in right after
+  // the cover page's own entry (index 0) so the sidebar's ordering
+  // matches the document's actual physical page order.
+  w.outline.splice(1, 0, { title: "Contents", page: contentsPage, contents: false, sidebar: true });
+}
+
+// Builds a real navigable PDF outline (bookmark) tree from every
+// markOutline() call recorded during generation (Task 3.1). pdf-lib has no
+// built-in outline/bookmark API, so this uses its low-level object
+// primitives directly (context.nextRef/assign/obj and the document's own
+// public `catalog`) rather than add a bookmark-specific dependency for
+// what's fundamentally a short, fixed structure: a flat doubly-linked list
+// of dictionaries hung off the document's /Outlines catalog entry.
+// PageMode is set to UseOutlines too, so a viewer opens with that sidebar
+// already showing rather than the reader having to know to look for it.
+function attachOutline(doc: PDFDocument, boldFont: PDFFont, entries: { title: string; page: PDFPage }[]) {
+  if (entries.length === 0) return;
+
+  const context = doc.context;
+  // Reserved up front, not yet registered to an object — each item's dict
+  // needs to reference its Prev/Next sibling's ref, and at least one of
+  // those two directions is always a forward reference no matter what
+  // order the dicts are built in, since this is a doubly-linked list.
+  const itemRefs = entries.map(() => context.nextRef());
+  const rootRef = context.nextRef();
+
+  entries.forEach((entry, i) => {
+    const dict: Record<string, unknown> = {
+      // context.obj() converts a plain JS string into a PDFName, not a
+      // PDFString — correct for /Type and /Fit below, but a bookmark's
+      // Title must genuinely be a string object, so it's wrapped
+      // explicitly. Run through the same WinAnsi-safe sanitizer as
+      // on-page text, since a title built from free text (a filename, an
+      // item title) could contain the exact class of character that has
+      // already crashed a real PDF generation once in this file.
+      Title: PDFString.of(sanitizeForPdf(boldFont, entry.title)),
+      Parent: rootRef,
+      Dest: [entry.page.ref, "Fit"]
+    };
+    if (i > 0) dict.Prev = itemRefs[i - 1];
+    if (i < entries.length - 1) dict.Next = itemRefs[i + 1];
+    // context.obj()'s LiteralObject type doesn't accept a loosely-typed
+    // Record<string, unknown> even though every value here genuinely is a
+    // valid Literal | PDFObject at runtime (a PDFString, a PDFRef, or a
+    // [PDFRef, string] array) — this is low-level interop with pdf-lib's
+    // own internal object-construction API, not application logic, so the
+    // cast is deliberate rather than a type-safety gap being papered over.
+    context.assign(itemRefs[i], context.obj(dict as any));
+  });
+
+  context.assign(
+    rootRef,
+    context.obj({
+      Type: "Outlines",
+      First: itemRefs[0],
+      Last: itemRefs[itemRefs.length - 1],
+      Count: entries.length
+    })
+  );
+
+  doc.catalog.set(PDFName.of("Outlines"), rootRef);
+  doc.catalog.set(PDFName.of("PageMode"), PDFName.of("UseOutlines"));
 }
 
 export async function generateVariationPackagePdf(params: {
@@ -449,10 +704,16 @@ export async function generateVariationPackagePdf(params: {
 
   const packageTotals = computePackageTotals(sheetRecords, materials, plant, contractTerms);
 
-  // --- Header (Task 1.1 — unchanged from before this feature) ---
+  // --- Header (Task 1.1) ---
   w.heading(`Variation Package — ${item.reference}`);
+  w.markOutline(`Variation Package — ${item.reference}`);
   w.text(item.title, { size: 13, bold: true });
   w.spacer(6);
+  // Accent-coloured rule marking the masthead off from the detail rows
+  // below it — the only other spot in this document besides the grand
+  // total that uses the brand colour, so it reads as a deliberate accent
+  // rather than a rebrand of every line.
+  w.divider({ color: ACCENT, thickness: 1.5 });
   w.row("Type", item.type === "variation" ? "Variation" : "Site Instruction");
   w.row("Date notified", formatDate(item.notifiedAt));
   w.row("Instructed by", item.instructedByName || "Not recorded");
@@ -465,6 +726,7 @@ export async function generateVariationPackagePdf(params: {
 
   // --- Evidence checklist (literal counts only — no AI sufficiency judgement) ---
   w.subheading("Evidence included");
+  w.markOutline("Evidence included", { contents: true });
   w.text(
     `Photos (${photos.length}), Correspondence (${correspondence.length}), Day Works Sheets (${sheetRecords.length}), Materials (${materials.length}), Plant (${plant.length})`
   );
@@ -474,6 +736,7 @@ export async function generateVariationPackagePdf(params: {
   // --- Photos thumbnail grid (unchanged from before this feature — the
   // full-page standalone Photos embed happens later, see Task 1.6) ---
   w.subheading(`Photos (${photos.length})`);
+  if (photos.length > 0) w.markOutline(`Photos (${photos.length})`, { contents: true });
   if (photos.length === 0) {
     w.text("No photos attached.");
   } else {
@@ -531,6 +794,7 @@ export async function generateVariationPackagePdf(params: {
 
   // --- Correspondence (computed list — unchanged; real content follows later, Task 1.4) ---
   w.subheading(`Correspondence (${correspondence.length})`);
+  if (correspondence.length > 0) w.markOutline(`Correspondence (${correspondence.length})`, { contents: true });
   if (correspondence.length === 0) {
     w.text("No correspondence attached.");
   } else {
@@ -548,6 +812,7 @@ export async function generateVariationPackagePdf(params: {
   // embeds separately below (Task 1.3). Matches how Materials/Plant list
   // their own line items flatly rather than grouped by source document. ---
   w.subheading(`Day Works Sheets — Labour (${sheetRecords.length})`);
+  if (sheetRecords.length > 0) w.markOutline(`Day Works Sheets — Labour (${sheetRecords.length})`, { contents: true });
   if (sheetRecords.length === 0) {
     w.text("No labour records attached.");
   } else {
@@ -573,6 +838,7 @@ export async function generateVariationPackagePdf(params: {
   // --- Materials — independent of any sheet (Labour, Plant & Material AI
   // Extraction) ---
   w.subheading(`Materials (${materials.length})`);
+  if (materials.length > 0) w.markOutline(`Materials (${materials.length})`, { contents: true });
   if (materials.length === 0) {
     w.text("No materials attached.");
   } else {
@@ -594,6 +860,7 @@ export async function generateVariationPackagePdf(params: {
   // --- Plant — independent of any sheet, no markup (Labour, Plant &
   // Material AI Extraction / Task 1.1) ---
   w.subheading(`Plant (${plant.length})`);
+  if (plant.length > 0) w.markOutline(`Plant (${plant.length})`, { contents: true });
   if (plant.length === 0) {
     w.text("No plant attached.");
   } else {
@@ -608,16 +875,38 @@ export async function generateVariationPackagePdf(params: {
   w.spacer(10);
   w.divider();
 
-  // --- Grand total (Task 1.1 — unchanged) ---
+  // --- Grand total ---
+  // Reserves room for the WHOLE section (heading + 4 rows + the total
+  // panel + the generated-by line) up front, so it moves to a fresh page
+  // as one block rather than the panel alone splitting away onto a
+  // near-empty page by itself when the cover page is almost, but not
+  // quite, full — which is exactly what the new panel's extra height
+  // caused before this reservation was added.
+  w.ensureSpace(165);
   w.subheading("Grand total");
+  w.markOutline("Grand total", { contents: true });
   w.row("Labour", formatCurrency(packageTotals.labourTotal));
   w.row("Materials", formatCurrency(packageTotals.materialsTotal));
   w.row("Materials markup", formatCurrency(packageTotals.materialsMarkupTotal));
   w.row("Plant", formatCurrency(packageTotals.plantTotal));
-  w.spacer(4);
-  w.row("Grand total claimed value", formatCurrency(packageTotals.grandTotal), { bold: true });
+  w.spacer(8);
 
-  w.spacer(20);
+  // The one number a Main Contractor's QS actually needs, set apart in a
+  // tinted panel and the brand colour at a larger size — previously this
+  // was styled identically to every other line item on the page (just
+  // bold), easy to scroll straight past.
+  w.ensureSpace(44);
+  const totalPanelTop = w.y + 10;
+  w.panelRect(totalPanelTop, 34);
+  w.row("GRAND TOTAL CLAIMED VALUE", formatCurrency(packageTotals.grandTotal), {
+    bold: true,
+    size: 15,
+    color: ACCENT,
+    indent: 8
+  });
+  w.spacer(10);
+
+  w.spacer(10);
   w.text(`Generated by ${generatedByName} on ${formatDate(new Date())}`, { size: 8, color: [0.5, 0.5, 0.55] });
 
   // ============================================================
@@ -627,16 +916,21 @@ export async function generateVariationPackagePdf(params: {
 
   // --- 1.2 Quote ---
   if (item.quoteFileName && item.quoteStorageKey) {
-    await embedSourceFile(w, { fileName: item.quoteFileName, storageKey: item.quoteStorageKey }, `Quote — ${item.quoteFileName}`);
+    await embedSourceFile(w, { fileName: item.quoteFileName, storageKey: item.quoteStorageKey }, "Quote", { contentsSection: "Quote" });
   }
 
   // --- 1.3 Day Works Sheets: real source file for each sheet (labour
-  // only now — materials/plant are independent, see below) ---
-  for (const sheet of dayWorksSheets) {
+  // only now — materials/plant are independent, see below). Headed by
+  // position ("Day Works Sheet 2 of 5"), not the raw uploaded filename —
+  // Task 3.3 — with the original filename still shown, just demoted to a
+  // caption underneath (see embedSourceFile).
+  for (let i = 0; i < dayWorksSheets.length; i++) {
+    const sheet = dayWorksSheets[i];
     await embedSourceFile(
       w,
       { fileName: sheet.fileName, storageKey: sheet.storageKey, contentType: sheet.contentType },
-      `Day Works Sheet — ${sheet.fileName}`
+      `Day Works Sheet ${i + 1} of ${dayWorksSheets.length}`,
+      { contentsSection: i === 0 ? "Day Works Sheets" : undefined }
     );
   }
 
@@ -645,47 +939,104 @@ export async function generateVariationPackagePdf(params: {
   // or docket can produce several line items that all reference the SAME
   // photoStorageKey (see the labour-plant-material save route) — embed
   // each distinct source image once, not once per line item that shares
-  // it, so a 5-line invoice doesn't repeat the same page 5 times.
+  // it, so a 5-line invoice doesn't repeat the same page 5 times. Collected
+  // into a list first (rather than embedding inline) so each one can be
+  // numbered "N of M" against the real de-duplicated count, not the raw
+  // materials/plant array length.
   const embeddedPhotoKeys = new Set<string>();
+  const materialPhotoEntries: { fileName: string; storageKey: string; contentType: string | null }[] = [];
   for (const material of materials) {
     if (material.photoFileName && material.photoStorageKey && !embeddedPhotoKeys.has(material.photoStorageKey)) {
       embeddedPhotoKeys.add(material.photoStorageKey);
-      await embedSourceFile(
-        w,
-        { fileName: material.photoFileName, storageKey: material.photoStorageKey, contentType: material.photoContentType },
-        `Materials receipt — ${material.photoFileName}`
-      );
+      materialPhotoEntries.push({ fileName: material.photoFileName, storageKey: material.photoStorageKey, contentType: material.photoContentType });
     }
   }
+  for (let i = 0; i < materialPhotoEntries.length; i++) {
+    await embedSourceFile(w, materialPhotoEntries[i], `Materials receipt ${i + 1} of ${materialPhotoEntries.length}`, {
+      contentsSection: i === 0 ? "Materials Receipts" : undefined
+    });
+  }
+
+  const plantPhotoEntries: { fileName: string; storageKey: string; contentType: string | null }[] = [];
   for (const plantItem of plant) {
     if (plantItem.photoFileName && plantItem.photoStorageKey && !embeddedPhotoKeys.has(plantItem.photoStorageKey)) {
       embeddedPhotoKeys.add(plantItem.photoStorageKey);
-      await embedSourceFile(
-        w,
-        { fileName: plantItem.photoFileName, storageKey: plantItem.photoStorageKey, contentType: plantItem.photoContentType },
-        `Plant docket — ${plantItem.photoFileName}`
-      );
+      plantPhotoEntries.push({ fileName: plantItem.photoFileName, storageKey: plantItem.photoStorageKey, contentType: plantItem.photoContentType });
     }
+  }
+  for (let i = 0; i < plantPhotoEntries.length; i++) {
+    await embedSourceFile(w, plantPhotoEntries[i], `Plant docket ${i + 1} of ${plantPhotoEntries.length}`, {
+      contentsSection: i === 0 ? "Plant Dockets" : undefined
+    });
   }
 
   // --- 1.4 Site Instruction evidence: source document, then each correspondence entry ---
   if (item.fileName && item.storageKey) {
-    await embedSourceFile(w, { fileName: item.fileName, storageKey: item.storageKey }, `Source document — ${item.fileName}`);
+    await embedSourceFile(w, { fileName: item.fileName, storageKey: item.storageKey }, "Source document", { contentsSection: "Source document" });
   }
 
+  // contentsSection is only attached to the first correspondence entry
+  // that actually produces a page — some entries render nothing at all
+  // (see embedCorrespondenceEntry's final fallback), so "first in the
+  // array" isn't necessarily "first that lands on a page"; tracked here
+  // via whether a new outline entry actually appeared.
+  let correspondenceSectionMarked = false;
   for (const correspondenceItem of correspondence) {
-    await embedCorrespondenceEntry(w, correspondenceItem);
+    const outlineCountBefore = w.outline.length;
+    await embedCorrespondenceEntry(w, correspondenceItem, correspondenceSectionMarked ? undefined : "Correspondence");
+    if (w.outline.length > outlineCountBefore) correspondenceSectionMarked = true;
   }
 
   // --- 1.5 Linked Updates: content, then that update's own photos ---
-  for (const update of updates) {
-    await embedUpdateEntry(w, update);
+  for (let i = 0; i < updates.length; i++) {
+    await embedUpdateEntry(w, updates[i], i === 0 ? "Updates" : undefined);
   }
 
   // --- 1.6 Directly-uploaded Photos, each its own full page ---
-  for (const photo of photos) {
-    await embedSourceFile(w, { fileName: photo.fileName, storageKey: photo.storageKey, contentType: photo.contentType }, `Photo — ${photo.fileName}`);
+  for (let i = 0; i < photos.length; i++) {
+    const photo = photos[i];
+    await embedSourceFile(w, { fileName: photo.fileName, storageKey: photo.storageKey, contentType: photo.contentType }, `Photo ${i + 1} of ${photos.length}`, {
+      contentsSection: i === 0 ? "Photos" : undefined
+    });
   }
+
+  // --- Contents index + PDF outline/bookmarks (Task 3.1/3.2) — inserted
+  // after all real content exists (a page-number/Dest can't be computed or
+  // linked before then) but BEFORE the footer pass below, so the newly
+  // inserted Contents page gets a footer and a correct "Page X of Y" too. ---
+  insertContentsPage(doc, w);
+  // Only sidebar-visible entries become real bookmarks — the appendix's
+  // generic section-start markers (Task 3.2's "Day Works Sheets" etc.)
+  // exist purely to compute the Contents page's page ranges and would
+  // otherwise sit right next to (and duplicate) the specific per-item
+  // bookmark that already covers that same page.
+  attachOutline(doc, boldFont, w.outline.filter((entry) => entry.sidebar));
+
+  // --- Footer on every page: small logo mark, item reference, and
+  // "Page X of Y" — previously only the cover page ever said who
+  // generated this or when, and nothing anywhere said how many pages the
+  // package even ran to. Run as a final pass over every page (including
+  // ones copied wholesale from an embedded source PDF) since the total
+  // page count isn't known until generation is complete. ---
+  const allPages = doc.getPages();
+  const totalPages = allPages.length;
+  allPages.forEach((page, index) => {
+    const footerY = 26;
+    if (logoImage) {
+      drawLogo(page, logoImage, { x: MARGIN, y: footerY + 14, maxWidth: 14, maxHeight: 14 });
+    }
+    const refLabel = sanitizeForPdf(font, item.reference);
+    page.drawText(refLabel, { x: MARGIN + (logoImage ? 20 : 0), y: footerY, size: 8, font, color: rgb(0.55, 0.57, 0.6) });
+    const pageLabel = `Page ${index + 1} of ${totalPages}`;
+    const pageLabelWidth = font.widthOfTextAtSize(pageLabel, 8);
+    page.drawText(pageLabel, {
+      x: PAGE_WIDTH - MARGIN - pageLabelWidth,
+      y: footerY,
+      size: 8,
+      font,
+      color: rgb(0.55, 0.57, 0.6)
+    });
+  });
 
   const bytes = await doc.save();
   return new Uint8Array(bytes);

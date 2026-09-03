@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
 import { PaymentClaimsListView } from "@/components/payment-claims/payment-claims-list-view";
+import { getRetentionSummary } from "@/lib/retention";
 
 export default async function PaymentClaimsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
@@ -14,10 +15,13 @@ export default async function PaymentClaimsPage({ params }: { params: Promise<{ 
     redirect(`/projects/${projectId}`);
   }
 
-  const claims = await prisma.paymentClaim.findMany({
-    where: { projectId },
-    orderBy: { claimNumber: "desc" }
-  });
+  const [claims, retentionSummary] = await Promise.all([
+    prisma.paymentClaim.findMany({
+      where: { projectId },
+      orderBy: { claimNumber: "desc" }
+    }),
+    getRetentionSummary(projectId)
+  ]);
 
-  return <PaymentClaimsListView projectId={projectId} claims={claims} />;
+  return <PaymentClaimsListView projectId={projectId} claims={claims} retentionSummary={retentionSummary} />;
 }

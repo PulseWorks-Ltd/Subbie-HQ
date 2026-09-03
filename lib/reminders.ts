@@ -4,6 +4,7 @@ import { sendReminderEmail } from "./email";
 import { sendPushToUser } from "./push";
 import { hasModuleAccess, type ModuleKey } from "./permissions";
 import { INSURANCE_TYPE_LABELS } from "./insurance-labels";
+import { getRetentionSummary } from "./retention";
 
 // Stage order matters: a run only sends a reminder if the newly-computed
 // stage ranks strictly higher than the last one sent, so a nightly run never
@@ -127,6 +128,7 @@ export type ReminderRunSummary = {
   checkedVariationItems: number;
   checkedSafetyDocuments: number;
   checkedInsuranceCertificates: number;
+  checkedRetentions: number;
   remindersSent: number;
   details: string[];
 };
@@ -137,6 +139,7 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
     checkedVariationItems: 0,
     checkedSafetyDocuments: 0,
     checkedInsuranceCertificates: 0,
+    checkedRetentions: 0,
     remindersSent: 0,
     details: []
   };
@@ -161,7 +164,8 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
       safetyDocuments: {
         where: { expiresAt: { not: null } },
         select: { id: true, title: true, expiresAt: true, lastReminderStage: true }
-      }
+      },
+      retention: { select: { tranche1LastReminderStage: true, tranche2LastReminderStage: true } }
     }
   });
 
@@ -217,6 +221,69 @@ export async function runReminderCheck(now: Date = new Date()): Promise<Reminder
 
       summary.remindersSent += recipients.length;
       summary.details.push(`SafetyDocument ${document.id} (${document.title}): stage=${stage}, recipients=${recipients.length}`);
+    }
+
+    // Retention's expected dates are computed defaults (Project.completedAt
+    // / ContractTerms.defectsLiabilityPeriodDays), not always a value
+    // stored on the Retention row — reuses the exact same summary the
+    // Payment Claims page's Retention card renders, rather than
+    // re-deriving that default logic a second time here. Each tranche is
+    // its own independent stage/reminder, same as Variations/Safety
+    // Documents above, and stops reminding once released.
+    summary.checkedRetentions++;
+    const retentionSummary = await getRetentionSummary(project.id);
+    const tranches: {
+      key: "tranche1" | "tranche2";
+      label: string;
+      lastStage: ReminderStage | null;
+      update: (stage: ReminderStage) => Promise<unknown>;
+    }[] = [
+      {
+        key: "tranche1",
+        label: "Retention (Practical Completion release)",
+        lastStage: project.retention?.tranche1LastReminderStage ?? null,
+        update: (stage) =>
+          prisma.retention.upsert({
+            where: { projectId: project.id },
+            update: { tranche1LastReminderStage: stage },
+            create: { projectId: project.id, tranche1LastReminderStage: stage }
+          })
+      },
+      {
+        key: "tranche2",
+        label: "Retention (Defects Liability Period release)",
+        lastStage: project.retention?.tranche2LastReminderStage ?? null,
+        update: (stage) =>
+          prisma.retention.upsert({
+            where: { projectId: project.id },
+            update: { tranche2LastReminderStage: stage },
+            create: { projectId: project.id, tranche2LastReminderStage: stage }
+          })
+      }
+    ];
+
+    for (const tranche of tranches) {
+      const info = retentionSummary[tranche.key];
+      if (!info.expectedDate || info.releasedAt) continue;
+
+      const stage = stageForDaysUntil(daysBetween(today, info.expectedDate));
+      if (!stage || stageRank(stage) <= stageRank(tranche.lastStage)) continue;
+
+      const recipients = await recipientsFor(project, "payment_claims");
+      const detail = `${tranche.label} ${stageLabel(stage, "due")}`;
+      const itemUrl = `${baseUrl()}/projects/${project.id}/payment-claims`;
+
+      await notifyRecipients(recipients, {
+        subject: tranche.label,
+        headline: tranche.label,
+        detail,
+        projectName: project.name,
+        itemUrl
+      });
+      await tranche.update(stage);
+
+      summary.remindersSent += recipients.length;
+      summary.details.push(`Retention ${tranche.key} (project ${project.id}): stage=${stage}, recipients=${recipients.length}`);
     }
   }
 

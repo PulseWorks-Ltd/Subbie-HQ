@@ -11,12 +11,18 @@ type MainContractorDetail = MainContractor & {
   projects: Pick<Project, "id" | "name" | "status" | "jobNumber">[];
 };
 
+function formatCurrency(amount: number) {
+  return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
+}
+
 export function MainContractorDetailView({
   mainContractor,
-  isAdmin
+  isAdmin,
+  totalRetentionWithheld
 }: {
   mainContractor: MainContractorDetail;
   isAdmin: boolean;
+  totalRetentionWithheld: number;
 }) {
   const router = useRouter();
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
@@ -140,6 +146,16 @@ export function MainContractorDetailView({
           </div>
         )}
       </div>
+
+      {totalRetentionWithheld > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5">
+          <h3 className="text-sm font-bold mb-1">Retention currently held</h3>
+          <p className="text-xs text-[#4c739a] dark:text-slate-400 mb-2">
+            Total, across every project with this Main Contractor — not yet released.
+          </p>
+          <p className="text-2xl font-bold">{formatCurrency(totalRetentionWithheld)}</p>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5">
         <h3 className="text-sm font-bold mb-3">Projects</h3>

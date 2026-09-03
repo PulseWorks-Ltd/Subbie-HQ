@@ -10,7 +10,8 @@ const TYPE_ICONS: Record<DashboardItem["type"], string> = {
   variation: "request_quote",
   "site-instruction": "assignment",
   "payment-claim": "payments",
-  "safety-document": "health_and_safety"
+  "safety-document": "health_and_safety",
+  retention: "savings"
 };
 
 function toDateInputValue(date: Date) {
@@ -70,6 +71,12 @@ export function DashboardItemRow({ item }: { item: DashboardItem }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ expiresAt: isoDate })
+      });
+    } else if (item.type === "retention") {
+      await fetch(`/api/projects/${item.projectId}/retention`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [item.rescheduleField]: isoDate })
       });
     }
 

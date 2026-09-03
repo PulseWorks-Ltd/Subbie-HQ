@@ -1,17 +1,26 @@
 import { prisma } from "./prisma";
 import { getOrganisationMembership } from "./organisation";
 import { hasModuleAccess, type ModuleKey } from "./permissions";
+import { getRetentionSummary } from "./retention";
 
 const MODULE_FOR_TYPE: Record<DashboardItemType, ModuleKey> = {
   programme: "programme",
   variation: "variations",
   "site-instruction": "site_instructions",
   "payment-claim": "payment_claims",
-  "safety-document": "health_safety"
+  "safety-document": "health_safety",
+  retention: "payment_claims"
 };
 
-export type DashboardItemType = "programme" | "variation" | "site-instruction" | "payment-claim" | "safety-document";
-export type DashboardRescheduleField = "startDate" | "endDate" | "dueAt" | "nextClaimDate" | "expiresAt";
+export type DashboardItemType = "programme" | "variation" | "site-instruction" | "payment-claim" | "safety-document" | "retention";
+export type DashboardRescheduleField =
+  | "startDate"
+  | "endDate"
+  | "dueAt"
+  | "nextClaimDate"
+  | "expiresAt"
+  | "tranche1ExpectedDate"
+  | "tranche2ExpectedDate";
 
 export type DashboardItem = {
   id: string;
@@ -82,6 +91,7 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
     const canSeeSiteInstructions = canSeeType(project, "site-instruction");
     const canSeePaymentClaims = canSeeType(project, "payment-claim");
     const canSeeSafetyDocuments = canSeeType(project, "safety-document");
+    const canSeeRetention = canSeeType(project, "retention");
 
     for (const item of canSeeProgramme ? project.programmeItems : []) {
       if (!item.startDate && !item.endDate) continue;
@@ -177,6 +187,43 @@ export async function getDashboardFeed(userId: string): Promise<DashboardItem[]>
         canComplete: false,
         rescheduleField: "expiresAt"
       });
+    }
+
+    // Retention isn't a plain findMany-able list like the other sections
+    // above — its expected dates can be DEFAULTS computed from
+    // Project.completedAt/ContractTerms (see getRetentionSummary), not
+    // always a value stored on the Retention row itself, so this calls
+    // the same summary the Payment Claims page's Retention card uses
+    // rather than re-deriving that default logic here a second time. Only
+    // called for projects that could plausibly need it (retention module
+    // visible at all) to avoid the extra queries for every other project.
+    if (canSeeRetention) {
+      const retentionSummary = await getRetentionSummary(project.id);
+      const tranches: { key: "tranche1" | "tranche2"; label: string; rescheduleField: DashboardRescheduleField }[] = [
+        { key: "tranche1", label: "Retention — Practical Completion release due", rescheduleField: "tranche1ExpectedDate" },
+        { key: "tranche2", label: "Retention — Defects Liability Period release due", rescheduleField: "tranche2ExpectedDate" }
+      ];
+      for (const { key, label, rescheduleField } of tranches) {
+        const tranche = retentionSummary[key];
+        if (!tranche.expectedDate || tranche.releasedAt) continue;
+        const anchorDay = startOfDay(tranche.expectedDate);
+        if (!inWindow(anchorDay)) continue;
+
+        const isOverdue = anchorDay.getTime() < today.getTime();
+        items.push({
+          id: `retention-${key}-${project.id}`,
+          type: "retention",
+          projectId: project.id,
+          projectName: project.name,
+          headline: label,
+          detail: `${isOverdue ? "Overdue" : "Due"} ${formatShortDate(tranche.expectedDate, today)}`,
+          date: tranche.expectedDate,
+          isOverdue,
+          href: `/projects/${project.id}/payment-claims`,
+          canComplete: false,
+          rescheduleField
+        });
+      }
     }
   }
 

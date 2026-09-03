@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getOrganisationMembership } from "@/lib/organisation";
 import { hasModuleAccess } from "@/lib/permissions";
 import { MainContractorDetailView } from "@/components/main-contractors/main-contractor-detail-view";
+import { computeTotalRetentionWithheldForMainContractor } from "@/lib/retention";
 
 export default async function MainContractorDetailPage({
   params
@@ -33,5 +34,13 @@ export default async function MainContractorDetailPage({
     notFound();
   }
 
-  return <MainContractorDetailView mainContractor={mainContractor} isAdmin={membership!.isAdmin} />;
+  const totalRetentionWithheld = await computeTotalRetentionWithheldForMainContractor(mainContractorId);
+
+  return (
+    <MainContractorDetailView
+      mainContractor={mainContractor}
+      isAdmin={membership!.isAdmin}
+      totalRetentionWithheld={totalRetentionWithheld}
+    />
+  );
 }

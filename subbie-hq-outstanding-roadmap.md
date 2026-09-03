@@ -350,10 +350,29 @@ against its own text, which pre-dates some of this session's work):
   a dedicated page. Genuinely still open from that doc: the Leakage
   Calculator (not built), reframing the guides index as "leak points" (not
   done), and a public/self-serve Contract Review teaser tool (not built).
-- **Area 02 (Delay/EOT) and Area 03 (Retention)** — confirmed genuinely
-  **not built**: no `Retention` or `DelayEvent` model exists anywhere in
-  `prisma/schema.prisma`. Both docs agree here; this is real, unclaimed
-  work.
+- **Area 03 (Retention)** — ✅ **now built, same session.** New `Retention`
+  model (one per project, two explicit tranches — Practical Completion and
+  end of Defects Liability Period — not one combined release, since a Main
+  Contractor routinely only releases the first half on time) and
+  `lib/retention.ts`. Total withheld is never stored — always computed
+  live as Σ(`PaymentClaim.claimedAmount`) × `ContractTerms.retentionPercent`,
+  so it can never drift out of sync with the real claims. Surfaced as a
+  Retention card at the top of the Payment Claims page (inline edit of
+  tranche %/dates, mark-released); wired into the Dashboard feed and the
+  existing `lib/reminders.ts` engine (literally sitting on a `// TODO:
+  once Payment Claims is built...` comment that was still in that file);
+  and a "Retention currently held" rollup on the Main Contractor detail
+  page, summed across every project with that MC (the NET figure — gross
+  withheld minus whatever's actually been released — not the historical
+  gross total). Known, deliberately deferred gap: no retention CAP is
+  modelled. Verified with 16 real staging assertions; deliberately did
+  NOT invoke the live `runReminderCheck()` in verification, since it
+  processes every project in the shared staging database and could have
+  sent real emails/push notifications to real staging users — the new
+  persistence mechanism was exercised directly instead.
+- **Area 02 (Delay/EOT)** — confirmed genuinely **not built yet**: no
+  `DelayEvent` model exists. Planned as the next build (Retention first,
+  per this session's own agreed sequencing).
 - **Area 05 (founder/social proof) and Area 06 (sales process)** — no
   About/Founder page, no testimonials anywhere in the marketing routes,
   confirmed absent. Pure content/process work, nothing to build.

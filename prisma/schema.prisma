@@ -549,6 +549,7 @@ model Project {
   variationScheduleRuns        VariationScheduleRun[]
   hoursOnSiteSheets            HoursOnSiteSheet[]
   contractSchedule             ContractSchedule?
+  retention                    Retention?
 }
 
 enum VariationAutomationMode {
@@ -1145,6 +1146,62 @@ model PaymentClaim {
   claimEvidenceLinks ClaimEvidenceLink[]
 
   @@unique([projectId, claimNumber])
+}
+
+// One row per project — the retention side of Payment Claims (Appendix
+// B1's "Less retention" line, tracked forward to actual release rather
+// than just deducted). Deliberately does NOT store a running withheld
+// total: that figure is always computed live as
+// Σ(PaymentClaim.claimedAmount) × ContractTerms.retentionPercent/100 (see
+// lib/retention.ts) — the real PaymentClaim rows already ARE the source of
+// truth for what's been claimed, so duplicating a total here would just be
+// another number that can drift out of sync with them. Two tranches
+// modelled explicitly (not one combined release) because that's how
+// retention actually gets released in practice — commonly half at
+// Practical Completion, the remainder at the end of the Defects Liability
+// Period — and a Main Contractor routinely only releases the first half
+// on time, leaving the second outstanding for months; collapsing that
+// into one date/amount would hide exactly the "did they actually release
+// it" tracking this feature exists for.
+//
+// Known, deliberately deferred gap: no retention CAP is modelled (some
+// contracts stop accruing retention once it hits a ceiling, e.g. 5% up to
+// a max of 2.5% of contract value) — retention keeps accruing at
+// ContractTerms.retentionPercent indefinitely. Flagged plainly rather than
+// guessed at; add if a real contract needs it.
+model Retention {
+  id        String @id @default(cuid())
+  projectId String @unique
+
+  // Practical Completion, for retention purposes specifically — falls
+  // back to Project.completedAt (which already tracks "site work
+  // finished") when null, since the two are usually the same date; this
+  // override exists only for the real but less common case where a
+  // certified PC date differs from Subbie HQ's own Project.completedAt.
+  practicalCompletionDateOverride DateTime?
+
+  // Tranche 1 — released at Practical Completion.
+  tranche1ExpectedDate      DateTime?
+  tranche1Percent           Float?
+  tranche1ReleasedAmount    Decimal?       @db.Decimal(12, 2)
+  tranche1ReleasedAt        DateTime?
+  tranche1LastReminderStage ReminderStage?
+
+  // Tranche 2 — released at the end of the Defects Liability Period.
+  // tranche2ExpectedDate defaults (in application code, not the database)
+  // to tranche1ExpectedDate + ContractTerms.defectsLiabilityPeriodDays,
+  // but is stored and editable here since either date can genuinely slip
+  // independently of the contract's stated terms.
+  tranche2ExpectedDate      DateTime?
+  tranche2Percent           Float?
+  tranche2ReleasedAmount    Decimal?       @db.Decimal(12, 2)
+  tranche2ReleasedAt        DateTime?
+  tranche2LastReminderStage ReminderStage?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
 }
 
 // One row per Variation claimed, in one specific month's claim — the

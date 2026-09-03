@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PaymentClaim } from "@prisma/client";
+import type { RetentionSummary } from "@/lib/retention";
+import { RetentionCard } from "@/components/payment-claims/retention-card";
 
 function formatCurrency(amount: number | string | { toString(): string }) {
   return Number(amount).toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -22,7 +24,15 @@ function defaultNextPeriod(claims: PaymentClaim[]): { start: string; end: string
   return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
 
-export function PaymentClaimsListView({ projectId, claims }: { projectId: string; claims: PaymentClaim[] }) {
+export function PaymentClaimsListView({
+  projectId,
+  claims,
+  retentionSummary
+}: {
+  projectId: string;
+  claims: PaymentClaim[];
+  retentionSummary: RetentionSummary;
+}) {
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const initial = defaultNextPeriod(claims);
@@ -68,6 +78,8 @@ export function PaymentClaimsListView({ projectId, claims }: { projectId: string
           Create Claim
         </button>
       </div>
+
+      <RetentionCard projectId={projectId} summary={retentionSummary} />
 
       <p className="text-xs text-[#4c739a] dark:text-slate-400">
         Before creating a claim, make sure the{" "}

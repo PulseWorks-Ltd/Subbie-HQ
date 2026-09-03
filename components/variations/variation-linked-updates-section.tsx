@@ -1,4 +1,5 @@
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
+import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { UpdateThread } from "@/components/updates/update-thread";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
@@ -17,13 +18,15 @@ export function VariationLinkedUpdatesSection({
   updates,
   contacts,
   taggableItems,
-  defaultRatePerHour
+  defaultRatePerHour,
+  contractItems
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
   contacts: ContactOption[];
   taggableItems: VariationItem[];
   defaultRatePerHour: string;
+  contractItems: TaggableContractItem[];
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -40,6 +43,7 @@ export function VariationLinkedUpdatesSection({
               contacts={contacts}
               taggableItems={taggableItems}
               defaultRatePerHour={defaultRatePerHour}
+              contractItems={contractItems}
             />
           ))}
         </div>

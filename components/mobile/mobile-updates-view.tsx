@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
+import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { MobileThread } from "@/components/mobile/mobile-thread";
 import { UpdateComposer } from "@/components/updates/update-composer";
 import { UpdatesSearchBar } from "@/components/updates/updates-search-bar";
@@ -23,6 +24,7 @@ export function MobileUpdatesView({
   updates,
   taggableItems,
   contacts,
+  contractItems,
   highlightUpdateId,
   initialQuery,
   initialFrom,
@@ -33,6 +35,7 @@ export function MobileUpdatesView({
   updates: UpdateWithReplies[];
   taggableItems: VariationItem[];
   contacts: ContactOption[];
+  contractItems: TaggableContractItem[];
   highlightUpdateId?: string;
   initialQuery: string;
   initialFrom: string;
@@ -102,7 +105,7 @@ export function MobileUpdatesView({
       ) : (
         <div className="flex flex-col gap-3">
           {updates.map((update) => (
-            <MobileThread key={update.id} projectId={projectId} update={update} taggableItems={taggableItems} />
+            <MobileThread key={update.id} projectId={projectId} update={update} taggableItems={taggableItems} contractItems={contractItems} />
           ))}
         </div>
       )}

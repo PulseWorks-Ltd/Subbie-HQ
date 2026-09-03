@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess } from "@/lib/auth";
 import { MobileUpdatesView } from "@/components/mobile/mobile-updates-view";
+import { getTaggableContractItems } from "@/lib/contract-schedule";
 import { UPDATE_CATEGORIES } from "@/lib/update-category";
 
 export default async function MobileProjectUpdatesPage({
@@ -38,7 +39,7 @@ export default async function MobileProjectUpdatesPage({
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [updates, taggableItems, contacts] = await Promise.all([
+  const [updates, taggableItems, contacts, contractItems] = await Promise.all([
     prisma.update.findMany({
       where: {
         projectId,
@@ -96,7 +97,8 @@ export default async function MobileProjectUpdatesPage({
           select: { id: true, name: true, email: true, role: true },
           orderBy: { name: "asc" }
         })
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    getTaggableContractItems(projectId)
   ]);
 
   return (
@@ -112,6 +114,7 @@ export default async function MobileProjectUpdatesPage({
         updates={updates}
         taggableItems={taggableItems}
         contacts={contacts}
+        contractItems={contractItems}
         highlightUpdateId={highlightUpdateId}
         initialQuery={q ?? ""}
         initialFrom={from ?? ""}

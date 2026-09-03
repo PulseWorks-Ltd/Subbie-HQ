@@ -331,3 +331,40 @@ export function buildContractItemCreateData(scheduleId: string, item: ContractIt
     }
   };
 }
+
+export type TaggableContractItem = {
+  id: string;
+  description: string;
+  components: {
+    id: string;
+    label: string;
+    kind: "fixed" | "weekly_hire";
+    phases: { id: string; label: string }[];
+  }[];
+};
+
+// A deliberately lean read — every "assign progress from this Project
+// Diary entry" picker (Phase 3) needs only ids/labels to populate its
+// item -> component/phase dropdowns, not the full progress-entry history
+// getContractScheduleForProject loads for the Contract Schedule page
+// itself. Returns [] (not null) when a project has no schedule yet, so
+// callers can render "no contract items to tag" without a null check.
+export async function getTaggableContractItems(projectId: string): Promise<TaggableContractItem[]> {
+  const schedule = await prisma.contractSchedule.findUnique({
+    where: { projectId },
+    select: {
+      items: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          description: true,
+          components: {
+            orderBy: { sortOrder: "asc" },
+            select: { id: true, label: true, kind: true, phases: { orderBy: { sortOrder: "asc" }, select: { id: true, label: true } } }
+          }
+        }
+      }
+    }
+  });
+  return schedule?.items ?? [];
+}

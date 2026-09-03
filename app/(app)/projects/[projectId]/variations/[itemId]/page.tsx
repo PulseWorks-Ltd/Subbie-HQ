@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
 import { VariationDetailView } from "@/components/variations/variation-detail-view";
+import { getTaggableContractItems } from "@/lib/contract-schedule";
 
 export default async function VariationItemPage({
   params
@@ -38,7 +39,7 @@ export default async function VariationItemPage({
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [dayWorksSheets, sheetRecords, materials, plant, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages, qaRecords, externalActions] = await Promise.all([
+  const [dayWorksSheets, sheetRecords, materials, plant, photos, correspondence, updates, contacts, taggableItems, contractTerms, packages, qaRecords, externalActions, contractItems] = await Promise.all([
     // Just the uploaded files — labour records are independent of any
     // sheet now too (Labour, Plant & Material AI Extraction, extended to
     // Labour), fetched at the item level below instead.
@@ -89,7 +90,8 @@ export default async function VariationItemPage({
     // query (dayWorksSheetId set for sheet-scoped requests still carries
     // this same variationItemId — see lib/external-action.ts) — split by
     // dayWorksSheetId presence in the view rather than querying twice.
-    prisma.externalAction.findMany({ where: { variationItemId: itemId }, orderBy: { sentAt: "desc" } })
+    prisma.externalAction.findMany({ where: { variationItemId: itemId }, orderBy: { sentAt: "desc" } }),
+    getTaggableContractItems(projectId)
   ]);
 
   return (
@@ -109,6 +111,7 @@ export default async function VariationItemPage({
       packages={packages}
       qaRecords={qaRecords}
       externalActions={externalActions}
+      contractItems={contractItems}
     />
   );
 }

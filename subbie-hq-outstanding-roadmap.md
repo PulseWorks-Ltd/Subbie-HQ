@@ -85,9 +85,31 @@ the extraction schema required every optional field present-with-null,
 but Grok frequently omits a not-applicable key entirely rather than
 setting it to JSON null — switched to Zod's `.nullish()` throughout.
 
-Not yet built: Project Diary → contract-item % complete assignment
-(Phase 3) — scoped as a separate follow-up phase from the start, not an
-oversight.
+✅ **Phase 3, same session: Project Diary → contract-item % complete,
+now built.** A new "+ Progress" action on any Project Diary entry (desktop
+`update-thread.tsx`, mobile `mobile-thread.tsx`, and the Variation's own
+Linked Diary Entries section — all three real UpdateThread render sites)
+opens a small dialog: pick a contract item, then which of its components/
+phases the entry reports on, a % and an effective date (defaulting to the
+diary entry's own date), and it's recorded as a `ContractItemProgressEntry`
+with `source: project_diary` linked back to that Update — reusing the
+Phase 1 `/contract-schedule/progress` route rather than a new one.
+Deliberately NOT folded into the existing SI/Variation/QA tag `<select>`:
+those three are mutually-exclusive facets of "what this update is about,"
+while contract item progress is an independent, addable fact about it.
+One real permissions decision made here: recording progress from a diary
+entry is gated by **Updates** access, not Payment Claims access (a site
+foreman posting a diary entry has no reason to hold Payment Claims
+permission) — direct manual entry on the Contract Schedule page itself is
+unchanged, still gated by Payment Claims access. Verified with 10 real
+staging assertions, including that a diary-entry-sourced checkpoint flows
+into the Payment Claim calculation identically to a manually-entered one
+(same table, same read logic, no special-casing by source).
+
+All three phases of the Contract Schedule of Values feature are now
+built: schema + calculation engine + Payment Claims wiring (Phase 1),
+Grok vision quote extraction (Phase 2), Project Diary progress assignment
+(Phase 3).
 
 ---
 

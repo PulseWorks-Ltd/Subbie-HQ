@@ -8,13 +8,19 @@ import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/
 // ContractItemProgressEntry schema comment for why this isn't a DB
 // constraint). Ownership (does this phase/component genuinely belong to
 // THIS project) is checked below rather than trusted from the client.
+//
+// projectDiaryUpdateId (Phase 3) marks this checkpoint as coming from a
+// Project Diary entry rather than direct manual entry on the Contract
+// Schedule page — see the module-access branch below for why that changes
+// which permission this route requires.
 const createProgressSchema = z
   .object({
     phaseId: z.string().optional(),
     componentId: z.string().optional(),
     effectiveDate: z.string(), // ISO date, e.g. "2026-08-10"
     percent: z.number().min(0).max(100),
-    note: z.string().optional()
+    note: z.string().optional(),
+    projectDiaryUpdateId: z.string().optional()
   })
   .refine((value) => Boolean(value.phaseId) !== Boolean(value.componentId), {
     message: "Provide exactly one of phaseId or componentId."
@@ -30,12 +36,23 @@ export async function POST(request: Request, context: { params: { projectId: str
   if (!hasAccess) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const canAccessModule = await requireModuleAccess(projectId, userId, "payment_claims");
+
+  const payload = createProgressSchema.parse(await request.json());
+
+  // Recording progress FROM a diary entry is gated by Updates access, not
+  // Payment Claims access — the person posting a site diary entry (e.g. a
+  // foreman) routinely has no reason to hold Payment Claims permission at
+  // all, and shouldn't need it just to note "facade 2 handed over today"
+  // against a contract item. Direct manual entry on the Contract Schedule
+  // page itself (no projectDiaryUpdateId) keeps requiring Payment Claims
+  // access, unchanged from Phase 1.
+  const canAccessModule = payload.projectDiaryUpdateId
+    ? await requireModuleAccess(projectId, userId, "updates")
+    : await requireModuleAccess(projectId, userId, "payment_claims");
   if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const payload = createProgressSchema.parse(await request.json());
   const effectiveDate = new Date(payload.effectiveDate);
   if (Number.isNaN(effectiveDate.getTime())) {
     return NextResponse.json({ error: "Invalid effectiveDate." }, { status: 400 });
@@ -53,6 +70,11 @@ export async function POST(request: Request, context: { params: { projectId: str
     if (!component) return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (payload.projectDiaryUpdateId) {
+    const update = await prisma.update.findFirst({ where: { id: payload.projectDiaryUpdateId, projectId } });
+    if (!update) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const entry = await prisma.contractItemProgressEntry.create({
     data: {
       phaseId: payload.phaseId,
@@ -60,7 +82,8 @@ export async function POST(request: Request, context: { params: { projectId: str
       effectiveDate,
       percent: payload.percent,
       note: payload.note || null,
-      source: "manual",
+      source: payload.projectDiaryUpdateId ? "project_diary" : "manual",
+      projectDiaryUpdateId: payload.projectDiaryUpdateId,
       createdByUserId: userId
     }
   });

@@ -6,6 +6,8 @@ import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
 import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
+import { AssignUpdateAsContractProgressDialog } from "@/components/contract-schedule/assign-update-as-contract-progress-dialog";
+import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
@@ -44,11 +46,13 @@ function authorLabel(author: Author) {
 export function MobileThread({
   projectId,
   update,
-  taggableItems
+  taggableItems,
+  contractItems
 }: {
   projectId: string;
   update: UpdateWithReplies;
   taggableItems: VariationItem[];
+  contractItems: TaggableContractItem[];
 }) {
   const router = useRouter();
   const [isReplying, setIsReplying] = useState(false);
@@ -94,6 +98,7 @@ export function MobileThread({
   const [tagSelection, setTagSelection] = useState(currentTagSelection(update));
   const [isSavingTag, setIsSavingTag] = useState(false);
   const [showAssignQaDialog, setShowAssignQaDialog] = useState(false);
+  const [showContractProgressDialog, setShowContractProgressDialog] = useState(false);
 
   // Same PATCH endpoint and tag semantics as desktop's UpdateThread (Task
   // 2.1) — "which SI/Variation this belongs to" often only becomes clear
@@ -242,6 +247,14 @@ export function MobileThread({
               Remove tag
             </button>
           )}
+          {contractItems.length > 0 && (
+            <button
+              onClick={() => setShowContractProgressDialog(true)}
+              className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
+            >
+              + Progress
+            </button>
+          )}
         </div>
       )}
 
@@ -254,6 +267,17 @@ export function MobileThread({
           defaultVariationItemId={update.variationItem?.id ?? null}
           onClose={() => setShowAssignQaDialog(false)}
           onAssigned={() => setShowAssignQaDialog(false)}
+        />
+      )}
+
+      {showContractProgressDialog && (
+        <AssignUpdateAsContractProgressDialog
+          projectId={projectId}
+          updateId={update.id}
+          updateDate={update.createdAt.toISOString()}
+          contractItems={contractItems}
+          onClose={() => setShowContractProgressDialog(false)}
+          onAssigned={() => setShowContractProgressDialog(false)}
         />
       )}
 

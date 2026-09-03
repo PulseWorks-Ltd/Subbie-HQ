@@ -32,6 +32,7 @@ import { VariationQaSection } from "@/components/quality-assurance/variation-qa-
 import { VariationExternalActionsSection } from "@/components/external-actions/variation-external-actions-section";
 import { CreateVariationDialog } from "@/components/variations/create-variation-dialog";
 import { VariationItemLifecycleControls } from "@/components/variations/variation-item-lifecycle-controls";
+import type { TaggableContractItem } from "@/lib/contract-schedule";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -65,7 +66,8 @@ export function VariationDetailView({
   contractTerms,
   packages,
   qaRecords,
-  externalActions
+  externalActions,
+  contractItems
 }: {
   projectId: string;
   item: VariationItem;
@@ -82,6 +84,7 @@ export function VariationDetailView({
   packages: VariationPackage[];
   qaRecords: QaRecordWithItem[];
   externalActions: ExternalAction[];
+  contractItems: TaggableContractItem[];
 }) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -246,6 +249,7 @@ export function VariationDetailView({
         contacts={contacts}
         taggableItems={taggableItems}
         defaultRatePerHour={defaultRatePerHour}
+        contractItems={contractItems}
       />
 
       <VariationPackageSection

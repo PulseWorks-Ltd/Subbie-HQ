@@ -8,6 +8,8 @@ import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
 import { GenerateOutboundEmailPanel } from "@/components/updates/generate-outbound-email-panel";
 import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
+import { AssignUpdateAsContractProgressDialog } from "@/components/contract-schedule/assign-update-as-contract-progress-dialog";
+import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
@@ -49,13 +51,15 @@ export function UpdateThread({
   update,
   contacts,
   taggableItems,
-  defaultRatePerHour
+  defaultRatePerHour,
+  contractItems
 }: {
   projectId: string;
   update: UpdateWithReplies;
   contacts: ContactOption[];
   taggableItems: VariationItem[];
   defaultRatePerHour: string;
+  contractItems: TaggableContractItem[];
 }) {
   const router = useRouter();
   const [isReplying, setIsReplying] = useState(false);
@@ -102,6 +106,7 @@ export function UpdateThread({
   const [tagSelection, setTagSelection] = useState(currentTagSelection(update));
   const [isSavingTag, setIsSavingTag] = useState(false);
   const [showAssignQaDialog, setShowAssignQaDialog] = useState(false);
+  const [showContractProgressDialog, setShowContractProgressDialog] = useState(false);
 
   async function handleSaveTag() {
     if (tagSelection === ASSIGN_QA_SENTINEL) {
@@ -273,6 +278,14 @@ export function UpdateThread({
                   Remove tag
                 </button>
               )}
+              {contractItems.length > 0 && (
+                <button
+                  onClick={() => setShowContractProgressDialog(true)}
+                  className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
+                >
+                  + Progress
+                </button>
+              )}
             </>
           )}
         </div>
@@ -298,6 +311,17 @@ export function UpdateThread({
           defaultVariationItemId={update.variationItem?.id ?? null}
           onClose={() => setShowAssignQaDialog(false)}
           onAssigned={() => setShowAssignQaDialog(false)}
+        />
+      )}
+
+      {showContractProgressDialog && (
+        <AssignUpdateAsContractProgressDialog
+          projectId={projectId}
+          updateId={update.id}
+          updateDate={update.createdAt.toISOString()}
+          contractItems={contractItems}
+          onClose={() => setShowContractProgressDialog(false)}
+          onAssigned={() => setShowContractProgressDialog(false)}
         />
       )}
 

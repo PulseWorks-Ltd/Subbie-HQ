@@ -1,6 +1,7 @@
 "use client";
 
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
+import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { UpdateThread } from "@/components/updates/update-thread";
 import { UpdateComposer } from "@/components/updates/update-composer";
 import { UpdatesSearchBar } from "@/components/updates/updates-search-bar";
@@ -22,6 +23,7 @@ export function UpdatesView({
   taggableItems,
   contacts,
   defaultRatePerHour,
+  contractItems,
   initialQuery,
   initialFrom,
   initialTo,
@@ -32,6 +34,7 @@ export function UpdatesView({
   taggableItems: VariationItem[];
   contacts: ContactOption[];
   defaultRatePerHour: string;
+  contractItems: TaggableContractItem[];
   initialQuery: string;
   initialFrom: string;
   initialTo: string;
@@ -78,6 +81,7 @@ export function UpdatesView({
                 contacts={contacts}
                 taggableItems={taggableItems}
                 defaultRatePerHour={defaultRatePerHour}
+                contractItems={contractItems}
               />
             ))}
           </div>

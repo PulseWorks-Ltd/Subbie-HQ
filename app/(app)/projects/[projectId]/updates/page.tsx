@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
 import { markProjectUpdatesRead } from "@/lib/updates-feed";
+import { getTaggableContractItems } from "@/lib/contract-schedule";
 import { UpdatesView } from "@/components/updates/updates-view";
 import { UPDATE_CATEGORIES } from "@/lib/update-category";
 
@@ -44,7 +45,7 @@ export default async function UpdatesPage({
 
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { mainContractorId: true } });
 
-  const [updates, taggableItems, contacts, contractTerms] = await Promise.all([
+  const [updates, taggableItems, contacts, contractTerms, contractItems] = await Promise.all([
     prisma.update.findMany({
       where: {
         projectId,
@@ -103,7 +104,8 @@ export default async function UpdatesPage({
           orderBy: { name: "asc" }
         })
       : Promise.resolve([]),
-    prisma.contractTerms.findUnique({ where: { projectId } })
+    prisma.contractTerms.findUnique({ where: { projectId } }),
+    getTaggableContractItems(projectId)
   ]);
 
   // Same "Use as Day Works Sheet" pre-fill as the item's own "+Upload"
@@ -119,6 +121,7 @@ export default async function UpdatesPage({
       taggableItems={taggableItems}
       contacts={contacts}
       defaultRatePerHour={defaultRatePerHour}
+      contractItems={contractItems}
       initialQuery={q ?? ""}
       initialFrom={from ?? ""}
       initialTo={to ?? ""}

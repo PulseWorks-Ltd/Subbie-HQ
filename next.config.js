@@ -1,7 +1,48 @@
 import { withSentryConfig } from "@sentry/nextjs";
 
+// Kept in sync with middleware.ts's own copy of these same values —
+// middleware is the primary enforcement point (it also covers /api/*
+// routes); this headers() config is a fallback for any response that
+// somehow bypasses middleware. See middleware.ts for the full reasoning
+// behind each header/directive.
+const SECURITY_HEADERS = [
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: blob: https:",
+      "connect-src 'self' https://*.sentry.io https://*.ingest.sentry.io",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+      "upgrade-insecure-requests"
+    ].join("; ")
+  }
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Removes the "X-Powered-By: Next.js" response header (avoids
+  // advertising the exact framework/version to a would-be attacker) — the
+  // one header from this task that can't be reliably stripped from
+  // middleware, since Next's server adds it after middleware runs.
+  poweredByHeader: false,
+  // Explicit, not just relying on the default — client-side source maps
+  // must never be publicly served in production. (Server-side source maps
+  // for Sentry are handled separately below: generated at build time,
+  // uploaded to Sentry, then deleted from the build output.)
+  productionBrowserSourceMaps: false,
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["localhost:3000"]
@@ -33,6 +74,13 @@ export default withSentryConfig(nextConfig, {
 
   // Upload a larger set of source maps for prettier stack traces (increases build time)
   widenClientFileUpload: true,
+
+  // Explicit, not just relying on the default — source maps are uploaded
+  // to Sentry for readable stack traces, then deleted from the actual
+  // build output so they're never publicly servable from production.
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true
+  },
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.

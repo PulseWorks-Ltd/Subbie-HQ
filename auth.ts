@@ -5,6 +5,16 @@ import { prisma } from "@/lib/prisma";
 import { formatUserName } from "@/lib/user-display";
 import { isLoginRateLimited, recordFailedLoginAttempt } from "@/lib/login-rate-limit";
 
+// Session cookie flags — no explicit `cookies` config below, so Auth.js
+// v5's own defaults apply: HttpOnly is always true (not configurable to
+// false), SameSite defaults to "lax", and Secure is applied automatically
+// once Auth.js detects the request is HTTPS (via `trustHost` below plus
+// the `x-forwarded-proto` header Railway sets, or via AUTH_URL starting
+// with "https://") — at which point it also switches to the
+// `__Secure-`/`__Host-` prefixed cookie names. Manual step: confirm the
+// production AUTH_URL environment variable on Railway is the real
+// `https://` domain (not http/localhost) — that's what this detection
+// keys off, and it can't be verified from this codebase alone.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   session: { strategy: "jwt" },

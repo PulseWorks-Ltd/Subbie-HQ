@@ -4,6 +4,7 @@ import {
   compareClausesToPriorContract,
   synthesizeContractReview,
   extractContractTermsFromClauses,
+  extractRetentionTermsFromClauses,
   extractRequiredInsuranceCoverFromClauses,
   type BucketDeviation,
   type SynthesisResult
@@ -363,9 +364,16 @@ async function runContractReviewWork(
     // cover extraction all run concurrently — none depend on each other,
     // only on the already-extracted clauses. This always runs, regardless
     // of comparison type (see runBaselineComparison).
-    const [baseline, extractedTerms, requiredCovers] = await Promise.all([
+    const [baseline, extractedTerms, extractedRetentionTerms, requiredCovers] = await Promise.all([
       runBaselineComparison(clauseInputs, usageContext),
       extractContractTermsFromClauses(
+        clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber })),
+        usageContext
+      ),
+      // Retention V2 — a separate, richer extraction alongside the plain
+      // terms extraction above (see lib/grok.ts's own comment on why this
+      // isn't folded into extractContractTermsFromClauses).
+      extractRetentionTermsFromClauses(
         clauses.map((c) => ({ clauseRef: c.clauseRef, title: c.title, body: c.body, pageNumber: c.pageNumber })),
         usageContext
       ),
@@ -535,7 +543,30 @@ async function runContractReviewWork(
       suggestedDayWorksRateSundayHoliday: extractedTerms.dayWorksRateSundayHoliday,
       suggestedDayWorksRateNotes: extractedTerms.dayWorksRateNotes,
       suggestedVariationScheduleType: extractedTerms.variationScheduleType,
-      suggestedVariationScheduleValue: extractedTerms.variationScheduleValue
+      suggestedVariationScheduleValue: extractedTerms.variationScheduleValue,
+
+      // Retention V2 — see lib/grok.ts's extractRetentionTermsFromClauses.
+      suggestedRetentionApplies: extractedRetentionTerms.retentionApplies,
+      suggestedRetentionCapAmount: extractedRetentionTerms.retentionCapAmount,
+      suggestedInitialReleasePercent: extractedRetentionTerms.initialReleasePercent,
+      suggestedInitialReleaseTrigger: extractedRetentionTerms.initialReleaseTrigger,
+      suggestedInitialReleaseTimingDays: extractedRetentionTerms.initialReleaseTiming?.days ?? null,
+      suggestedInitialReleaseTimingUnit: extractedRetentionTerms.initialReleaseTiming?.unit ?? null,
+      suggestedInitialReleaseTimingDescription: extractedRetentionTerms.initialReleaseTiming?.description ?? null,
+      suggestedInitialReleaseAnchorEndOfMonth: extractedRetentionTerms.initialReleaseTiming?.anchorEndOfMonth ?? null,
+      suggestedFinalReleasePercent: extractedRetentionTerms.finalReleasePercent,
+      suggestedFinalReleaseTrigger: extractedRetentionTerms.finalReleaseTrigger,
+      suggestedFinalReleaseTimingDays: extractedRetentionTerms.finalReleaseTiming?.days ?? null,
+      suggestedFinalReleaseTimingUnit: extractedRetentionTerms.finalReleaseTiming?.unit ?? null,
+      suggestedFinalReleaseTimingDescription: extractedRetentionTerms.finalReleaseTiming?.description ?? null,
+      suggestedFinalReleaseAnchorEndOfMonth: extractedRetentionTerms.finalReleaseTiming?.anchorEndOfMonth ?? null,
+      suggestedRetentionClauseReference: extractedRetentionTerms.clauseReference,
+      // Not suggested-shadow fields — the extraction's own live judgement
+      // about whatever the CURRENT confirmed retention terms look like,
+      // always refreshed by the latest run, same "read-only context, not
+      // a settable value of its own" reasoning as dayWorksRateNotes above.
+      retentionRequiresReview: extractedRetentionTerms.requiresReview,
+      retentionReviewNotes: extractedRetentionTerms.reviewNotes
     },
     update: {
       sourceDocumentId: documentId,
@@ -588,7 +619,54 @@ async function runContractReviewWork(
       suggestedVariationScheduleValue: suggestIfUnconfirmed(
         existingTerms?.variationScheduleValue,
         extractedTerms.variationScheduleValue
-      )
+      ),
+
+      // Retention V2 — same suggest-don't-overwrite pattern as every
+      // other field above.
+      suggestedRetentionApplies: suggestIfUnconfirmed(existingTerms?.retentionApplies, extractedRetentionTerms.retentionApplies),
+      suggestedRetentionCapAmount: suggestIfUnconfirmed(
+        existingTerms?.retentionCapAmount != null ? Number(existingTerms.retentionCapAmount) : existingTerms?.retentionCapAmount,
+        extractedRetentionTerms.retentionCapAmount
+      ),
+      suggestedInitialReleasePercent: suggestIfUnconfirmed(existingTerms?.initialReleasePercent, extractedRetentionTerms.initialReleasePercent),
+      suggestedInitialReleaseTrigger: suggestIfUnconfirmed(existingTerms?.initialReleaseTrigger, extractedRetentionTerms.initialReleaseTrigger),
+      suggestedInitialReleaseTimingDays: suggestIfUnconfirmed(
+        existingTerms?.initialReleaseTimingDays,
+        extractedRetentionTerms.initialReleaseTiming?.days ?? null
+      ),
+      suggestedInitialReleaseTimingUnit: suggestIfUnconfirmed(
+        existingTerms?.initialReleaseTimingUnit,
+        extractedRetentionTerms.initialReleaseTiming?.unit ?? null
+      ),
+      suggestedInitialReleaseTimingDescription: suggestIfUnconfirmed(
+        existingTerms?.initialReleaseTimingDescription,
+        extractedRetentionTerms.initialReleaseTiming?.description ?? null
+      ),
+      suggestedInitialReleaseAnchorEndOfMonth: suggestIfUnconfirmed(
+        existingTerms?.initialReleaseAnchorEndOfMonth,
+        extractedRetentionTerms.initialReleaseTiming?.anchorEndOfMonth ?? null
+      ),
+      suggestedFinalReleasePercent: suggestIfUnconfirmed(existingTerms?.finalReleasePercent, extractedRetentionTerms.finalReleasePercent),
+      suggestedFinalReleaseTrigger: suggestIfUnconfirmed(existingTerms?.finalReleaseTrigger, extractedRetentionTerms.finalReleaseTrigger),
+      suggestedFinalReleaseTimingDays: suggestIfUnconfirmed(
+        existingTerms?.finalReleaseTimingDays,
+        extractedRetentionTerms.finalReleaseTiming?.days ?? null
+      ),
+      suggestedFinalReleaseTimingUnit: suggestIfUnconfirmed(
+        existingTerms?.finalReleaseTimingUnit,
+        extractedRetentionTerms.finalReleaseTiming?.unit ?? null
+      ),
+      suggestedFinalReleaseTimingDescription: suggestIfUnconfirmed(
+        existingTerms?.finalReleaseTimingDescription,
+        extractedRetentionTerms.finalReleaseTiming?.description ?? null
+      ),
+      suggestedFinalReleaseAnchorEndOfMonth: suggestIfUnconfirmed(
+        existingTerms?.finalReleaseAnchorEndOfMonth,
+        extractedRetentionTerms.finalReleaseTiming?.anchorEndOfMonth ?? null
+      ),
+      suggestedRetentionClauseReference: suggestIfUnconfirmed(existingTerms?.retentionClauseReference, extractedRetentionTerms.clauseReference),
+      retentionRequiresReview: extractedRetentionTerms.requiresReview,
+      retentionReviewNotes: extractedRetentionTerms.reviewNotes
     }
   });
   } catch (error) {

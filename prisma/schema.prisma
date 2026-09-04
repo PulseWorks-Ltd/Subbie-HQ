@@ -111,6 +111,34 @@ enum ReminderStage {
   overdue
 }
 
+// A small, closed set — NOT every possible contractual phrase, just
+// enough to answer "is this the SA-2017-conforming trigger, or something
+// this feature specifically needs to flag for review." head_contract_event
+// and other_event describe a release conditioned on something outside the
+// subcontractor's own performance of ITS OWN obligations — the CCA s.20
+// pattern ContractTerms.retentionRequiresReview exists to surface.
+// completion_of_subcontract_works is the SA-2017-conforming case (clause
+// 10.4.2(a)) and is deliberately kept distinct from
+// practical_completion_subcontractor (some non-SA-2017 forms use
+// "practical completion" to mean the same subcontractor-scoped thing,
+// just under different wording — not itself a red flag).
+enum RetentionReleaseTrigger {
+  completion_of_subcontract_works
+  practical_completion_subcontractor
+  final_payment_claim
+  final_account
+  head_contract_event
+  other_event
+  not_stated
+}
+
+enum RetentionTimingUnit {
+  working_days
+  calendar_days
+  weeks
+  months
+}
+
 enum ContractReviewStatus {
   running
   complete
@@ -318,6 +346,7 @@ model User {
   hoursOnSiteSheets              HoursOnSiteSheet[]
   contractItemProgressEntries    ContractItemProgressEntry[]
   createdDelayEvents             DelayEvent[]
+  confirmedRetentions            Retention[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -818,6 +847,74 @@ model ContractTerms {
   disputeNoticeMethod        String?
   generalNoticeMethod        String?
 
+  // ============================================================
+  // Retention V2 — the contract-aware layer on top of the plain
+  // retentionPercent/defectsLiabilityPeriodDays above (kept, unchanged,
+  // for backward compatibility with every existing computation that
+  // already reads them). See subbie-hq-retention-management-v2-plan.md
+  // §3.2/§4 for the full design.
+  // ============================================================
+
+  // Whether retention applies at all — a real subcontract may specify a
+  // bond in lieu of retention instead (SA-2017 clause 3.1.1/3.2.1), in
+  // which case retentionPercent being null is a genuine "not applicable"
+  // fact, not an unconfirmed extraction. Null = not yet determined either
+  // way (today's default, unchanged behaviour).
+  retentionApplies   Boolean?
+  // Retention cap — "5% until total retention reaches $50,000" style
+  // provisions. Null = no cap stated (retention accrues indefinitely at
+  // retentionPercent, today's behaviour, unchanged).
+  retentionCapAmount Decimal? @db.Decimal(12, 2)
+
+  // Initial release — the FIRST tranche's contractual trigger and
+  // timing. Trigger is a small closed enum so completion-event logic can
+  // branch on it reliably; timing is free-form (days/unit plus the raw
+  // contractual sentence) because real contracts express it
+  // inconsistently ("22 working days after the end of the month in
+  // which...", "on issue of the Completion Certificate").
+  initialReleasePercent           Float?
+  initialReleaseTrigger           RetentionReleaseTrigger?
+  // TimingDays is the numeric MAGNITUDE, not always literally days — read
+  // together with TimingUnit (e.g. days=22/unit=working_days, or
+  // days=12/unit=months for "12 months"). Named for the most common real
+  // case (working/calendar days) rather than a more generic "Value",
+  // matching this field's own plan document; see lib/retention-dates.ts's
+  // computeReleaseDate for exactly how each unit is interpreted.
+  initialReleaseTimingDays        Int?
+  initialReleaseTimingUnit        RetentionTimingUnit?
+  initialReleaseTimingDescription String?
+  // True when the contract anchors the timing count to the END OF THE
+  // MONTH containing the trigger date, not the trigger date itself — the
+  // SA-2017 baseline's own phrasing ("22 Working Days after the END OF
+  // THE MONTH in which the notice of completion... is issued") is
+  // exactly this shape. Null = not yet determined; false = count
+  // directly from the trigger date, the simpler/more common case.
+  initialReleaseAnchorEndOfMonth  Boolean?
+
+  // Final release — same shape as initial release, for the second tranche.
+  finalReleasePercent           Float?
+  finalReleaseTrigger           RetentionReleaseTrigger?
+  finalReleaseTimingDays        Int?
+  finalReleaseTimingUnit        RetentionTimingUnit?
+  finalReleaseTimingDescription String?
+  finalReleaseAnchorEndOfMonth  Boolean?
+
+  // Which clause(s) actually state this, for the "what does my contract
+  // say" trace-back — free text, not a Clause FK, since the source may be
+  // the Specific Conditions Schedule (a fill-in table, not prose
+  // clauses) as often as the General Conditions.
+  retentionClauseReference String?
+
+  // Set true when retention-terms extraction judged the release trigger/
+  // timing genuinely unusual enough to need human review (e.g. release
+  // conditioned on a head-contract event, or on something other than the
+  // subcontractor's own performance of its own obligations — the CCA
+  // s.20 pattern this exists to flag). Deliberately NOT a legal-validity
+  // judgement — retentionReviewNotes carries the actual, hedged
+  // explanation, never an assertion that a clause is illegal.
+  retentionRequiresReview Boolean @default(false)
+  retentionReviewNotes    String?
+
   suggestedPaymentClaimMethod         String?
   suggestedPaymentClaimDay            Int?
   suggestedVariationNoticePeriodDays  Int?
@@ -828,6 +925,22 @@ model ContractTerms {
   suggestedDefectsLiabilityPeriodDays Int?
   suggestedDisputeNoticeMethod        String?
   suggestedGeneralNoticeMethod        String?
+
+  suggestedRetentionApplies                Boolean?
+  suggestedRetentionCapAmount              Decimal?                 @db.Decimal(12, 2)
+  suggestedInitialReleasePercent           Float?
+  suggestedInitialReleaseTrigger           RetentionReleaseTrigger?
+  suggestedInitialReleaseTimingDays        Int?
+  suggestedInitialReleaseTimingUnit        RetentionTimingUnit?
+  suggestedInitialReleaseTimingDescription String?
+  suggestedInitialReleaseAnchorEndOfMonth  Boolean?
+  suggestedFinalReleasePercent             Float?
+  suggestedFinalReleaseTrigger             RetentionReleaseTrigger?
+  suggestedFinalReleaseTimingDays          Int?
+  suggestedFinalReleaseTimingUnit          RetentionTimingUnit?
+  suggestedFinalReleaseTimingDescription   String?
+  suggestedFinalReleaseAnchorEndOfMonth    Boolean?
+  suggestedRetentionClauseReference        String?
 
   // Day works rate settings. "Normal hours" = Monday-Saturday, 7am-5pm (see
   // the Settings UI help text) — outside that window is Night rate;
@@ -1183,14 +1296,35 @@ model Retention {
   id        String @id @default(cuid())
   projectId String @unique
 
-  // Practical Completion, for retention purposes specifically — falls
-  // back to Project.completedAt (which already tracks "site work
-  // finished") when null, since the two are usually the same date; this
-  // override exists only for the real but less common case where a
-  // certified PC date differs from Subbie HQ's own Project.completedAt.
-  practicalCompletionDateOverride DateTime?
+  // RENAMED from practicalCompletionDateOverride (Retention V2) — that
+  // name borrowed NZS3910-style "Practical Completion" language, which is
+  // a HEAD-CONTRACT concept under other NZ standard forms and is
+  // explicitly the wrong term for what SA-2017 clause 10.4 calls
+  // "completion of the Subcontract Works" — the two must not be
+  // conflated (see ContractTerms.initialReleaseTrigger's own comment).
+  // Falls back to Project.completedAt (which already tracks "site work
+  // finished") when null, since the two are usually the same real-world
+  // event; this override exists only for the real but less common case
+  // where the contractual completion date differs from Subbie HQ's own
+  // Project.completedAt.
+  completionOfWorksDateOverride DateTime?
 
-  // Tranche 1 — released at Practical Completion.
+  // The explicit confirmation action (Retention V2) — distinct from just
+  // reading Project.completedAt passively. Recorded even when it happens
+  // to match Project.completedAt exactly, so there's always a real "yes,
+  // I confirm this" event on file, not an inferred one. Mirrors the
+  // who/when shape already used elsewhere in this schema (e.g.
+  // VariationItem.closedByUserId/closedAt).
+  completionOfWorksConfirmedAt       DateTime?
+  completionOfWorksConfirmedByUserId String?
+  // Free text — "how do we actually know this" as a human-readable
+  // one-liner (e.g. "per the Contractor's clause 10.4.2(a) notice dated
+  // —"). Real evidence LINKS live via RetentionEvidenceLink below, not
+  // here — this is just the caption, same role as DelayEvent.cause.
+  completionOfWorksNote              String?
+
+  // Tranche 1 — released at completion of the Subcontract Works (or
+  // whatever ContractTerms.initialReleaseTrigger actually states).
   tranche1ExpectedDate      DateTime?
   tranche1Percent           Float?
   tranche1ReleasedAmount    Decimal?       @db.Decimal(12, 2)
@@ -1211,7 +1345,31 @@ model Retention {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id])
+  project         Project                 @relation(fields: [projectId], references: [id])
+  confirmedByUser User?                   @relation(fields: [completionOfWorksConfirmedByUserId], references: [id])
+  evidenceLinks   RetentionEvidenceLink[]
+}
+
+// Structural copy of ClaimEvidenceLink (Payment Claims' own evidence
+// links) — deliberately a separate, purpose-specific table rather than
+// widening ClaimEvidenceLink to serve two unrelated owners, matching this
+// codebase's own established convention of small, purpose-specific link
+// tables over one maximally-generic join table (see how
+// VariationItemClaimAllocation and ClaimEvidenceLink are already two
+// separate tables rather than one generic "PaymentClaimLink"). Reuses
+// ClaimEvidenceType directly (variation_package/correspondence/
+// external_action/qa_record/update) rather than a duplicate enum — the
+// same five real evidence kinds apply here.
+model RetentionEvidenceLink {
+  id           String            @id @default(cuid())
+  retentionId  String
+  evidenceType ClaimEvidenceType
+  evidenceId   String
+  createdAt    DateTime          @default(now())
+
+  retention Retention @relation(fields: [retentionId], references: [id])
+
+  @@unique([retentionId, evidenceType, evidenceId])
 }
 
 // Delay / Extension of Time tracking (SA-2017 clause 10) — the same
@@ -1835,12 +1993,23 @@ enum RecordLifecycleEntityType {
   variation_item
   task
   project
+  retention
 }
 
 enum RecordLifecycleEventType {
   closed
   reactivated
   completed
+  // Retention V2 — a generic "a dated retention event happened" marker,
+  // reused across every retention milestone (completion confirmed,
+  // initial/final release recorded, terms confirmed) rather than adding
+  // one enum value per milestone. The SPECIFIC nature of the milestone is
+  // carried in the already-free-text newState column (e.g. newState:
+  // "initial_release_recorded") — exactly the same reasoning
+  // previousState/newState are already deliberately untyped strings for
+  // (this log spans multiple entities with different state vocabularies;
+  // retention's vocabulary just lives in the string, not a new enum).
+  milestone
 }
 
 model RecordLifecycleEvent {

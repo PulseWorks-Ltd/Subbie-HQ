@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContractTerms, VariationScheduleType } from "@prisma/client";
+import type { ContractTerms, RetentionReleaseTrigger, RetentionTimingUnit, VariationScheduleType } from "@prisma/client";
 
 type FieldKey =
   | "paymentClaimMethod"
@@ -60,6 +60,134 @@ export function ContractTermsSection({
     contractTerms?.variationScheduleValue != null ? String(contractTerms.variationScheduleValue) : ""
   );
 
+  // Retention V2 — a bespoke block below (not the generic FIELDS array
+  // above), same reasoning as the Variation/SI submission schedule block
+  // just above: several of these fields (a trigger select, a timing-unit
+  // select, an end-of-month-anchor checkbox) don't fit the generic text/
+  // number input the FIELDS array renders.
+  const [retentionApplies, setRetentionApplies] = useState<"" | "yes" | "no">(
+    contractTerms?.retentionApplies == null ? "" : contractTerms.retentionApplies ? "yes" : "no"
+  );
+  const [retentionCapAmount, setRetentionCapAmount] = useState(
+    contractTerms?.retentionCapAmount != null ? String(contractTerms.retentionCapAmount) : ""
+  );
+  const [initialReleasePercent, setInitialReleasePercent] = useState(
+    contractTerms?.initialReleasePercent != null ? String(contractTerms.initialReleasePercent) : ""
+  );
+  const [initialReleaseTrigger, setInitialReleaseTrigger] = useState<RetentionReleaseTrigger | "">(
+    contractTerms?.initialReleaseTrigger ?? ""
+  );
+  const [initialReleaseTimingDays, setInitialReleaseTimingDays] = useState(
+    contractTerms?.initialReleaseTimingDays != null ? String(contractTerms.initialReleaseTimingDays) : ""
+  );
+  const [initialReleaseTimingUnit, setInitialReleaseTimingUnit] = useState<RetentionTimingUnit | "">(
+    contractTerms?.initialReleaseTimingUnit ?? ""
+  );
+  const [initialReleaseAnchorEndOfMonth, setInitialReleaseAnchorEndOfMonth] = useState(
+    contractTerms?.initialReleaseAnchorEndOfMonth ?? false
+  );
+  const [initialReleaseTimingDescription, setInitialReleaseTimingDescription] = useState(
+    contractTerms?.initialReleaseTimingDescription ?? ""
+  );
+  const [finalReleasePercent, setFinalReleasePercent] = useState(
+    contractTerms?.finalReleasePercent != null ? String(contractTerms.finalReleasePercent) : ""
+  );
+  const [finalReleaseTrigger, setFinalReleaseTrigger] = useState<RetentionReleaseTrigger | "">(
+    contractTerms?.finalReleaseTrigger ?? ""
+  );
+  const [finalReleaseTimingDays, setFinalReleaseTimingDays] = useState(
+    contractTerms?.finalReleaseTimingDays != null ? String(contractTerms.finalReleaseTimingDays) : ""
+  );
+  const [finalReleaseTimingUnit, setFinalReleaseTimingUnit] = useState<RetentionTimingUnit | "">(
+    contractTerms?.finalReleaseTimingUnit ?? ""
+  );
+  const [finalReleaseAnchorEndOfMonth, setFinalReleaseAnchorEndOfMonth] = useState(
+    contractTerms?.finalReleaseAnchorEndOfMonth ?? false
+  );
+  const [finalReleaseTimingDescription, setFinalReleaseTimingDescription] = useState(
+    contractTerms?.finalReleaseTimingDescription ?? ""
+  );
+  const [retentionClauseReference, setRetentionClauseReference] = useState(contractTerms?.retentionClauseReference ?? "");
+
+  const RETENTION_KEYS = [
+    "retentionApplies",
+    "retentionCapAmount",
+    "initialReleasePercent",
+    "initialReleaseTrigger",
+    "initialReleaseTimingDays",
+    "initialReleaseTimingUnit",
+    "initialReleaseTimingDescription",
+    "initialReleaseAnchorEndOfMonth",
+    "finalReleasePercent",
+    "finalReleaseTrigger",
+    "finalReleaseTimingDays",
+    "finalReleaseTimingUnit",
+    "finalReleaseTimingDescription",
+    "finalReleaseAnchorEndOfMonth",
+    "retentionClauseReference"
+  ] as const;
+  const hasSuggestedRetention = RETENTION_KEYS.some(
+    (key) => (contractTerms as unknown as Record<string, unknown> | null)?.[`suggested${key.charAt(0).toUpperCase()}${key.slice(1)}`] != null
+  );
+
+  async function saveRetention() {
+    setIsSaving(true);
+    await fetch(`/api/projects/${projectId}/contract-terms`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        retentionApplies: retentionApplies === "" ? null : retentionApplies === "yes",
+        retentionCapAmount: retentionCapAmount === "" ? null : Number(retentionCapAmount),
+        initialReleasePercent: initialReleasePercent === "" ? null : Number(initialReleasePercent),
+        initialReleaseTrigger: initialReleaseTrigger || null,
+        initialReleaseTimingDays: initialReleaseTimingDays === "" ? null : Number(initialReleaseTimingDays),
+        initialReleaseTimingUnit: initialReleaseTimingUnit || null,
+        initialReleaseTimingDescription: initialReleaseTimingDescription || null,
+        initialReleaseAnchorEndOfMonth,
+        finalReleasePercent: finalReleasePercent === "" ? null : Number(finalReleasePercent),
+        finalReleaseTrigger: finalReleaseTrigger || null,
+        finalReleaseTimingDays: finalReleaseTimingDays === "" ? null : Number(finalReleaseTimingDays),
+        finalReleaseTimingUnit: finalReleaseTimingUnit || null,
+        finalReleaseTimingDescription: finalReleaseTimingDescription || null,
+        finalReleaseAnchorEndOfMonth,
+        retentionClauseReference: retentionClauseReference || null
+      })
+    });
+    setIsSaving(false);
+    router.refresh();
+  }
+
+  async function confirmRetention() {
+    if (!contractTerms) return;
+    setRetentionApplies(contractTerms.suggestedRetentionApplies == null ? "" : contractTerms.suggestedRetentionApplies ? "yes" : "no");
+    setRetentionCapAmount(contractTerms.suggestedRetentionCapAmount != null ? String(contractTerms.suggestedRetentionCapAmount) : "");
+    setInitialReleasePercent(contractTerms.suggestedInitialReleasePercent != null ? String(contractTerms.suggestedInitialReleasePercent) : "");
+    setInitialReleaseTrigger(contractTerms.suggestedInitialReleaseTrigger ?? "");
+    setInitialReleaseTimingDays(
+      contractTerms.suggestedInitialReleaseTimingDays != null ? String(contractTerms.suggestedInitialReleaseTimingDays) : ""
+    );
+    setInitialReleaseTimingUnit(contractTerms.suggestedInitialReleaseTimingUnit ?? "");
+    setInitialReleaseTimingDescription(contractTerms.suggestedInitialReleaseTimingDescription ?? "");
+    setInitialReleaseAnchorEndOfMonth(contractTerms.suggestedInitialReleaseAnchorEndOfMonth ?? false);
+    setFinalReleasePercent(contractTerms.suggestedFinalReleasePercent != null ? String(contractTerms.suggestedFinalReleasePercent) : "");
+    setFinalReleaseTrigger(contractTerms.suggestedFinalReleaseTrigger ?? "");
+    setFinalReleaseTimingDays(
+      contractTerms.suggestedFinalReleaseTimingDays != null ? String(contractTerms.suggestedFinalReleaseTimingDays) : ""
+    );
+    setFinalReleaseTimingUnit(contractTerms.suggestedFinalReleaseTimingUnit ?? "");
+    setFinalReleaseTimingDescription(contractTerms.suggestedFinalReleaseTimingDescription ?? "");
+    setFinalReleaseAnchorEndOfMonth(contractTerms.suggestedFinalReleaseAnchorEndOfMonth ?? false);
+    setRetentionClauseReference(contractTerms.suggestedRetentionClauseReference ?? "");
+    setIsSaving(true);
+    await fetch(`/api/projects/${projectId}/contract-terms`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmFields: RETENTION_KEYS })
+    });
+    setIsSaving(false);
+    router.refresh();
+  }
+
   const suggestedFields = FIELDS.filter((field) => getSuggested(contractTerms, field.key) !== null);
   const suggestedScheduleType = contractTerms?.suggestedVariationScheduleType ?? null;
   const suggestedScheduleValue = contractTerms?.suggestedVariationScheduleValue ?? null;
@@ -79,7 +207,7 @@ export function ContractTermsSection({
     router.refresh();
   }
 
-  async function confirmFields(keys: FieldKey[]) {
+  async function confirmFields(keys: string[]) {
     if (keys.length === 0) return;
     setIsSaving(true);
     await fetch(`/api/projects/${projectId}/contract-terms`, {
@@ -214,6 +342,241 @@ export function ContractTermsSection({
                 Confirm
               </button>
             </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 pt-2 border-t border-[#e7edf3] dark:border-slate-800">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <label className="text-sm font-medium">Retention</label>
+              <p className="text-xs text-[#4c739a] dark:text-slate-400">
+                What your contract says about retention — rate, cap, and each release stage's trigger and timing. Drives the
+                Retention tracker on the Payment Claims page.
+              </p>
+            </div>
+            {hasSuggestedRetention && (
+              <button
+                onClick={confirmRetention}
+                disabled={isSaving}
+                className="h-8 px-3 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 disabled:opacity-60 shrink-0"
+              >
+                Confirm all suggested
+              </button>
+            )}
+          </div>
+
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Does retention apply?
+            <select
+              value={retentionApplies}
+              onChange={(event) => setRetentionApplies(event.target.value as "" | "yes" | "no")}
+              onBlur={saveRetention}
+              className="h-9 w-48 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              <option value="">Not yet determined</option>
+              <option value="yes">Yes</option>
+              <option value="no">No (e.g. bond in lieu of retention)</option>
+            </select>
+          </label>
+
+          {retentionApplies !== "no" && (
+            <>
+              <label className="flex flex-col gap-1 text-sm font-medium w-64">
+                Retention cap <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional, $)</span>
+                <input
+                  type="number"
+                  value={retentionCapAmount}
+                  onChange={(event) => setRetentionCapAmount(event.target.value)}
+                  onBlur={saveRetention}
+                  className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </label>
+
+              <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 flex flex-col gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">Initial release</p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="flex flex-col gap-1 text-xs font-medium w-24">
+                    Share %
+                    <input
+                      type="number"
+                      value={initialReleasePercent}
+                      onChange={(event) => setInitialReleasePercent(event.target.value)}
+                      onBlur={saveRetention}
+                      className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-medium flex-1 min-w-[14rem]">
+                    Trigger
+                    <select
+                      value={initialReleaseTrigger}
+                      onChange={(event) => setInitialReleaseTrigger(event.target.value as RetentionReleaseTrigger | "")}
+                      onBlur={saveRetention}
+                      className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                    >
+                      <option value="">Not set</option>
+                      <option value="completion_of_subcontract_works">Completion of the Subcontract Works</option>
+                      <option value="practical_completion_subcontractor">Practical completion of your own scope</option>
+                      <option value="final_payment_claim">Final payment claim</option>
+                      <option value="final_account">Final account</option>
+                      <option value="head_contract_event">Head contract event (not your own performance)</option>
+                      <option value="other_event">Other event</option>
+                      <option value="not_stated">Not stated in the contract</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="flex flex-col gap-1 text-xs font-medium w-20">
+                    Timing
+                    <input
+                      type="number"
+                      value={initialReleaseTimingDays}
+                      onChange={(event) => setInitialReleaseTimingDays(event.target.value)}
+                      onBlur={saveRetention}
+                      className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-medium w-40">
+                    Unit
+                    <select
+                      value={initialReleaseTimingUnit}
+                      onChange={(event) => setInitialReleaseTimingUnit(event.target.value as RetentionTimingUnit | "")}
+                      onBlur={saveRetention}
+                      className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                    >
+                      <option value="">Not set</option>
+                      <option value="working_days">Working days</option>
+                      <option value="calendar_days">Calendar days</option>
+                      <option value="weeks">Weeks</option>
+                      <option value="months">Months</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-medium pb-2">
+                    <input
+                      type="checkbox"
+                      checked={initialReleaseAnchorEndOfMonth}
+                      onChange={(event) => {
+                        setInitialReleaseAnchorEndOfMonth(event.target.checked);
+                        void saveRetention();
+                      }}
+                      className="size-4"
+                    />
+                    Counted from end of month
+                  </label>
+                </div>
+                <label className="flex flex-col gap-1 text-xs font-medium">
+                  Description <span className="font-normal text-[#4c739a] dark:text-slate-400">(the contract's own wording)</span>
+                  <input
+                    type="text"
+                    value={initialReleaseTimingDescription}
+                    onChange={(event) => setInitialReleaseTimingDescription(event.target.value)}
+                    onBlur={saveRetention}
+                    className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                  />
+                </label>
+              </div>
+
+              <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 flex flex-col gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">Final release</p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="flex flex-col gap-1 text-xs font-medium w-24">
+                    Share %
+                    <input
+                      type="number"
+                      value={finalReleasePercent}
+                      onChange={(event) => setFinalReleasePercent(event.target.value)}
+                      onBlur={saveRetention}
+                      className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-medium flex-1 min-w-[14rem]">
+                    Trigger
+                    <select
+                      value={finalReleaseTrigger}
+                      onChange={(event) => setFinalReleaseTrigger(event.target.value as RetentionReleaseTrigger | "")}
+                      onBlur={saveRetention}
+                      className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                    >
+                      <option value="">Not set</option>
+                      <option value="completion_of_subcontract_works">Completion of the Subcontract Works</option>
+                      <option value="practical_completion_subcontractor">Practical completion of your own scope</option>
+                      <option value="final_payment_claim">Final payment claim</option>
+                      <option value="final_account">Final account</option>
+                      <option value="head_contract_event">Head contract event (not your own performance)</option>
+                      <option value="other_event">Other event</option>
+                      <option value="not_stated">Not stated in the contract</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="flex flex-col gap-1 text-xs font-medium w-20">
+                    Timing
+                    <input
+                      type="number"
+                      value={finalReleaseTimingDays}
+                      onChange={(event) => setFinalReleaseTimingDays(event.target.value)}
+                      onBlur={saveRetention}
+                      className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-medium w-40">
+                    Unit
+                    <select
+                      value={finalReleaseTimingUnit}
+                      onChange={(event) => setFinalReleaseTimingUnit(event.target.value as RetentionTimingUnit | "")}
+                      onBlur={saveRetention}
+                      className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                    >
+                      <option value="">Not set</option>
+                      <option value="working_days">Working days</option>
+                      <option value="calendar_days">Calendar days</option>
+                      <option value="weeks">Weeks</option>
+                      <option value="months">Months</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-medium pb-2">
+                    <input
+                      type="checkbox"
+                      checked={finalReleaseAnchorEndOfMonth}
+                      onChange={(event) => {
+                        setFinalReleaseAnchorEndOfMonth(event.target.checked);
+                        void saveRetention();
+                      }}
+                      className="size-4"
+                    />
+                    Counted from end of month
+                  </label>
+                </div>
+                <label className="flex flex-col gap-1 text-xs font-medium">
+                  Description <span className="font-normal text-[#4c739a] dark:text-slate-400">(the contract's own wording)</span>
+                  <input
+                    type="text"
+                    value={finalReleaseTimingDescription}
+                    onChange={(event) => setFinalReleaseTimingDescription(event.target.value)}
+                    onBlur={saveRetention}
+                    className="h-9 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+                  />
+                </label>
+              </div>
+
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Clause reference <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+                <input
+                  type="text"
+                  value={retentionClauseReference}
+                  onChange={(event) => setRetentionClauseReference(event.target.value)}
+                  onBlur={saveRetention}
+                  placeholder="e.g. Clause 12.4, 10.4.2(a)"
+                  className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </label>
+
+              {contractTerms?.retentionRequiresReview && (
+                <p className="text-xs rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 p-2">
+                  This provision may require review under the Construction Contracts Act 2002 — see below.
+                  {contractTerms.retentionReviewNotes && <span className="block mt-1">{contractTerms.retentionReviewNotes}</span>}
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>

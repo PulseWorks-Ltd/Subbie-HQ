@@ -946,6 +946,109 @@ export async function extractContractTermsFromClauses(
   return ExtractedContractTermsSchema.parse(JSON.parse(raw));
 }
 
+// ============================================================
+// Retention V2 — a separate, richer extraction from the flat retention
+// facts extractContractTermsFromClauses already pulls (retentionPercent/
+// defectsLiabilityPeriodDays, kept unchanged above). Kept as its own
+// function rather than folded into that one because retention's real
+// structure — a classified trigger, structured timing, a cap, an
+// unusual-clause review flag — is meaningfully richer than the one-line-
+// per-fact shape that works well for everything else in that call. Runs
+// on the same already-extracted Clause[] from Contract Review's Step 0
+// (no new PDF parsing), same feature tag (no new AiFeature value needed).
+// See subbie-hq-retention-management-v2-plan.md §4 for the full design.
+// ============================================================
+
+const RetentionReleaseTriggerSchema = z
+  .enum([
+    "completion_of_subcontract_works",
+    "practical_completion_subcontractor",
+    "final_payment_claim",
+    "final_account",
+    "head_contract_event",
+    "other_event",
+    "not_stated"
+  ])
+  .nullable();
+
+const RetentionTimingSchema = z
+  .object({
+    days: z.number().int().nullable(),
+    unit: z.enum(["working_days", "calendar_days", "weeks", "months"]).nullable(),
+    // True when the contract anchors the count to the END OF THE MONTH
+    // containing the trigger date, not the trigger date itself (the
+    // SA-2017 baseline's own phrasing: "22 Working Days after the END OF
+    // THE MONTH in which the notice of completion... is issued").
+    anchorEndOfMonth: z.boolean().nullable(),
+    // The raw contractual sentence — always populated even when
+    // days/unit parse cleanly, so nothing is ever silently reduced to
+    // just a number if the wording matters (e.g. "whichever is later").
+    description: z.string().nullable()
+  })
+  .nullable();
+
+const ExtractedRetentionTermsSchema = z.object({
+  retentionApplies: z.boolean().nullable(),
+  retentionPercent: z.number().nullable(),
+  retentionCapAmount: z.number().nullable(),
+  defectsLiabilityPeriodDays: z.number().int().nullable(),
+  initialReleasePercent: z.number().nullable(),
+  initialReleaseTrigger: RetentionReleaseTriggerSchema,
+  initialReleaseTiming: RetentionTimingSchema,
+  finalReleasePercent: z.number().nullable(),
+  finalReleaseTrigger: RetentionReleaseTriggerSchema,
+  finalReleaseTiming: RetentionTimingSchema,
+  clauseReference: z.string().nullable(),
+  requiresReview: z.boolean(),
+  reviewNotes: z.string().nullable()
+});
+
+export type ExtractedRetentionTerms = z.infer<typeof ExtractedRetentionTermsSchema>;
+
+export async function extractRetentionTermsFromClauses(
+  clauses: { clauseRef: string; title: string | null; body: string; pageNumber: number | null }[],
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ExtractedRetentionTerms> {
+  const documentText = clauses
+    .map((c) => `[${c.clauseRef}]${c.title ? ` ${c.title}` : ""}${c.pageNumber ? ` (p.${c.pageNumber})` : ""}\n${c.body}`)
+    .join("\n\n");
+
+  const response = await callGrok(
+    {
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You extract the retention (money withheld from progress payments) provisions from a construction subcontract agreement, for a subcontractor's own retention tracker. " +
+            "A standard NZ subcontract conditions retention release on completion of the Subcontract Works — a defined event where the subcontractor notifies the Contractor that its own work is complete, and the Contractor then issues a notice confirming the completion date (often a numbered clause similar to \"10.4\") — NOT on the head contract reaching practical completion, NOT on submission of a final payment claim, and NOT on the final account being agreed. Classify the ACTUAL trigger by what the clause conditions release on, never by what label it happens to use — a clause that calls its own trigger \"practical completion\" but defines it as the subcontractor's own scope being complete is practical_completion_subcontractor, not a red flag; a clause conditioning the SUBCONTRACTOR's release on the HEAD CONTRACT's own PC certificate is head_contract_event. " +
+            "Respond with only a JSON object matching this exact shape: " +
+            '{"retentionApplies": boolean | null, "retentionPercent": number | null, "retentionCapAmount": number | null, "defectsLiabilityPeriodDays": number | null, "initialReleasePercent": number | null, "initialReleaseTrigger": "completion_of_subcontract_works" | "practical_completion_subcontractor" | "final_payment_claim" | "final_account" | "head_contract_event" | "other_event" | "not_stated" | null, "initialReleaseTiming": {"days": number | null, "unit": "working_days" | "calendar_days" | "weeks" | "months" | null, "anchorEndOfMonth": boolean | null, "description": string | null} | null, "finalReleasePercent": number | null, "finalReleaseTrigger": (same enum) | null, "finalReleaseTiming": (same shape) | null, "clauseReference": string | null, "requiresReview": boolean, "reviewNotes": string | null}. ' +
+            "retentionApplies: false if the contract clearly states retention does NOT apply or is replaced by a bond in lieu of retention; true if a retention percentage/mechanism is clearly stated; null if genuinely unclear either way. " +
+            "retentionPercent: the retention percentage withheld, if stated — if the contract states a TIERED rate (e.g. \"5% of the first $X, 3% of the next $Y\"), give the first/primary tier's rate here and describe the full tiered structure in clauseReference or reviewNotes instead of attempting to represent every tier. " +
+            "retentionCapAmount: a stated maximum total retention amount (e.g. \"until total retention reaches $50,000\"), else null. " +
+            "initialReleasePercent/finalReleasePercent: what portion of the TOTAL retention is released at each stage (e.g. 50/50) — these should sum to 100 when both are stated. " +
+            "initialReleaseTiming/finalReleaseTiming.days: the NUMBER stated (e.g. 22), interpreted according to unit (e.g. days=22 with unit=working_days means \"22 working days\"; days=12 with unit=months means \"12 months\"). description: always populate with the actual contractual sentence, even when days/unit parse cleanly. " +
+            "clauseReference: the actual clause number(s) that state this (e.g. \"12.4, 10.4.2(a)\" or the Specific Conditions Schedule), so a human can trace this back to their own contract. " +
+            "requiresReview: true when the release trigger is head_contract_event or other_event (release contingent on something outside the subcontractor's own performance of ITS OWN obligations), OR when release timing is stated as being at the Contractor's discretion with no objective date-fixing mechanism, OR when retention clearly applies but no release mechanism/defects period is stated at all. False for a normal, SA-2017-conforming mechanism. " +
+            "reviewNotes: when requiresReview is true, a brief, plain-English explanation — phrase it as \"this provision may require review under the Construction Contracts Act 2002\" or similar, NEVER assert that a clause is illegal, invalid, or unenforceable. Null when requiresReview is false. " +
+            "Never invent a percentage, cap, or date you can't reasonably support from the text — use null instead."
+        },
+        { role: "user", content: documentText }
+      ]
+    },
+    { ...usageContext, feature: "contract_review" }
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return ExtractedRetentionTermsSchema.parse(JSON.parse(raw));
+}
+
 const ExtractedQuoteLineItemSchema = z.object({
   description: z.string(),
   amount: z.number().nullable()

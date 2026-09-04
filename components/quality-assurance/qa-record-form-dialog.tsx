@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QARecord, VariationItem } from "@prisma/client";
+import { MAX_QA_ATTACHMENTS } from "@/lib/qa-record-attachments";
 
 function toDateInputValue(date: Date) {
   return new Date(date).toISOString().slice(0, 10);
@@ -149,11 +150,21 @@ export function QaRecordFormDialog({
 
           {!isEditing && (
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Files / evidence <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional, multiple allowed)</span>
+              Files / evidence{" "}
+              <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional, up to {MAX_QA_ATTACHMENTS})</span>
               <input
                 type="file"
                 multiple
-                onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+                onChange={(event) => {
+                  const selected = Array.from(event.target.files ?? []);
+                  if (selected.length > MAX_QA_ATTACHMENTS) {
+                    setError(`You can attach up to ${MAX_QA_ATTACHMENTS} files per QA record.`);
+                    event.target.value = "";
+                    return;
+                  }
+                  setError(null);
+                  setFiles(selected);
+                }}
                 className="text-sm file:mr-2 file:h-9 file:px-3 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-bold file:text-xs"
               />
               {files.length > 0 && (

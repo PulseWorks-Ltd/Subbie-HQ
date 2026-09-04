@@ -28,7 +28,8 @@ export const AI_FEATURES = [
   "labour_plant_material_document_extraction",
   "external_action_draft",
   "contract_schedule_extraction",
-  "payment_claim_email_draft"
+  "payment_claim_email_draft",
+  "qa_document_email_draft"
 ] as const;
 
 export type AiFeature = (typeof AI_FEATURES)[number];

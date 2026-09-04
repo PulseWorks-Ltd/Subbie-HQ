@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { downloadFromS3, uploadToS3 } from "@/lib/s3";
+import { MAX_QA_ATTACHMENTS } from "@/lib/qa-record-attachments";
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
@@ -164,6 +165,9 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   if (!stage) {
     return NextResponse.json({ error: "Stage/milestone label is required" }, { status: 400 });
+  }
+  if (files.length > MAX_QA_ATTACHMENTS) {
+    return NextResponse.json({ error: `You can attach up to ${MAX_QA_ATTACHMENTS} files per QA record.` }, { status: 400 });
   }
 
   const variationItemId = await resolveVariationItemId(variationItemIdRaw);

@@ -364,6 +364,7 @@ model User {
   contractItemProgressEntries    ContractItemProgressEntry[]
   createdDelayEvents             DelayEvent[]
   confirmedRetentions            Retention[]
+  generatedQaDocuments           QaDocument[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -591,6 +592,7 @@ model Project {
   contractRequiredCovers       ContractRequiredCover[]
   quote                        ProjectQuote?
   qaRecords                    QARecord[]
+  qaDocuments                  QaDocument[]
   externalActions              ExternalAction[]
   variationScheduleRecipients  VariationScheduleRecipient[]
   variationScheduleRuns        VariationScheduleRun[]
@@ -2397,6 +2399,11 @@ model QARecord {
   // (see Update.qaRecordId) — distinct from `attachments`, which is the
   // file evidence copied in when that tagging happened.
   updates        Update[]
+  // Whether this record has been compiled into a QA Document is a DERIVED
+  // state (see QaDocumentRecord below) — "not yet included" is just
+  // documentLinks: { none: {} } — deliberately not a mutable boolean flag
+  // that could drift out of sync with the join table.
+  documentLinks  QaDocumentRecord[]
 }
 
 // One row per file of evidence on a QARecord — mirrors UpdateAttachment
@@ -2413,6 +2420,53 @@ model QARecordAttachment {
   createdAt           DateTime @default(now())
 
   qaRecord QARecord @relation(fields: [qaRecordId], references: [id])
+}
+
+// "Generate QA Document" — compiles a chosen, ordered set of QARecords
+// into one professional PDF (fixed wording/structure) for handing to a
+// Main Contractor/client. One row per GENERATION, holding a frozen
+// snapshot (siteAddress/contractReference are free text entered at
+// generation time, not read from Project — there's no such field on
+// Project today, and these can genuinely vary document to document), same
+// "immutable snapshot per generation" shape as VariationPackage/
+// PaymentClaim. docNumber is a plain per-project incrementing Int
+// (formatted "QA-000123" only at display time), generated the exact same
+// way as PaymentClaim.claimNumber.
+model QaDocument {
+  id                String   @id @default(cuid())
+  projectId         String
+  docNumber         Int
+  fileName          String
+  storageKey        String
+  siteAddress       String?
+  contractReference String?
+  generatedByUserId String
+  generatedAt       DateTime @default(now())
+
+  project         Project            @relation(fields: [projectId], references: [id])
+  generatedByUser User               @relation(fields: [generatedByUserId], references: [id])
+  records         QaDocumentRecord[]
+
+  @@unique([projectId, docNumber])
+}
+
+// The join table that both (a) records which QARecords went into a given
+// QaDocument, in what order (sortOrder — the user's chosen ordering,
+// preserved in the generated PDF), and (b) IS the "included" state a
+// QARecord carries — see QARecord.documentLinks above. onDelete: Cascade
+// on the QaDocument side only: deleting a QaDocument (there's no UI for
+// this today, but if one's ever added) should free up its records for a
+// future document, never the reverse — a QARecord is never deleted here.
+model QaDocumentRecord {
+  id           String @id @default(cuid())
+  qaDocumentId String
+  qaRecordId   String
+  sortOrder    Int
+
+  qaDocument QaDocument @relation(fields: [qaDocumentId], references: [id], onDelete: Cascade)
+  qaRecord   QARecord   @relation(fields: [qaRecordId], references: [id])
+
+  @@unique([qaDocumentId, qaRecordId])
 }
 
 // A request for an external (no-login) recipient to Acknowledge, Approve,

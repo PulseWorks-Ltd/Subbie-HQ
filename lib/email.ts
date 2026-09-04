@@ -143,6 +143,45 @@ export async function sendPaymentClaimEmail(params: {
   });
 }
 
+// "Generate QA Document" — same shape/contract as sendPaymentClaimEmail
+// (throws rather than silently no-ops: the user clicked Send and expects
+// real delivery or a clear error to retry). Kept as its own small,
+// purpose-named function rather than folded into a shared generic sender,
+// matching this codebase's existing preference (sendExternalUpdateEmail
+// vs sendPaymentClaimEmail stay separate despite a near-identical body).
+export async function sendQaDocumentEmail(params: {
+  to: { email: string; name?: string }[];
+  cc?: { email: string; name?: string }[];
+  subject: string;
+  body: string;
+  attachments: { filename: string; content: Uint8Array; contentType: string }[];
+}) {
+  const config = getConfiguredSendGrid();
+  if (!config) {
+    throw new Error("Email sending isn't configured — SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are missing.");
+  }
+
+  const html = params.body
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br />")}</p>`)
+    .join("\n");
+
+  await sgMail.send({
+    to: params.to,
+    cc: params.cc && params.cc.length > 0 ? params.cc : undefined,
+    from: { email: config.fromEmail, name: "Subbie HQ" },
+    subject: params.subject,
+    text: params.body,
+    html,
+    attachments: params.attachments.map((attachment) => ({
+      filename: attachment.filename,
+      type: attachment.contentType,
+      content: Buffer.from(attachment.content).toString("base64"),
+      disposition: "attachment"
+    }))
+  });
+}
+
 // Plain HTML rather than a SendGrid dynamic template — same reasoning as
 // sendReminderEmail: no SENDGRID_WELCOME_TEMPLATE_ID exists yet. Fire-and-
 // forget like the other notification emails — a failed welcome email should

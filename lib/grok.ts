@@ -1759,6 +1759,52 @@ export async function draftExternalUpdateEmail(
   return DraftedUpdateEmailSchema.parse(JSON.parse(raw));
 }
 
+// Pre-Launch Feature 5 — drafts the covering email a Payment Claim PDF is
+// attached to when submitted to the Main Contractor. Same "draft, then
+// human reviews before sending" rule as draftExternalUpdateEmail — nothing
+// is sent until the user confirms (see the payment-claims send route).
+export async function draftPaymentClaimEmail(
+  params: {
+    projectName: string;
+    mainContractorName: string | null;
+    claimNumber: number;
+    periodStart: string;
+    periodEnd: string;
+    claimedAmount: number;
+    statutoryWording: string;
+    authorName: string;
+  },
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<DraftedUpdateEmail> {
+  const response = await callGrok({
+    model: GROK_MODEL,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You draft a short, professional covering email a subcontractor sends to a Main Contractor along with an attached Payment Claim PDF, under a New Zealand construction subcontract (Construction Contracts Act 2002). " +
+          "Respond with only a JSON object matching this exact shape: " +
+          '{"subject": string, "body": string}. ' +
+          "subject: short and clear, naming the project and claim number. " +
+          "body: an appropriate greeting, one or two sentences stating this is Payment Claim number X for the stated period and referencing the statutory wording given below, a note that the claim is attached as a PDF, a professional sign-off using the author's name. " +
+          "Do not include placeholder brackets like [Your Name]. Do not restate every dollar figure in the email body — the PDF is the authoritative document; the email is just the covering note. Do not fabricate any detail not given below."
+      },
+      {
+        role: "user",
+        content: `Project: ${params.projectName}\nMain Contractor: ${params.mainContractorName ?? "the Main Contractor"}\nAuthor: ${params.authorName}\nClaim number: ${params.claimNumber}\nPeriod: ${params.periodStart} to ${params.periodEnd}\nClaimed amount (incl. GST): $${params.claimedAmount.toFixed(2)}\nStatutory wording: ${params.statutoryWording}`
+      }
+    ]
+  }, { ...usageContext, feature: "payment_claim_email_draft" });
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return DraftedUpdateEmailSchema.parse(JSON.parse(raw));
+}
+
 // Same drafted shape as draftExternalUpdateEmail, but for summarising an
 // entire existing Update thread (the original update plus every reply, in
 // order) into one outbound email — used when generating a follow-up email

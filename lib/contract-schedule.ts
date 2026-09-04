@@ -368,3 +368,76 @@ export async function getTaggableContractItems(projectId: string): Promise<Tagga
   });
   return schedule?.items ?? [];
 }
+
+// ============================================================
+// "Assign Project Diary entries to Contract Works" (Pre-Launch feature) —
+// a plain many-to-many association, deliberately separate from
+// ContractItemProgressEntry (which always carries a % complete
+// checkpoint). See ContractItemDiaryLink's own schema comment.
+// ============================================================
+
+// Full replace, not additive — matches how a multi-select chips field
+// naturally works (the client always sends the CURRENT complete set of
+// selected items, not a delta), and makes "clearing the selection removes
+// the link" trivially correct (an empty array clears everything).
+export async function setContractItemDiaryLinks(updateId: string, contractItemIds: string[]): Promise<void> {
+  await prisma.$transaction([
+    prisma.contractItemDiaryLink.deleteMany({ where: { updateId } }),
+    prisma.contractItemDiaryLink.createMany({
+      data: contractItemIds.map((contractItemId) => ({ updateId, contractItemId })),
+      skipDuplicates: true
+    })
+  ]);
+}
+
+export async function getContractItemIdsForUpdate(updateId: string): Promise<string[]> {
+  const links = await prisma.contractItemDiaryLink.findMany({ where: { updateId }, select: { contractItemId: true } });
+  return links.map((link) => link.contractItemId);
+}
+
+export type LinkedDiaryEntry = { id: string; body: string; createdAt: Date; authorName: string };
+
+// The "discoverable from the Contract Works item" side (Pre-Launch
+// acceptance criterion) — a count + list, each linking back to the real
+// Project Diary entry. Author name resolved here (not left to the caller)
+// since every real caller wants it for display.
+export async function getLinkedDiaryEntriesForContractItem(contractItemId: string): Promise<LinkedDiaryEntry[]> {
+  const links = await prisma.contractItemDiaryLink.findMany({
+    where: { contractItemId },
+    orderBy: { createdAt: "desc" },
+    include: { update: { include: { author: { select: { firstName: true, lastName: true, email: true } } } } }
+  });
+  return links.map((link) => ({
+    id: link.update.id,
+    body: link.update.body,
+    createdAt: link.update.createdAt,
+    authorName: link.update.author.firstName || link.update.author.lastName
+      ? `${link.update.author.firstName ?? ""} ${link.update.author.lastName ?? ""}`.trim()
+      : link.update.author.email
+  }));
+}
+
+// Batched version of the above for a whole Contract Schedule page — one
+// query for every item's links rather than N (the Contract Schedule view
+// renders every item at once, so avoiding a per-item round trip matters).
+export async function getLinkedDiaryEntriesForContractItems(contractItemIds: string[]): Promise<Record<string, LinkedDiaryEntry[]>> {
+  if (contractItemIds.length === 0) return {};
+  const links = await prisma.contractItemDiaryLink.findMany({
+    where: { contractItemId: { in: contractItemIds } },
+    orderBy: { createdAt: "desc" },
+    include: { update: { include: { author: { select: { firstName: true, lastName: true, email: true } } } } }
+  });
+  const byItemId: Record<string, LinkedDiaryEntry[]> = {};
+  for (const link of links) {
+    const entry: LinkedDiaryEntry = {
+      id: link.update.id,
+      body: link.update.body,
+      createdAt: link.update.createdAt,
+      authorName: link.update.author.firstName || link.update.author.lastName
+        ? `${link.update.author.firstName ?? ""} ${link.update.author.lastName ?? ""}`.trim()
+        : link.update.author.email
+    };
+    (byItemId[link.contractItemId] ??= []).push(entry);
+  }
+  return byItemId;
+}

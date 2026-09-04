@@ -271,7 +271,7 @@ export function HomepageView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
               <div className="bg-surface-card rounded-xl p-6 border border-white/5 hover:border-accent-electric/30 transition-colors">
                 <div className="mb-4 text-accent-electric flex justify-center">
-                  <span className="material-symbols-outlined text-[128x]">fact_check</span>
+                  <span className="material-symbols-outlined text-[128px]">fact_check</span>
                 </div>
                 <h4 className="font-bold text-on-surface mb-2">
                   <span className="text-accent-electric">Know</span> what you&apos;re entitled to

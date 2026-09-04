@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
-import { getContractScheduleForProject, computeScheduleClaimBreakdown, computeScheduleTotalValue, sumBreakdown } from "@/lib/contract-schedule";
+import { getPaymentClaimComputedData } from "@/lib/payment-claim";
 import { PaymentClaimDetailView } from "@/components/payment-claims/payment-claim-detail-view";
 
 export default async function PaymentClaimDetailPage({
@@ -19,79 +19,45 @@ export default async function PaymentClaimDetailPage({
     redirect(`/projects/${projectId}`);
   }
 
-  const claim = await prisma.paymentClaim.findFirst({
-    where: { id: claimId, projectId },
-    include: { allocations: { include: { variationItem: true } } }
-  });
-  if (!claim) notFound();
+  // Pre-Launch Feature 5 — this same computation now also backs the
+  // Payment Claim PDF generator (lib/payment-claim-pdf.ts), so the two can
+  // never disagree about what a claim is actually worth.
+  const data = await getPaymentClaimComputedData(projectId, claimId);
+  if (!data) notFound();
 
-  // The immediately-prior claim (by period, not creation order) — the same
-  // cutoff computeScheduleClaimBreakdown uses to work out what's genuinely
-  // NEW in this claim versus already claimed before it.
-  const previousClaim = await prisma.paymentClaim.findFirst({
-    where: { projectId, periodEnd: { lt: claim.periodStart } },
-    orderBy: { periodEnd: "desc" }
-  });
-
-  const [schedule, contractTerms, eligibleVariations] = await Promise.all([
-    getContractScheduleForProject(projectId),
-    prisma.contractTerms.findUnique({ where: { projectId }, select: { retentionPercent: true } }),
-    prisma.variationItem.findMany({
-      where: { projectId, variationCreatedAt: { not: null } },
-      select: {
-        id: true,
-        reference: true,
-        title: true,
-        variationValue: true,
-        closedAt: true,
-        claimAllocations: { select: { paymentClaimId: true, amount: true } }
-      },
-      orderBy: { variationCreatedAt: "asc" }
-    })
-  ]);
-
-  const breakdown = schedule
-    ? computeScheduleClaimBreakdown(schedule, claim.periodStart, claim.periodEnd, previousClaim?.periodEnd ?? null)
+  // Pre-Launch Feature 5 — same contact source as the Updates external-send
+  // flow (MainContractorContact scoped to this project's Main Contractor).
+  const contacts = data.mainContractorId
+    ? await prisma.mainContractorContact.findMany({
+        where: { mainContractorId: data.mainContractorId },
+        select: { id: true, name: true, email: true, role: true },
+        orderBy: { name: "asc" }
+      })
     : [];
-  const scheduleTotals = sumBreakdown(breakdown);
-  const originalSubcontractSum = schedule ? computeScheduleTotalValue(schedule) : 0;
-
-  const variationsForClaim = eligibleVariations.map((item) => {
-    const thisClaimAllocation = item.claimAllocations.find((allocation) => allocation.paymentClaimId === claimId);
-    const totalAllocated = item.claimAllocations.reduce((sum, allocation) => sum + Number(allocation.amount), 0);
-    return {
-      id: item.id,
-      reference: item.reference,
-      title: item.title,
-      value: item.variationValue != null ? Number(item.variationValue) : 0,
-      closed: item.closedAt != null,
-      thisClaimAmount: thisClaimAllocation ? Number(thisClaimAllocation.amount) : 0,
-      totalAllocatedAcrossAllClaims: totalAllocated
-    };
-  });
 
   return (
     <PaymentClaimDetailView
       projectId={projectId}
+      contacts={contacts}
       claim={{
-        id: claim.id,
-        claimNumber: claim.claimNumber,
-        status: claim.status,
-        periodStart: claim.periodStart.toISOString(),
-        periodEnd: claim.periodEnd.toISOString(),
-        referenceDate: claim.referenceDate.toISOString(),
-        statutoryWording: claim.statutoryWording,
-        contractWorksAmount: Number(claim.contractWorksAmount),
-        otherAmount: Number(claim.otherAmount),
-        claimedAmount: Number(claim.claimedAmount)
+        id: data.claim.id,
+        claimNumber: data.claim.claimNumber,
+        status: data.claim.status,
+        periodStart: data.claim.periodStart.toISOString(),
+        periodEnd: data.claim.periodEnd.toISOString(),
+        referenceDate: data.claim.referenceDate.toISOString(),
+        statutoryWording: data.claim.statutoryWording,
+        contractWorksAmount: data.claim.contractWorksAmount,
+        otherAmount: data.claim.otherAmount,
+        claimedAmount: data.claim.claimedAmount
       }}
-      hasSchedule={Boolean(schedule)}
-      originalSubcontractSum={originalSubcontractSum}
-      scheduleBreakdown={breakdown}
-      scheduleClaimedToDate={scheduleTotals.claimedToDate}
-      scheduleThisClaim={scheduleTotals.thisClaim}
-      retentionPercent={contractTerms?.retentionPercent ?? 5}
-      variations={variationsForClaim}
+      hasSchedule={data.hasSchedule}
+      originalSubcontractSum={data.figures.originalSubcontractSum}
+      scheduleBreakdown={data.scheduleBreakdown}
+      scheduleClaimedToDate={data.figures.scheduleClaimedToDate}
+      scheduleThisClaim={data.figures.scheduleThisClaim}
+      retentionPercent={data.retentionPercent}
+      variations={data.variations}
     />
   );
 }

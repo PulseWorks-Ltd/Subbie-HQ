@@ -10,6 +10,7 @@ import { formatUserName } from "@/lib/user-display";
 import { MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType, attachmentKind } from "@/lib/update-attachments";
 import { generateThumbnail } from "@/lib/image-thumbnails";
 import { UPDATE_CATEGORIES } from "@/lib/update-category";
+import { setContractItemDiaryLinks } from "@/lib/contract-schedule";
 
 const recipientSchema = z
   .object({
@@ -25,6 +26,15 @@ const createUpdateSchema = z.object({
   // Mutually exclusive with variationItemId — see Update.category's schema
   // comment. Validated against the fixed enum list, not left as a bare string.
   category: z.enum(UPDATE_CATEGORIES as [string, ...string[]]).optional(),
+  // Only meaningful when category is "variation" and the user picked
+  // "enter own Site Instruction" in the secondary dropdown — see
+  // CategoryCascadeFields. Harmless to persist otherwise since it's never
+  // read outside that one context.
+  freeTextSiteInstructionReference: z.string().optional(),
+  // Pre-Launch Feature 1 — "Assign to Contract Works" is independent of
+  // category/variationItemId, so it's its own field, not folded into the
+  // mutual-exclusivity rule those two follow.
+  contractItemIds: z.array(z.string()).default([]),
   percentComplete: z.number().min(0).max(100).optional(),
   isExternal: z.boolean().default(false),
   externalSubject: z.string().optional(),
@@ -89,11 +99,14 @@ export async function POST(request: Request, context: { params: { projectId: str
   const formData = await request.formData();
   const percentCompleteRaw = formData.get("percentComplete");
   const recipientsRaw = formData.get("recipients")?.toString();
+  const contractItemIdsRaw = formData.get("contractItemIds")?.toString();
   const payload = createUpdateSchema.parse({
     body: formData.get("body"),
     parentId: formData.get("parentId") || undefined,
     variationItemId: formData.get("variationItemId") || undefined,
     category: formData.get("category") || undefined,
+    freeTextSiteInstructionReference: formData.get("freeTextSiteInstructionReference")?.toString() || undefined,
+    contractItemIds: contractItemIdsRaw ? JSON.parse(contractItemIdsRaw) : [],
     percentComplete: percentCompleteRaw ? Number(percentCompleteRaw) : undefined,
     isExternal: formData.get("isExternal") === "true",
     externalSubject: formData.get("externalSubject")?.toString() || undefined,
@@ -136,6 +149,18 @@ export async function POST(request: Request, context: { params: { projectId: str
     });
     if (!variationItem) {
       return NextResponse.json({ error: "Variation/Site Instruction not found" }, { status: 400 });
+    }
+  }
+
+  // Same "replies don't carry their own tag" rule as category/variationItemId
+  // — only checked for top-level updates, matching how it's actually applied below.
+  if (payload.contractItemIds.length > 0 && !payload.parentId) {
+    const items = await prisma.contractItem.findMany({
+      where: { id: { in: payload.contractItemIds }, schedule: { projectId } },
+      select: { id: true }
+    });
+    if (items.length !== payload.contractItemIds.length) {
+      return NextResponse.json({ error: "One or more Contract Works items were not found" }, { status: 400 });
     }
   }
 
@@ -185,6 +210,7 @@ export async function POST(request: Request, context: { params: { projectId: str
       // Replies inherit their parent thread's tagged item rather than carrying their own.
       variationItemId: payload.parentId ? undefined : payload.variationItemId,
       category: payload.parentId ? undefined : (payload.category as (typeof UPDATE_CATEGORIES)[number] | undefined),
+      freeTextSiteInstructionReference: payload.parentId ? undefined : payload.freeTextSiteInstructionReference,
       percentComplete: payload.parentId ? undefined : payload.percentComplete,
       body: payload.body,
       isExternal,
@@ -198,6 +224,10 @@ export async function POST(request: Request, context: { params: { projectId: str
       recipients: true
     }
   });
+
+  if (!payload.parentId && payload.contractItemIds.length > 0) {
+    await setContractItemDiaryLinks(update.id, payload.contractItemIds);
+  }
 
   // The author has obviously "read" what they just wrote — without this,
   // every update they post would immediately show up as unread in their own

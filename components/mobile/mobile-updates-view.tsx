@@ -15,6 +15,7 @@ type UpdateWithReplies = Update & {
   variationItem: VariationItemRef | null;
   qaRecord: { id: string; stage: string } | null;
   attachments: UpdateAttachment[];
+  contractItemLinks: { contractItemId: string }[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
@@ -57,7 +58,13 @@ export function MobileUpdatesView({
 
   return (
     <div className="flex flex-col gap-4">
-      <UpdateComposer projectId={projectId} taggableItems={taggableItems} contacts={contacts} variant="mobile" />
+      <UpdateComposer
+        projectId={projectId}
+        taggableItems={taggableItems}
+        contacts={contacts}
+        contractItems={contractItems}
+        variant="mobile"
+      />
 
       {taggableItems.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">

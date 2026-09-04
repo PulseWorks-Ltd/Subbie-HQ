@@ -8,58 +8,102 @@ function formatDate(date: Date | string) {
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
-// One dated %-checkpoint history, shared by a fixed component's phase
-// (point-in-time % complete) and a weekly_hire component (day-weighted %
-// on hire) — the only difference the caller passes in is which of
-// phaseId/componentId to attach a new checkpoint to; the display and add/
-// delete mechanics are identical either way (see lib/contract-schedule.ts
-// for why the same shape works for both).
-export function ProgressCheckpointEditor({
+// Pre-Launch Feature 6 — split what used to be one combined "History"
+// panel (log list + add-checkpoint form together) into two separate
+// pieces: a fast inline entry that's always one click away (no form to
+// open first), and a History view that shows ONLY the log, never the
+// entry form mixed in. Both still call the same progress API and accept
+// the same phaseId/componentId pair (see lib/contract-schedule.ts for why
+// one shape covers both a fixed component's phase and a weekly_hire
+// component).
+
+// Always-visible, single-field fast entry — dated today, since the whole
+// point is "record today's % right now" without picking a date first.
+// A user who genuinely needs a backdated/edited entry still has History's
+// own delete-and-re-add, or can use this same control after changing
+// nothing else; a full date picker was deliberately dropped from the
+// fast path to keep it a true one-click action.
+export function QuickPercentEntry({
   projectId,
   phaseId,
   componentId,
-  entries,
+  currentPercent,
   percentLabel
 }: {
   projectId: string;
   phaseId?: string;
   componentId?: string;
-  entries: ContractItemProgressEntry[];
+  currentPercent: number;
   percentLabel: string;
 }) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0, 10));
-  const [percent, setPercent] = useState("");
-  const [note, setNote] = useState("");
+  const [percent, setPercent] = useState(String(currentPercent));
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const sorted = [...entries].sort((a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime());
-
-  async function handleAdd(event: React.FormEvent) {
-    event.preventDefault();
+  async function handleSave() {
     setError(null);
-    if (percent === "" || Number(percent) < 0 || Number(percent) > 100) {
-      setError("Enter a percentage between 0 and 100.");
+    const value = Number(percent);
+    if (percent === "" || Number.isNaN(value) || value < 0 || value > 100) {
+      setError("0-100 only");
       return;
     }
-    setIsSubmitting(true);
+    if (value === currentPercent) return; // nothing changed — skip a no-op checkpoint
+    setIsSaving(true);
     const response = await fetch(`/api/projects/${projectId}/contract-schedule/progress`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phaseId, componentId, effectiveDate, percent: Number(percent), note: note || undefined })
+      body: JSON.stringify({ phaseId, componentId, effectiveDate: new Date().toISOString().slice(0, 10), percent: value })
     });
-    setIsSubmitting(false);
+    setIsSaving(false);
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       setError(typeof body?.error === "string" ? body.error : "Could not save.");
       return;
     }
-    setPercent("");
-    setNote("");
     router.refresh();
   }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="number"
+        min={0}
+        max={100}
+        value={percent}
+        onChange={(event) => setPercent(event.target.value)}
+        onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleSave(); } }}
+        aria-label={percentLabel}
+        className="h-7 w-16 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-1.5 text-xs text-right"
+      />
+      <span className="text-xs text-[#4c739a] dark:text-slate-400">%</span>
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={isSaving || percent === String(currentPercent)}
+        className="h-7 px-2 rounded-md bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-40"
+      >
+        {isSaving ? "..." : "Save"}
+      </button>
+      {error && <span className="text-[10px] text-red-600">{error}</span>}
+    </div>
+  );
+}
+
+// History — toggled open, shows ONLY the dated log (no add-checkpoint
+// form mixed in, unlike this component's previous combined version).
+export function ProgressHistory({
+  projectId,
+  entries,
+  percentLabel
+}: {
+  projectId: string;
+  entries: ContractItemProgressEntry[];
+  percentLabel: string;
+}) {
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const sorted = [...entries].sort((a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime());
 
   async function handleDelete(entryId: string) {
     if (!confirm("Remove this checkpoint?")) return;
@@ -74,11 +118,11 @@ export function ProgressCheckpointEditor({
         onClick={() => setIsOpen((open) => !open)}
         className="text-xs font-medium text-primary hover:underline self-start"
       >
-        {isOpen ? "Hide" : `History (${entries.length})`}
+        {isOpen ? "Hide history" : `History (${entries.length})`}
       </button>
 
       {isOpen && (
-        <div className="flex flex-col gap-2 rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3">
+        <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3">
           {sorted.length === 0 ? (
             <p className="text-xs text-[#4c739a] dark:text-slate-400">No checkpoints recorded yet — {percentLabel} is 0%.</p>
           ) : (
@@ -101,46 +145,6 @@ export function ProgressCheckpointEditor({
               ))}
             </ul>
           )}
-
-          <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-2 pt-1 border-t border-[#e7edf3] dark:border-slate-700">
-            <label className="flex flex-col gap-0.5 text-xs font-medium">
-              Date
-              <input
-                type="date"
-                value={effectiveDate}
-                onChange={(event) => setEffectiveDate(event.target.value)}
-                className="h-8 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
-              />
-            </label>
-            <label className="flex flex-col gap-0.5 text-xs font-medium w-20">
-              {percentLabel} %
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={percent}
-                onChange={(event) => setPercent(event.target.value)}
-                className="h-8 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
-              />
-            </label>
-            <label className="flex flex-col gap-0.5 text-xs font-medium flex-1 min-w-[8rem]">
-              Note <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
-              <input
-                type="text"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                className="h-8 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="h-8 px-3 rounded-md bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-60"
-            >
-              Add
-            </button>
-          </form>
-          {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
       )}
     </div>

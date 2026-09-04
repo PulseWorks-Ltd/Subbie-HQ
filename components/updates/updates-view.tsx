@@ -13,6 +13,7 @@ type UpdateWithReplies = Update & {
   variationItem: VariationItemRef | null;
   qaRecord: { id: string; stage: string } | null;
   attachments: UpdateAttachment[];
+  contractItemLinks: { contractItemId: string }[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
@@ -52,7 +53,13 @@ export function UpdatesView({
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col gap-4">
-        <UpdateComposer projectId={projectId} taggableItems={taggableItems} contacts={contacts} variant="desktop" />
+        <UpdateComposer
+          projectId={projectId}
+          taggableItems={taggableItems}
+          contacts={contacts}
+          contractItems={contractItems}
+          variant="desktop"
+        />
 
         <UpdatesSearchBar
           basePath={`/projects/${projectId}/updates`}

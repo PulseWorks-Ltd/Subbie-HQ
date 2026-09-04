@@ -7,11 +7,13 @@ import { AttachmentThumbnails } from "@/components/attachment-thumbnails";
 import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
 import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
 import { AssignUpdateAsContractProgressDialog } from "@/components/contract-schedule/assign-update-as-contract-progress-dialog";
+import { ContractItemMultiSelect } from "@/components/contract-schedule/contract-item-multi-select";
+import { CategoryCascadeFields, SI_FREE_TEXT_SENTINEL } from "@/components/updates/category-cascade-fields";
 import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
-import { UPDATE_CATEGORIES, UPDATE_CATEGORY_LABELS, categoryOptionValue, parseCategoryOptionValue } from "@/lib/update-category";
+import { UPDATE_CATEGORY_LABELS, categoryOptionValue, parseCategoryOptionValue } from "@/lib/update-category";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -21,13 +23,24 @@ type UpdateWithReplies = Update & {
   variationItem: VariationItemRef | null;
   qaRecord: QaRecordRef | null;
   attachments: UpdateAttachment[];
+  contractItemLinks: { contractItemId: string }[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
 
+// See desktop UpdateThread's identical helpers for why a tagged real item
+// now shows as "Variation" at the primary level (Pre-Launch category
+// restructure removed the old flat "Site Instructions / Variations" optgroup).
 function currentTagSelection(update: { variationItem: VariationItemRef | null; qaRecord: QaRecordRef | null; category: string | null }) {
   if (update.category) return categoryOptionValue(update.category as Parameters<typeof categoryOptionValue>[0]);
   if (update.qaRecord) return ASSIGN_QA_SENTINEL;
-  return update.variationItem?.id ?? "";
+  if (update.variationItem) return categoryOptionValue("variation");
+  return "";
+}
+
+function currentVariationSecondary(update: { variationItem: VariationItemRef | null; freeTextSiteInstructionReference: string | null }) {
+  if (update.variationItem) return update.variationItem.id;
+  if (update.freeTextSiteInstructionReference) return SI_FREE_TEXT_SENTINEL;
+  return "";
 }
 
 function formatTimestamp(date: Date) {
@@ -96,9 +109,16 @@ export function MobileThread({
   }
   const [isEditingTag, setIsEditingTag] = useState(false);
   const [tagSelection, setTagSelection] = useState(currentTagSelection(update));
+  const [variationSecondary, setVariationSecondary] = useState(currentVariationSecondary(update));
+  const [freeTextSI, setFreeTextSI] = useState(update.freeTextSiteInstructionReference ?? "");
+  const [contractItemIds, setContractItemIds] = useState<string[]>(update.contractItemLinks.map((link) => link.contractItemId));
   const [isSavingTag, setIsSavingTag] = useState(false);
   const [showAssignQaDialog, setShowAssignQaDialog] = useState(false);
   const [showContractProgressDialog, setShowContractProgressDialog] = useState(false);
+
+  const linkedContractItems = contractItems.filter((item) =>
+    update.contractItemLinks.some((link) => link.contractItemId === item.id)
+  );
 
   // Same PATCH endpoint and tag semantics as desktop's UpdateThread (Task
   // 2.1) — "which SI/Variation this belongs to" often only becomes clear
@@ -117,12 +137,24 @@ export function MobileThread({
       setShowAssignQaDialog(true);
       return;
     }
-    const category = parseCategoryOptionValue(tagSelection);
+    const selectedCategory = parseCategoryOptionValue(tagSelection);
+    let body: Record<string, unknown>;
+    if (selectedCategory === "variation" && variationSecondary && variationSecondary !== SI_FREE_TEXT_SENTINEL) {
+      body = { variationItemId: variationSecondary };
+    } else if (selectedCategory === "variation" && variationSecondary === SI_FREE_TEXT_SENTINEL) {
+      body = { category: "variation", freeTextSiteInstructionReference: freeTextSI.trim() || null };
+    } else if (selectedCategory) {
+      body = { category: selectedCategory };
+    } else {
+      body = { category: null };
+    }
+    body.contractItemIds = contractItemIds;
+
     setIsSavingTag(true);
     await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(category ? { category } : { variationItemId: tagSelection || null })
+      body: JSON.stringify(body)
     });
     setIsSavingTag(false);
     setIsEditingTag(false);
@@ -175,45 +207,43 @@ export function MobileThread({
       </div>
 
       {isEditingTag ? (
-        <div className="flex items-center gap-2 flex-wrap mb-1.5">
-          <select
-            value={tagSelection}
-            onChange={(event) => setTagSelection(event.target.value)}
-            className="h-8 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
-          >
-            <option value="">Not Assigned</option>
-            <optgroup label="Category">
-              <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
-              {UPDATE_CATEGORIES.map((category) => (
-                <option key={category} value={categoryOptionValue(category)}>
-                  {UPDATE_CATEGORY_LABELS[category]}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Site Instructions / Variations">
-              {taggableItems.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.reference} · {option.title}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-          <button
-            onClick={handleSaveTag}
-            disabled={isSavingTag}
-            className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
-          >
-            {isSavingTag ? "Saving..." : "Save"}
-          </button>
-          <button
-            onClick={() => {
-              setTagSelection(currentTagSelection(update));
-              setIsEditingTag(false);
-            }}
-            className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
-          >
-            Cancel
-          </button>
+        <div className="flex flex-col gap-2 mb-1.5">
+          <div className="flex items-start gap-2 flex-wrap">
+            <CategoryCascadeFields
+              primary={tagSelection}
+              onPrimaryChange={(value) => {
+                setTagSelection(value);
+                setVariationSecondary("");
+                setFreeTextSI("");
+              }}
+              currentCategory={update.category as Parameters<typeof categoryOptionValue>[0] | null}
+              taggableItems={taggableItems}
+              variationSecondary={variationSecondary}
+              onVariationSecondaryChange={setVariationSecondary}
+              freeText={freeTextSI}
+              onFreeTextChange={setFreeTextSI}
+            />
+            <button
+              onClick={handleSaveTag}
+              disabled={isSavingTag}
+              className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
+            >
+              {isSavingTag ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={() => {
+                setTagSelection(currentTagSelection(update));
+                setVariationSecondary(currentVariationSecondary(update));
+                setFreeTextSI(update.freeTextSiteInstructionReference ?? "");
+                setContractItemIds(update.contractItemLinks.map((link) => link.contractItemId));
+                setIsEditingTag(false);
+              }}
+              className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+          <ContractItemMultiSelect items={contractItems} selectedIds={contractItemIds} onChange={setContractItemIds} />
         </div>
       ) : (
         <div className="flex items-center gap-2 flex-wrap mb-1.5">
@@ -230,8 +260,17 @@ export function MobileThread({
           {update.category && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
               {UPDATE_CATEGORY_LABELS[update.category]}
+              {update.freeTextSiteInstructionReference ? ` · ${update.freeTextSiteInstructionReference}` : ""}
             </span>
           )}
+          {linkedContractItems.map((item) => (
+            <span
+              key={item.id}
+              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+            >
+              {item.description}
+            </span>
+          ))}
           <button
             onClick={() => setIsEditingTag(true)}
             className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"

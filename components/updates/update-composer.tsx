@@ -3,11 +3,14 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VariationItem } from "@prisma/client";
+import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { AttachmentPreviewList } from "@/components/updates/attachment-preview-list";
 import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
+import { ContractItemMultiSelect } from "@/components/contract-schedule/contract-item-multi-select";
+import { CategoryCascadeFields, SI_FREE_TEXT_SENTINEL } from "@/components/updates/category-cascade-fields";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
-import { UPDATE_CATEGORIES, UPDATE_CATEGORY_LABELS, categoryOptionValue, parseCategoryOptionValue } from "@/lib/update-category";
+import { parseCategoryOptionValue } from "@/lib/update-category";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type Recipient = { contactId?: string; email: string; label: string };
@@ -16,11 +19,13 @@ export function UpdateComposer({
   projectId,
   taggableItems,
   contacts,
+  contractItems,
   variant
 }: {
   projectId: string;
   taggableItems: VariationItem[];
   contacts: ContactOption[];
+  contractItems: TaggableContractItem[];
   variant: "mobile" | "desktop";
 }) {
   const router = useRouter();
@@ -31,6 +36,12 @@ export function UpdateComposer({
   // ASSIGN_QA_SENTINEL, a category:* value (see lib/update-category.ts), or
   // a real VariationItem id — one combined <select>, not separate controls.
   const [tagSelection, setTagSelection] = useState("");
+  // Only meaningful when tagSelection parses to the "variation" category —
+  // "" (N/A), SI_FREE_TEXT_SENTINEL (free-text below), or a real
+  // VariationItem id. See CategoryCascadeFields.
+  const [variationSecondary, setVariationSecondary] = useState("");
+  const [freeTextSI, setFreeTextSI] = useState("");
+  const [contractItemIds, setContractItemIds] = useState<string[]>([]);
   const [percentComplete, setPercentComplete] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +69,26 @@ export function UpdateComposer({
 
   const openItems = taggableItems.filter((item) => item.status !== "complete");
   const eligibleContacts = contacts.filter((contact) => contact.email);
+
+  // Resolves the primary + secondary cascade selection down to what the
+  // API actually persists — a real VariationItem pick (secondary dropdown)
+  // takes priority over the "variation" category itself, matching the
+  // existing mutual-exclusivity rule (see CategoryCascadeFields' own
+  // comment for why the old flat "Site Instructions / Variations" optgroup
+  // was removed in favour of this cascade).
+  function resolveTagSelection() {
+    const selectedCategory = parseCategoryOptionValue(tagSelection);
+    if (selectedCategory === "variation") {
+      if (variationSecondary === SI_FREE_TEXT_SENTINEL) {
+        return { variationItemId: "", category: "variation" as const, freeText: freeTextSI };
+      }
+      if (variationSecondary) {
+        return { variationItemId: variationSecondary, category: null, freeText: "" };
+      }
+      return { variationItemId: "", category: "variation" as const, freeText: "" };
+    }
+    return { variationItemId: "", category: selectedCategory, freeText: "" };
+  }
 
   // Two separate <input> elements can both feed this same list (mobile's
   // camera capture and its file/document picker, Task 2.2) — selecting
@@ -201,14 +232,15 @@ export function UpdateComposer({
     setError(null);
 
     const isAssigningQa = tagSelection === ASSIGN_QA_SENTINEL;
-    const selectedCategory = parseCategoryOptionValue(tagSelection);
-    const selectedVariationItemId = !isAssigningQa && !selectedCategory ? tagSelection : "";
+    const resolved = isAssigningQa ? { variationItemId: "", category: null, freeText: "" } : resolveTagSelection();
 
     const formData = new FormData();
     formData.set("body", body);
-    if (selectedVariationItemId) formData.set("variationItemId", selectedVariationItemId);
-    if (selectedCategory) formData.set("category", selectedCategory);
-    if (!isMobile && selectedVariationItemId && percentComplete) formData.set("percentComplete", percentComplete);
+    if (resolved.variationItemId) formData.set("variationItemId", resolved.variationItemId);
+    if (resolved.category) formData.set("category", resolved.category);
+    if (resolved.freeText.trim()) formData.set("freeTextSiteInstructionReference", resolved.freeText.trim());
+    if (contractItemIds.length > 0) formData.set("contractItemIds", JSON.stringify(contractItemIds));
+    if (!isMobile && resolved.variationItemId && percentComplete) formData.set("percentComplete", percentComplete);
     files.forEach((file) => formData.append("files", file));
     if (isExternal && drafted) {
       formData.set("isExternal", "true");
@@ -232,6 +264,9 @@ export function UpdateComposer({
       }
       setBody("");
       setTagSelection("");
+      setVariationSecondary("");
+      setFreeTextSI("");
+      setContractItemIds([]);
       setPercentComplete("");
       setFiles([]);
       resetExternalState();
@@ -318,43 +353,35 @@ export function UpdateComposer({
 
       {transcribeError && <p className="text-xs text-red-600 dark:text-red-400">{transcribeError}</p>}
 
-      {openItems.length > 0 && (
-        <div className="flex items-center gap-2">
-          <select
-            value={tagSelection}
-            onChange={(event) => setTagSelection(event.target.value)}
-            className="h-9 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          >
-            <option value="">Not Assigned</option>
-            <optgroup label="Category">
-              <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
-              {UPDATE_CATEGORIES.map((category) => (
-                <option key={category} value={categoryOptionValue(category)}>
-                  {UPDATE_CATEGORY_LABELS[category]}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Site Instructions / Variations">
-              {openItems.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.reference} · {item.title}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-          {!isMobile && tagSelection && tagSelection !== ASSIGN_QA_SENTINEL && !parseCategoryOptionValue(tagSelection) && (
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={percentComplete}
-              onChange={(event) => setPercentComplete(event.target.value)}
-              placeholder="% complete"
-              className="h-9 w-28 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-          )}
-        </div>
-      )}
+      <div className="flex items-start gap-2 flex-wrap">
+        <CategoryCascadeFields
+          primary={tagSelection}
+          onPrimaryChange={(value) => {
+            setTagSelection(value);
+            setVariationSecondary("");
+            setFreeTextSI("");
+          }}
+          currentCategory={null}
+          taggableItems={openItems}
+          variationSecondary={variationSecondary}
+          onVariationSecondaryChange={setVariationSecondary}
+          freeText={freeTextSI}
+          onFreeTextChange={setFreeTextSI}
+        />
+        {!isMobile && resolveTagSelection().variationItemId && (
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={percentComplete}
+            onChange={(event) => setPercentComplete(event.target.value)}
+            placeholder="% complete"
+            className="h-9 w-28 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        )}
+      </div>
+
+      <ContractItemMultiSelect items={contractItems} selectedIds={contractItemIds} onChange={setContractItemIds} />
 
       <label className="flex items-center gap-2 text-xs font-medium text-[#4c739a] dark:text-slate-400 cursor-pointer">
         <input

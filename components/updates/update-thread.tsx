@@ -9,11 +9,13 @@ import { AttachmentPreviewList } from "@/components/updates/attachment-preview-l
 import { GenerateOutboundEmailPanel } from "@/components/updates/generate-outbound-email-panel";
 import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-update-as-qa-dialog";
 import { AssignUpdateAsContractProgressDialog } from "@/components/contract-schedule/assign-update-as-contract-progress-dialog";
+import { ContractItemMultiSelect } from "@/components/contract-schedule/contract-item-multi-select";
+import { CategoryCascadeFields, SI_FREE_TEXT_SENTINEL } from "@/components/updates/category-cascade-fields";
 import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
-import { UPDATE_CATEGORIES, UPDATE_CATEGORY_LABELS, categoryOptionValue, parseCategoryOptionValue } from "@/lib/update-category";
+import { UPDATE_CATEGORY_LABELS, categoryOptionValue, parseCategoryOptionValue } from "@/lib/update-category";
 
 type Author = { id: string; firstName: string | null; lastName: string | null; email: string };
 type VariationItemRef = { id: string; reference: string; title: string };
@@ -24,13 +26,25 @@ type UpdateWithReplies = Update & {
   variationItem: VariationItemRef | null;
   qaRecord: QaRecordRef | null;
   attachments: UpdateAttachment[];
+  contractItemLinks: { contractItemId: string }[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
 
+// The primary dropdown no longer offers real SI/Variation items as flat
+// options (Pre-Launch category restructure) — a tagged real item now shows
+// as "Variation" at the primary level, with the real item itself selected
+// in the secondary cascade below (see currentVariationSecondary).
 function currentTagSelection(update: { variationItem: VariationItemRef | null; qaRecord: QaRecordRef | null; category: string | null }) {
   if (update.category) return categoryOptionValue(update.category as Parameters<typeof categoryOptionValue>[0]);
   if (update.qaRecord) return ASSIGN_QA_SENTINEL;
-  return update.variationItem?.id ?? "";
+  if (update.variationItem) return categoryOptionValue("variation");
+  return "";
+}
+
+function currentVariationSecondary(update: { variationItem: VariationItemRef | null; freeTextSiteInstructionReference: string | null }) {
+  if (update.variationItem) return update.variationItem.id;
+  if (update.freeTextSiteInstructionReference) return SI_FREE_TEXT_SENTINEL;
+  return "";
 }
 
 function formatTimestamp(date: Date) {
@@ -61,6 +75,9 @@ export function UpdateThread({
   defaultRatePerHour: string;
   contractItems: TaggableContractItem[];
 }) {
+  const linkedContractItems = contractItems.filter((item) =>
+    update.contractItemLinks.some((link) => link.contractItemId === item.id)
+  );
   const router = useRouter();
   const [isReplying, setIsReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
@@ -104,6 +121,9 @@ export function UpdateThread({
   const [sentMessage, setSentMessage] = useState<string | null>(null);
   const [isEditingTag, setIsEditingTag] = useState(false);
   const [tagSelection, setTagSelection] = useState(currentTagSelection(update));
+  const [variationSecondary, setVariationSecondary] = useState(currentVariationSecondary(update));
+  const [freeTextSI, setFreeTextSI] = useState(update.freeTextSiteInstructionReference ?? "");
+  const [contractItemIds, setContractItemIds] = useState<string[]>(update.contractItemLinks.map((link) => link.contractItemId));
   const [isSavingTag, setIsSavingTag] = useState(false);
   const [showAssignQaDialog, setShowAssignQaDialog] = useState(false);
   const [showContractProgressDialog, setShowContractProgressDialog] = useState(false);
@@ -121,12 +141,26 @@ export function UpdateThread({
       setShowAssignQaDialog(true);
       return;
     }
-    const category = parseCategoryOptionValue(tagSelection);
+    const selectedCategory = parseCategoryOptionValue(tagSelection);
+    // Same cascade-resolution rule as UpdateComposer: a real item picked in
+    // the secondary dropdown wins over the "variation" category itself.
+    let body: Record<string, unknown>;
+    if (selectedCategory === "variation" && variationSecondary && variationSecondary !== SI_FREE_TEXT_SENTINEL) {
+      body = { variationItemId: variationSecondary };
+    } else if (selectedCategory === "variation" && variationSecondary === SI_FREE_TEXT_SENTINEL) {
+      body = { category: "variation", freeTextSiteInstructionReference: freeTextSI.trim() || null };
+    } else if (selectedCategory) {
+      body = { category: selectedCategory };
+    } else {
+      body = { category: null };
+    }
+    body.contractItemIds = contractItemIds;
+
     setIsSavingTag(true);
     await fetch(`/api/projects/${projectId}/updates/${update.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(category ? { category } : { variationItemId: tagSelection || null })
+      body: JSON.stringify(body)
     });
     setIsSavingTag(false);
     setIsEditingTag(false);
@@ -195,46 +229,44 @@ export function UpdateThread({
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-bold">{authorLabel(update.author)}</p>
           {isEditingTag ? (
-            <>
-              <select
-                value={tagSelection}
-                onChange={(event) => setTagSelection(event.target.value)}
-                className="h-7 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
-              >
-                <option value="">Not Assigned</option>
-                <optgroup label="Category">
-                  <option value={ASSIGN_QA_SENTINEL}>Assign QA</option>
-                  {UPDATE_CATEGORIES.map((category) => (
-                    <option key={category} value={categoryOptionValue(category)}>
-                      {UPDATE_CATEGORY_LABELS[category]}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Site Instructions / Variations">
-                  {taggableItems.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.reference} · {option.title}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-              <button
-                onClick={handleSaveTag}
-                disabled={isSavingTag}
-                className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
-              >
-                {isSavingTag ? "Saving..." : "Save"}
-              </button>
-              <button
-                onClick={() => {
-                  setTagSelection(currentTagSelection(update));
-                  setIsEditingTag(false);
-                }}
-                className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
-              >
-                Cancel
-              </button>
-            </>
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex items-start gap-2 flex-wrap">
+                <CategoryCascadeFields
+                  primary={tagSelection}
+                  onPrimaryChange={(value) => {
+                    setTagSelection(value);
+                    setVariationSecondary("");
+                    setFreeTextSI("");
+                  }}
+                  currentCategory={update.category as Parameters<typeof categoryOptionValue>[0] | null}
+                  taggableItems={taggableItems}
+                  variationSecondary={variationSecondary}
+                  onVariationSecondaryChange={setVariationSecondary}
+                  freeText={freeTextSI}
+                  onFreeTextChange={setFreeTextSI}
+                />
+                <button
+                  onClick={handleSaveTag}
+                  disabled={isSavingTag}
+                  className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
+                >
+                  {isSavingTag ? "Saving..." : "Save"}
+                </button>
+                <button
+                  onClick={() => {
+                    setTagSelection(currentTagSelection(update));
+                    setVariationSecondary(currentVariationSecondary(update));
+                    setFreeTextSI(update.freeTextSiteInstructionReference ?? "");
+                    setContractItemIds(update.contractItemLinks.map((link) => link.contractItemId));
+                    setIsEditingTag(false);
+                  }}
+                  className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+              <ContractItemMultiSelect items={contractItems} selectedIds={contractItemIds} onChange={setContractItemIds} />
+            </div>
           ) : (
             <>
               {update.variationItem && (
@@ -256,8 +288,18 @@ export function UpdateThread({
               {update.category && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                   {UPDATE_CATEGORY_LABELS[update.category]}
+                  {update.freeTextSiteInstructionReference ? ` · ${update.freeTextSiteInstructionReference}` : ""}
                 </span>
               )}
+              {linkedContractItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/projects/${projectId}/contract-schedule#contract-item-${item.id}`}
+                  className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400"
+                >
+                  {item.description}
+                </Link>
+              ))}
               {update.percentComplete != null && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                   {Math.round(update.percentComplete)}% tagged

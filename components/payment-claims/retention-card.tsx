@@ -69,10 +69,16 @@ type Tranche = RetentionSummary["tranche1"];
 // own comment).
 function TrancheEditor({
   label,
+  releaseActionLabel,
   tranche,
   onSave
 }: {
   label: string;
+  // Pre-Launch Feature 4 — a dedicated, plain-English action label distinct
+  // from the section heading (e.g. "1st Retention Release" rather than the
+  // more technical "Tranche 1 — initial release"), so the actual button
+  // reads as the concrete, real-world action being confirmed.
+  releaseActionLabel: string;
   tranche: Tranche;
   onSave: (patch: { percent?: number | null; expectedDate?: string | null; releasedAmount?: number | null; releasedAt?: string | null }) => Promise<void>;
 }) {
@@ -174,7 +180,7 @@ function TrancheEditor({
             disabled={isSaving || !releasedAmount || !releasedDate}
             className="h-8 px-3 rounded-md bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-60"
           >
-            Mark released
+            Mark {releaseActionLabel} complete
           </button>
         </div>
       )}
@@ -251,10 +257,20 @@ function CompletionConfirmation({ projectId, summary }: { projectId: string; sum
   );
 }
 
+// Pre-Launch Feature 4 — Retention still needs to be findable and complete
+// (nothing below is removed from the pre-existing Retention V2 build), but
+// it shouldn't dominate the Payment Claims screen the way a full always-
+// expanded card does. Collapsed by default to a single compact summary
+// line; expands in place to the exact same full detail as before. Urgency
+// still shows through at a glance even collapsed — an overdue/review-
+// needed status keeps its warning color on the collapsed bar itself,
+// rather than being hidden until the user thinks to expand it.
 export function RetentionCard({ projectId, summary }: { projectId: string; summary: RetentionSummary }) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const summarySentence = buildSummarySentence(summary);
   const statusInfo = STATUS_LABELS[summary.status];
+  const needsAttention = summary.requiresReview || summary.status === "initial_release_overdue" || summary.status === "final_release_overdue";
 
   async function patch(fields: Record<string, unknown>) {
     await fetch(`/api/projects/${projectId}/retention`, {
@@ -267,69 +283,98 @@ export function RetentionCard({ projectId, summary }: { projectId: string; summa
 
   if (summary.status === "not_configured") {
     return (
-      <div className="rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">
-        <h3 className="text-sm font-bold mb-1">Retention</h3>
+      <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 px-3 py-2">
         <p className="text-xs text-[#4c739a] dark:text-slate-400">
-          No retention applies to this project (or hasn't been configured yet) — set it under Contract → Contract Terms.
+          <span className="font-medium">Retention:</span> not configured — set it under Contract → Contract Terms if it applies to this project.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4 flex flex-col gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold">Retention</h3>
-            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${statusInfo.color}`}>{statusInfo.label}</span>
-          </div>
-          <p className="text-xs text-[#4c739a] dark:text-slate-400 mt-0.5">
-            {summarySentence ?? `${summary.retentionPercent}% of every claim, computed automatically from what's actually been claimed.`}
-          </p>
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-left ${
+          needsAttention
+            ? "border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/10"
+            : "border-[#e7edf3] dark:border-slate-700"
+        }`}
+      >
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <span className="text-xs font-bold text-[#4c739a] dark:text-slate-400 shrink-0">Retention</span>
+          <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 ${statusInfo.color}`}>
+            {statusInfo.label}
+          </span>
+          <span className="text-xs text-[#4c739a] dark:text-slate-400 truncate">
+            {formatCurrency(summary.totalWithheld)} withheld{needsAttention ? " — needs attention" : ""}
+          </span>
         </div>
-        <p className="text-xl font-bold">{formatCurrency(summary.totalWithheld)}</p>
-      </div>
+        <span className="material-symbols-outlined text-lg text-[#4c739a] dark:text-slate-400 shrink-0">
+          {expanded ? "expand_less" : "expand_more"}
+        </span>
+      </button>
 
-      {summary.requiresReview && (
-        <p className="text-xs rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 p-2">
-          This provision may require review under the Construction Contracts Act 2002 — see below.
-          {summary.reviewNotes && <span className="block mt-1">{summary.reviewNotes}</span>}
-        </p>
+      {expanded && (
+        <div className="mt-2 flex flex-col gap-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-xs text-[#4c739a] dark:text-slate-400">
+              {summarySentence ?? `${summary.retentionPercent}% of every claim, computed automatically from what's actually been claimed.`}
+            </p>
+            <p className="text-xl font-bold">{formatCurrency(summary.totalWithheld)}</p>
+          </div>
+
+          {summary.requiresReview && (
+            <p className="text-xs rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 p-2">
+              This provision may require review under the Construction Contracts Act 2002 — see below.
+              {summary.reviewNotes && <span className="block mt-1">{summary.reviewNotes}</span>}
+            </p>
+          )}
+
+          <p className="text-xs text-[#4c739a] dark:text-slate-400">
+            Subbie HQ will notify you when your retention release dates are approaching or become due.
+          </p>
+
+          <CompletionConfirmation projectId={projectId} summary={summary} />
+
+          {/* Two-stage release, matching how retention actually works under a
+              typical NZ subcontract: released in two tranches — a 1st release
+              once your own works are complete (or whatever trigger your
+              contract states), and a final release some time later, usually
+              at the end of the Defects Liability Period (often ~12 months
+              after Practical Completion) — the exact timing is whatever's
+              configured in Contract Terms, not assumed here. */}
+          <div className="flex flex-wrap gap-3">
+            <TrancheEditor
+              label="1st Retention Release"
+              releaseActionLabel="1st Retention Release"
+              tranche={summary.tranche1}
+              onSave={(patchFields) =>
+                patch({
+                  tranche1Percent: patchFields.percent,
+                  tranche1ExpectedDate: patchFields.expectedDate,
+                  tranche1ReleasedAmount: patchFields.releasedAmount,
+                  tranche1ReleasedAt: patchFields.releasedAt
+                })
+              }
+            />
+            <TrancheEditor
+              label="Final Retention Release — end of Defects Liability Period (typically ~12 months later)"
+              releaseActionLabel="Final Retention Release"
+              tranche={summary.tranche2}
+              onSave={(patchFields) =>
+                patch({
+                  tranche2Percent: patchFields.percent,
+                  tranche2ExpectedDate: patchFields.expectedDate,
+                  tranche2ReleasedAmount: patchFields.releasedAmount,
+                  tranche2ReleasedAt: patchFields.releasedAt
+                })
+              }
+            />
+          </div>
+        </div>
       )}
-
-      <p className="text-xs text-[#4c739a] dark:text-slate-400">
-        Subbie HQ will notify you when your retention release dates are approaching or become due.
-      </p>
-
-      <CompletionConfirmation projectId={projectId} summary={summary} />
-
-      <div className="flex flex-wrap gap-3">
-        <TrancheEditor
-          label="Tranche 1 — initial release"
-          tranche={summary.tranche1}
-          onSave={(patchFields) =>
-            patch({
-              tranche1Percent: patchFields.percent,
-              tranche1ExpectedDate: patchFields.expectedDate,
-              tranche1ReleasedAmount: patchFields.releasedAmount,
-              tranche1ReleasedAt: patchFields.releasedAt
-            })
-          }
-        />
-        <TrancheEditor
-          label="Tranche 2 — end of Defects Liability Period"
-          tranche={summary.tranche2}
-          onSave={(patchFields) =>
-            patch({
-              tranche2Percent: patchFields.percent,
-              tranche2ExpectedDate: patchFields.expectedDate,
-              tranche2ReleasedAmount: patchFields.releasedAmount,
-              tranche2ReleasedAt: patchFields.releasedAt
-            })
-          }
-        />
-      </div>
     </div>
   );
 }

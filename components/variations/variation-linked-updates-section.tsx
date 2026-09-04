@@ -10,6 +10,7 @@ type UpdateWithReplies = Update & {
   variationItem: VariationItemRef | null;
   qaRecord: { id: string; stage: string } | null;
   attachments: UpdateAttachment[];
+  contractItemLinks: { contractItemId: string }[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
 

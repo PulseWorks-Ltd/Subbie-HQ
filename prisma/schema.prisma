@@ -264,15 +264,32 @@ enum SafetyDocumentType {
 // second control — see Update.category's comment.
 enum UpdateCategory {
   general
+  // Kept for backward compatibility with existing rows only — no longer
+  // offered as a new choice (see lib/update-category.ts's UPDATE_CATEGORIES,
+  // the UI-facing subset of this enum). Superseded by `contract` below,
+  // which carries genuinely new behaviour (a cascading Contract Item
+  // picker) `progress` never had, rather than just relabelling it.
   progress
   health_safety
   delay
+  // Kept for backward compatibility with existing rows only — no longer
+  // offered as a new choice. A generic "Site Instruction" category was
+  // redundant with tagging the REAL SI directly via variationItemId, which
+  // already existed; removed per the Pre-Launch category restructure, see
+  // lib/update-category.ts.
   site_instruction
   variation
   day_works
   delivery
   defect
   other
+  // Pre-Launch category restructure — "Contract" replaces `progress`
+  // above as a primary category, and cascades to a secondary Contract
+  // Item picker (see ContractItemDiaryLink) the same way `variation`
+  // cascades to a secondary Site Instruction picker (a real VariationItem
+  // via variationItemId, or freeTextSiteInstructionReference for one not
+  // yet in the system).
+  contract
 }
 
 // The six response kinds a request can ask an external recipient for.
@@ -1526,6 +1543,7 @@ model ContractItem {
 
   schedule   ContractSchedule        @relation(fields: [scheduleId], references: [id])
   components ContractItemComponent[]
+  diaryLinks ContractItemDiaryLink[]
 }
 
 // fixed = any lump-sum priced component (Supply, Install, Erect, Dismantle,
@@ -1765,27 +1783,34 @@ model EvidencePaymentClaim {
 }
 
 model Update {
-  id              String          @id @default(cuid())
-  projectId       String
-  authorId        String
-  parentId        String?
-  variationItemId String?
+  id                               String          @id @default(cuid())
+  projectId                        String
+  authorId                         String
+  parentId                         String?
+  variationItemId                  String?
   // Mutually exclusive with variationItemId — an Update is tagged to EITHER
   // a Variation/SI directly OR a QA record (which itself may separately be
   // project-level or item-linked, see QARecord). Set via the same tag
   // dropdown ("Assign QA" option) — selecting it copies every attachment on
   // this Update into a new QARecord (see the qa-records POST route's
   // source: { type: "update" } branch) rather than moving anything.
-  qaRecordId      String?
+  qaRecordId                       String?
   // Mutually exclusive with BOTH variationItemId and qaRecordId — one
   // combined tag dropdown offers real object tags (SI/Variation, QA) grouped
   // alongside these generic category labels; picking any one of the three
   // clears the other two (enforced in the PATCH route, not just client-side).
   // Nullable/no default — "Not Assigned" until a user picks one explicitly.
-  category        UpdateCategory?
-  percentComplete Float?
-  body            String
-  createdAt       DateTime        @default(now())
+  category                         UpdateCategory?
+  // Only meaningful when category = "variation" and variationItemId is
+  // null — the secondary "Enter own Site Instruction" free-text fallback
+  // for an SI that doesn't exist as a real record in Subbie HQ yet
+  // (Pre-Launch category restructure). Once that SI is actually created,
+  // re-tagging via the real item picker (variationItemId) is the correct
+  // move — this field is never auto-migrated into a real VariationItem.
+  freeTextSiteInstructionReference String?
+  percentComplete                  Float?
+  body                             String
+  createdAt                        DateTime        @default(now())
 
   // External updates are a one-way notification sent out by email (via
   // SendGrid, see lib/email.ts) rather than an internal, reply-supported
@@ -1813,6 +1838,31 @@ model Update {
   correspondence              Correspondence[]
   reads                       UpdateRead[]
   contractItemProgressEntries ContractItemProgressEntry[]
+  contractItemLinks           ContractItemDiaryLink[]
+}
+
+// A plain association between a Project Diary entry and a Contract Item
+// (Pre-Launch feature: "Assign Project Diary entries to Contract Works") —
+// deliberately NOT the same thing as ContractItemProgressEntry, which
+// always carries a % complete checkpoint against one specific phase/
+// component. This is just "this diary entry is relevant to this contract
+// item," for discoverability (a count + list on the Contract Schedule
+// page, linking back to the diary) — no percentage attached. Many-to-many
+// (one diary entry can reference several contract items, and the same
+// item can be referenced by many entries), unlike the mutually-exclusive
+// single-target tags (variationItemId/qaRecordId/category) Update already
+// carries — being relevant to a contract item doesn't preclude an update
+// also being tagged to a Variation/SI/QA record/category.
+model ContractItemDiaryLink {
+  id             String   @id @default(cuid())
+  contractItemId String
+  updateId       String
+  createdAt      DateTime @default(now())
+
+  contractItem ContractItem @relation(fields: [contractItemId], references: [id])
+  update       Update       @relation(fields: [updateId], references: [id])
+
+  @@unique([contractItemId, updateId])
 }
 
 // Per-user read state for an Update — private to each user (one user

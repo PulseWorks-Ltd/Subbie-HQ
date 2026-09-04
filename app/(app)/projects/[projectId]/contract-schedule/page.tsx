@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
-import { getContractScheduleForProject, computeScheduleTotalValue, resolvePhasePercent, computeFixedComponentValue, computeRentalClaimedToDate } from "@/lib/contract-schedule";
+import { getContractScheduleForProject, computeScheduleTotalValue, resolvePhasePercent, computeFixedComponentValue, computeRentalClaimedToDate, getLinkedDiaryEntriesForContractItems } from "@/lib/contract-schedule";
 import { ContractScheduleView } from "@/components/contract-schedule/contract-schedule-view";
 
 export default async function ContractSchedulePage({ params }: { params: Promise<{ projectId: string }> }) {
@@ -59,6 +59,10 @@ export default async function ContractSchedulePage({ params }: { params: Promise
       }))
     : [];
 
+  const linkedDiaryEntriesByItemId = schedule
+    ? await getLinkedDiaryEntriesForContractItems(schedule.items.map((item) => item.id))
+    : {};
+
   return (
     <ContractScheduleView
       projectId={projectId}
@@ -66,6 +70,7 @@ export default async function ContractSchedulePage({ params }: { params: Promise
       schedule={schedule}
       totalValue={schedule ? computeScheduleTotalValue(schedule) : 0}
       computed={computed}
+      linkedDiaryEntriesByItemId={linkedDiaryEntriesByItemId}
     />
   );
 }

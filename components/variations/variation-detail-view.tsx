@@ -42,6 +42,7 @@ type UpdateWithReplies = Update & {
   variationItem: VariationItemRef | null;
   qaRecord: { id: string; stage: string } | null;
   attachments: UpdateAttachment[];
+  contractItemLinks: { contractItemId: string }[];
   replies: (Update & { author: Author; attachments: UpdateAttachment[] })[];
 };
 type QaRecordWithItem = QARecord & { variationItem: VariationItemRef | null; attachments: QARecordAttachment[] };
@@ -214,8 +215,34 @@ export function VariationDetailView({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {hasVariation && <VariationQuoteSection projectId={projectId} item={item} />}
+      {/*
+        Pre-Launch Feature 3 — Quote moves to the top of a left-hand stack
+        (Photos/Correspondence/QA/External Actions follow below it), sitting
+        beside Labour/Materials/Plant on the right. `items-start` is the
+        important part: a plain 2-col grid stretches every row-mate to the
+        tallest cell in its row, which is what made Quote balloon to match
+        Labour/Materials/Plant's height even though Quote's own content
+        (a filename link, or nothing) is tiny — self-sizing here is what
+        actually makes it "shrink to match Photos", not a fixed height.
+      */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        <div className="flex flex-col gap-4">
+          {hasVariation && <VariationQuoteSection projectId={projectId} item={item} />}
+          <VariationPhotosSection projectId={projectId} itemId={item.id} photos={photos} />
+          <VariationCorrespondenceSection
+            projectId={projectId}
+            itemId={item.id}
+            reference={item.reference}
+            correspondence={correspondence}
+          />
+          <VariationQaSection projectId={projectId} itemId={item.id} qaRecords={qaRecords} taggableItems={taggableItems} />
+          <VariationExternalActionsSection
+            projectId={projectId}
+            itemId={item.id}
+            actions={externalActions.filter((action) => !action.dayWorksSheetId)}
+            contacts={contacts}
+          />
+        </div>
         <LabourPlantMaterialSection
           projectId={projectId}
           itemId={item.id}
@@ -226,20 +253,6 @@ export function VariationDetailView({
           contractTerms={contractTerms}
           contacts={contacts}
           externalActions={externalActions.filter((action) => action.dayWorksSheetId)}
-        />
-        <VariationPhotosSection projectId={projectId} itemId={item.id} photos={photos} />
-        <VariationCorrespondenceSection
-          projectId={projectId}
-          itemId={item.id}
-          reference={item.reference}
-          correspondence={correspondence}
-        />
-        <VariationQaSection projectId={projectId} itemId={item.id} qaRecords={qaRecords} taggableItems={taggableItems} />
-        <VariationExternalActionsSection
-          projectId={projectId}
-          itemId={item.id}
-          actions={externalActions.filter((action) => !action.dayWorksSheetId)}
-          contacts={contacts}
         />
       </div>
 

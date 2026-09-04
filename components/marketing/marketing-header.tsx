@@ -8,6 +8,7 @@ const FEATURE_LINKS = [
   { href: "/features/variations", label: "Site Instructions & Variations" },
   { href: "/features/project-diary", label: "Project Diary" },
   { href: "/features/dayworks", label: "Dayworks" },
+  { href: "/features/payment-claims", label: "Payment Claims" },
   { href: "/features/approvals-automation", label: "Approvals & Automation" },
   { href: "/features/quality-assurance", label: "Quality Assurance & H&S" },
   { href: "/features/insurance", label: "Insurance Compliance" },
@@ -19,20 +20,22 @@ const INDUSTRY_LINKS = [
   { href: "/industries/scaffolding", label: "Scaffolding Contractors" },
   { href: "/industries/painting", label: "Painting Contractors" },
   { href: "/industries/masonry", label: "Masonry Contractors" },
-  { href: "/industries/residential-builders", label: "Residential Builders" }
+  { href: "/industries/residential-builders", label: "Residential Builders" },
+  { href: "/industries/electrical", label: "Electrical Contractors" },
+  { href: "/industries/plumbing", label: "Plumbing Contractors" },
+  { href: "/industries/civil", label: "Civil Contractors" }
 ];
 
 type NavLink = { href: string; label: string; disabled?: boolean };
 
-// payment-claims-construction-contracts-act is still a draft-only page
-// (DRAFT banner), pulled from nav/indexing until actually written — same
-// treatment as the footer's greyed-out Phase 2 placeholders. Its route
-// stays reachable directly; see app/sitemap.ts and app/robots.ts.
+// payment-claims-construction-contracts-act now has a real, written guide
+// (GuideArticleView, not the GuideOutlineView draft placeholder) — no
+// longer excluded from nav/indexing.
 const GUIDE_LINKS: NavLink[] = [
   { href: "/guides/late-or-non-compliant-claims", label: "Why Late or Non-Compliant Claims Cost You Money" },
   { href: "/guides/site-instruction-vs-variation", label: "Site Instruction vs Variation" },
   { href: "/guides/dayworks-labour-costs", label: "Dayworks – Why Labour Costs Disappear" },
-  { href: "/guides/payment-claims-construction-contracts-act", label: "Payment Claims Under the CCA", disabled: true }
+  { href: "/guides/payment-claims-construction-contracts-act", label: "Payment Claims Under the CCA" }
 ];
 
 function NavDropdown({ label, links }: { label: string; links: NavLink[] }) {

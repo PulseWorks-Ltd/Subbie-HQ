@@ -7,10 +7,6 @@ import type { MetadataRoute } from "next";
 // fallback is what actually serves in production today.
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://subbie-hq.com";
 
-// /guides/payment-claims-construction-contracts-act is deliberately
-// excluded — still outline-only, marked with a DRAFT banner, not ready for
-// indexing. Keep excluded until it's actually written; see app/robots.ts
-// for the matching explicit Disallow.
 const MARKETING_PATHS = [
   "/",
   "/pricing",
@@ -18,6 +14,7 @@ const MARKETING_PATHS = [
   "/features/variations",
   "/features/project-diary",
   "/features/dayworks",
+  "/features/payment-claims",
   "/features/approvals-automation",
   "/features/quality-assurance",
   "/features/insurance",
@@ -27,10 +24,14 @@ const MARKETING_PATHS = [
   "/industries/painting",
   "/industries/masonry",
   "/industries/residential-builders",
+  "/industries/electrical",
+  "/industries/plumbing",
+  "/industries/civil",
   "/compare/spreadsheets-and-paper",
   "/guides/late-or-non-compliant-claims",
   "/guides/site-instruction-vs-variation",
-  "/guides/dayworks-labour-costs"
+  "/guides/dayworks-labour-costs",
+  "/guides/payment-claims-construction-contracts-act"
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

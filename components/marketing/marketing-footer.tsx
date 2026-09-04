@@ -43,7 +43,7 @@ export function MarketingFooter() {
           <FooterLink href="/features/insurance" label="Insurance Compliance" />
           <FooterLink href="/features/team-permissions" label="Team & Permissions" />
           <FooterLink href="/features/scope-programme" label="Scope & Programme" />
-          <FooterPlaceholder label="Payment Claims" />
+          <FooterLink href="/features/payment-claims" label="Payment Claims" />
           <FooterPlaceholder label="Project Documents" />
         </div>
 
@@ -55,8 +55,9 @@ export function MarketingFooter() {
           <FooterLink href="/industries/painting" label="Painting Contractors" />
           <FooterLink href="/industries/masonry" label="Masonry Contractors" />
           <FooterLink href="/industries/residential-builders" label="Residential Builders" />
-          <FooterPlaceholder label="Electricians" />
-          <FooterPlaceholder label="Plumbers" />
+          <FooterLink href="/industries/electrical" label="Electrical Contractors" />
+          <FooterLink href="/industries/plumbing" label="Plumbing Contractors" />
+          <FooterLink href="/industries/civil" label="Civil Contractors" />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -67,10 +68,10 @@ export function MarketingFooter() {
           <FooterLink href="/guides/late-or-non-compliant-claims" label="Late or Non-Compliant Claims" />
           <FooterLink href="/guides/site-instruction-vs-variation" label="Site Instruction vs Variation" />
           <FooterLink href="/guides/dayworks-labour-costs" label="Dayworks – Why Labour Costs Disappear" />
-          {/* Draft-only pages (see the "DRAFT" banner on each) — pulled from
-              nav/indexing until actually written; routes stay reachable
+          <FooterLink href="/guides/payment-claims-construction-contracts-act" label="Payment Claims Under the CCA" />
+          {/* Still draft-only (see the "DRAFT" banner) — pulled from
+              nav/indexing until actually written; route stays reachable
               directly, see app/sitemap.ts and app/robots.ts. */}
-          <FooterPlaceholder label="Payment Claims Under the CCA" />
           <FooterPlaceholder label="vs Generic Construction Software" />
           <FooterPlaceholder label="More guides coming soon" />
         </div>

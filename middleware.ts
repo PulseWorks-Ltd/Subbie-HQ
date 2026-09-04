@@ -38,6 +38,66 @@ const CSP = [
   "upgrade-insecure-requests"
 ].join("; ");
 
+// ============================================================
+// CSRF / Origin protection for mutating API routes — turns what was
+// previously only incidental protection (SameSite=Lax cookies + every
+// mutating route expecting a JSON body a simple HTML <form> can't send)
+// into an explicit control. A same-origin browser always sends an Origin
+// header on state-changing requests (fetch/XHR — modern browsers include
+// it even for same-origin, not just cross-origin), and falls back to
+// Referer for the rare client that only sends that; a request with
+// neither is rejected rather than let through, since a real same-origin
+// fetch()/XHR call always sends at least one.
+// ============================================================
+
+const CSRF_PROTECTED_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+// Paths this check deliberately skips — genuine server-to-server callers
+// (SendGrid's inbound-parse webhook, Stripe, Railway Cron) that authenticate
+// via their own signature/bearer-secret rather than a session cookie, and
+// so never send a browser Origin/Referer header at all. CSRF protection
+// exists to stop a browser from being tricked into firing a cookie-
+// authenticated request; it has nothing to say about these.
+const CSRF_EXEMPT_PREFIXES = ["/api/webhooks/", "/api/cron/"];
+
+function expectedOrigin(request: NextRequest): string {
+  // Prefer the app's own configured URL (same env var auth.ts already
+  // relies on for cookie/HTTPS detection) over deriving it from the
+  // request's own Host header — a Host header is attacker-influenced
+  // input in general, even though this app's actual deployment (behind
+  // Railway's proxy) doesn't currently give an attacker room to spoof it.
+  // Falls back to the request's own origin only if AUTH_URL/NEXTAUTH_URL
+  // is somehow unset, so this can never hard-fail the whole app.
+  const configured = process.env.AUTH_URL || process.env.NEXTAUTH_URL;
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      // fall through to the request-derived origin below
+    }
+  }
+  return request.nextUrl.origin;
+}
+
+function originFromReferer(referer: string | null): string | null {
+  if (!referer) return null;
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return null;
+  }
+}
+
+function isSameOriginRequest(request: NextRequest): boolean {
+  const sourceOrigin = request.headers.get("origin") ?? originFromReferer(request.headers.get("referer"));
+  if (!sourceOrigin) return false;
+  return sourceOrigin === expectedOrigin(request);
+}
+
+function isCsrfExempt(pathname: string): boolean {
+  return CSRF_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 function applySecurityHeaders(response: NextResponse): NextResponse {
   // HSTS — tells browsers to only ever contact this origin over HTTPS for
   // the next year, including subdomains. `preload` additionally opts in to
@@ -81,6 +141,17 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
 //     — flagged here rather than changed, since that's a schema/business-
 //     logic change outside this task's scope.
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (
+    CSRF_PROTECTED_METHODS.has(request.method) &&
+    pathname.startsWith("/api/") &&
+    !isCsrfExempt(pathname) &&
+    !isSameOriginRequest(request)
+  ) {
+    return applySecurityHeaders(NextResponse.json({ error: "Cross-origin request rejected." }, { status: 403 }));
+  }
+
   const response = NextResponse.next();
   return applySecurityHeaders(response);
 }

@@ -1,5 +1,36 @@
 import sgMail from "@sendgrid/mail";
 
+// Every function below that builds its own HTML (as opposed to a SendGrid
+// dynamic template, which auto-escapes its own {{ }} substitutions) embeds
+// at least one user-authored string — an Update/Payment Claim/QA Document
+// body, a display name, a project name, an External Action message/comment.
+// None of that is escaped before this fix, so a name or message containing
+// e.g. "<img src=x onerror=...>" would execute in whatever mail client
+// renders the HTML part. Dependency-free on purpose — this app already
+// avoids pulling in a sanitization library for a single-purpose need.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Shared by every sender that renders a user-authored, multi-paragraph body
+// as HTML (External Update, Payment Claim, QA Document) — escapes first,
+// then applies the same paragraph/line-break formatting all three used to
+// duplicate inline. Escaping doesn't touch whitespace, so doing it before
+// the split/replace below changes nothing about the resulting structure,
+// it just guarantees every caller gets it rather than relying on each of
+// the three copies remembering to.
+function bodyToHtml(body: string): string {
+  return escapeHtml(body)
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br />")}</p>`)
+    .join("\n");
+}
+
 function getConfiguredSendGrid() {
   const apiKey = process.env.SENDGRID_API_KEY;
   const fromEmail = process.env.SENDGRID_FROM_EMAIL;
@@ -60,8 +91,8 @@ export async function sendReminderEmail(params: {
     from: { email: config.fromEmail, name: "Subbie HQ" },
     subject: params.subject,
     html: `
-      <p>${params.headline}</p>
-      <p>${params.detail} — <strong>${params.projectName}</strong></p>
+      <p>${escapeHtml(params.headline)}</p>
+      <p>${escapeHtml(params.detail)} — <strong>${escapeHtml(params.projectName)}</strong></p>
       <p><a href="${params.itemUrl}">View in Subbie HQ</a></p>
     `
   });
@@ -84,10 +115,7 @@ export async function sendExternalUpdateEmail(params: {
     throw new Error("Email sending isn't configured — SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are missing.");
   }
 
-  const html = params.body
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br />")}</p>`)
-    .join("\n");
+  const html = bodyToHtml(params.body);
 
   await sgMail.send({
     to: params.to,
@@ -122,10 +150,7 @@ export async function sendPaymentClaimEmail(params: {
     throw new Error("Email sending isn't configured — SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are missing.");
   }
 
-  const html = params.body
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br />")}</p>`)
-    .join("\n");
+  const html = bodyToHtml(params.body);
 
   await sgMail.send({
     to: params.to,
@@ -161,10 +186,7 @@ export async function sendQaDocumentEmail(params: {
     throw new Error("Email sending isn't configured — SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are missing.");
   }
 
-  const html = params.body
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br />")}</p>`)
-    .join("\n");
+  const html = bodyToHtml(params.body);
 
   await sgMail.send({
     to: params.to,
@@ -199,7 +221,7 @@ export async function sendWelcomeEmail(params: { to: string; name: string }) {
     subject: "Welcome to Subbie HQ",
     html: `
       <p><img src="${baseUrl}/icons/icon-512.png" alt="Subbie HQ" width="48" height="48" /></p>
-      <p>Hi ${params.name},</p>
+      <p>Hi ${escapeHtml(params.name)},</p>
       <p>Welcome to Subbie HQ — your workspace for contract intelligence, payment claims, and project updates is ready.</p>
       <p><a href="${baseUrl}/projects">Create your first project</a> to get started, or <a href="${baseUrl}/get-app">install the mobile app</a> to post site updates on the go.</p>
     `
@@ -224,7 +246,7 @@ export async function sendPasswordResetEmail(params: { to: string; name: string;
     subject: "Reset your Subbie HQ password",
     html: `
       <p><img src="${baseUrl}/icons/icon-512.png" alt="Subbie HQ" width="48" height="48" /></p>
-      <p>Hi ${params.name},</p>
+      <p>Hi ${escapeHtml(params.name)},</p>
       <p>We received a request to reset your Subbie HQ password. This link expires in 1 hour.</p>
       <p><a href="${params.resetUrl}">Reset your password</a></p>
       <p>If you didn't request this, you can safely ignore this email — your password won't be changed.</p>
@@ -257,7 +279,7 @@ export async function sendExternalActionRequestEmail(params: {
     throw new Error("Email sending isn't configured — SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are missing.");
   }
 
-  const greeting = params.recipientName ? `Hi ${params.recipientName},` : "Hi,";
+  const greeting = params.recipientName ? `Hi ${escapeHtml(params.recipientName)},` : "Hi,";
 
   await sgMail.send({
     to: params.to,
@@ -266,9 +288,9 @@ export async function sendExternalActionRequestEmail(params: {
     subject: `${params.senderName} has requested your ${params.typeLabel.toLowerCase()} — ${params.projectName}`,
     html: `
       <p>${greeting}</p>
-      <p>${params.senderName} has requested you <strong>${params.typeLabel}</strong> the following, on <strong>${params.projectName}</strong>:</p>
-      <p>${params.sourceLabel}</p>
-      ${params.message ? `<p>${params.message.replace(/\n/g, "<br />")}</p>` : ""}
+      <p>${escapeHtml(params.senderName)} has requested you <strong>${escapeHtml(params.typeLabel)}</strong> the following, on <strong>${escapeHtml(params.projectName)}</strong>:</p>
+      <p>${escapeHtml(params.sourceLabel)}</p>
+      ${params.message ? `<p>${escapeHtml(params.message).replace(/\n/g, "<br />")}</p>` : ""}
       <p><a href="${params.responseUrl}">Respond now</a> — no login required. This link expires in 30 days.</p>
     `
   });
@@ -306,11 +328,11 @@ export async function sendExternalActionResponseEmail(params: {
     from: { email: config.fromEmail, name: "Subbie HQ" },
     subject: `${outcome}: ${params.responderName} responded to your ${params.typeLabel.toLowerCase()} request — ${params.projectName}`,
     html: `
-      <p>Hi ${params.senderName},</p>
-      <p><strong>${params.responderName}</strong> has responded to your ${params.typeLabel.toLowerCase()} request on <strong>${params.projectName}</strong>:</p>
-      <p>${params.sourceLabel}</p>
+      <p>Hi ${escapeHtml(params.senderName)},</p>
+      <p><strong>${escapeHtml(params.responderName)}</strong> has responded to your ${escapeHtml(params.typeLabel.toLowerCase())} request on <strong>${escapeHtml(params.projectName)}</strong>:</p>
+      <p>${escapeHtml(params.sourceLabel)}</p>
       <p>Outcome: <strong>${outcome}</strong></p>
-      ${params.comment ? `<p>Comment: ${params.comment.replace(/\n/g, "<br />")}</p>` : ""}
+      ${params.comment ? `<p>Comment: ${escapeHtml(params.comment).replace(/\n/g, "<br />")}</p>` : ""}
       <p><a href="${params.itemUrl}">View in Subbie HQ</a></p>
     `
   });
@@ -335,9 +357,9 @@ export async function sendHoursOnSiteApprovedEmail(params: {
     from: { email: config.fromEmail, name: "Subbie HQ" },
     subject: `Hours on Site approved — ${params.projectName}`,
     html: `
-      <p>Hi ${params.creatorName},</p>
-      <p><strong>${params.approvedByName}</strong> has approved the Hours on Site sheet you sent, on <strong>${params.projectName}</strong>:</p>
-      <p>${params.sourceLabel}</p>
+      <p>Hi ${escapeHtml(params.creatorName)},</p>
+      <p><strong>${escapeHtml(params.approvedByName)}</strong> has approved the Hours on Site sheet you sent, on <strong>${escapeHtml(params.projectName)}</strong>:</p>
+      <p>${escapeHtml(params.sourceLabel)}</p>
       <p>It's now marked Approved and ready to be included in a variation claim.</p>
       <p><a href="${params.sheetUrl}">View the sheet</a></p>
     `

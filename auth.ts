@@ -3,7 +3,8 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { formatUserName } from "@/lib/user-display";
-import { isLoginRateLimited, recordFailedLoginAttempt } from "@/lib/login-rate-limit";
+import { isLoginRateLimited, isLoginRateLimitedByIp, recordFailedLoginAttempt } from "@/lib/login-rate-limit";
+import { getClientIp } from "@/lib/public-token-rate-limit";
 
 // Session cookie flags — no explicit `cookies` config below, so Auth.js
 // v5's own defaults apply: HttpOnly is always true (not configurable to
@@ -17,7 +18,13 @@ import { isLoginRateLimited, recordFailedLoginAttempt } from "@/lib/login-rate-l
 // keys off, and it can't be verified from this codebase alone.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
-  session: { strategy: "jwt" },
+  // Explicit rather than relying on Auth.js's own default (30 days) — 14
+  // days meaningfully shrinks the window a stolen/leaked session cookie
+  // stays valid for, while still comfortably outlasting how often someone
+  // working a single job actually needs to re-authenticate (a subbie
+  // checking in most weekdays won't notice this at all). Re-visit shorter
+  // if that assumption turns out wrong in practice.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 14 },
   pages: {
     signIn: "/login"
   },
@@ -27,25 +34,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: {},
         password: {}
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         const email = typeof credentials?.email === "string" ? credentials.email.toLowerCase().trim() : null;
         const password = typeof credentials?.password === "string" ? credentials.password : null;
         if (!email || !password) return null;
 
+        const ip = getClientIp(request);
+
         // Same generic null-return either way as the checks below, so a
         // rate-limited request is indistinguishable from a wrong password —
         // it never leaks whether the email exists or that a limit was hit.
+        // Two independent bounds: per-email (existing) catches repeated
+        // guessing against one account; per-IP (coarser, see
+        // lib/login-rate-limit.ts) catches one source spraying many
+        // different email addresses, which the per-email bound alone would
+        // never notice.
         if (await isLoginRateLimited(email)) return null;
+        if (await isLoginRateLimitedByIp(ip)) return null;
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
-          await recordFailedLoginAttempt(email);
+          await recordFailedLoginAttempt(email, ip);
           return null;
         }
 
         const passwordMatches = await bcrypt.compare(password, user.passwordHash);
         if (!passwordMatches) {
-          await recordFailedLoginAttempt(email);
+          await recordFailedLoginAttempt(email, ip);
           return null;
         }
 

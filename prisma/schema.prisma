@@ -392,13 +392,21 @@ model PasswordResetToken {
 // failed login attempt, no relation to User since a rate-limited email
 // might not even match a real account. Keyed by raw email string (not
 // userId) so an attacker probing a non-existent address is throttled the
-// same as one probing a real one.
+// same as one probing a real one. `ipAddress` backs a second, coarser
+// per-IP bound added alongside the per-email one — catches a single
+// source spraying many different email addresses, which the per-email
+// bound alone never would (each individual email would look like a
+// one-off failure). Nullable/no backfill: rows recorded before this column
+// existed simply have no IP on file, and the per-IP count query below only
+// ever needs rows going forward.
 model LoginAttempt {
   id        String   @id @default(cuid())
   email     String
+  ipAddress String?
   createdAt DateTime @default(now())
 
   @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
 }
 
 // Anti-abuse throttle for the public registration endpoint (lib/register-

@@ -318,49 +318,46 @@ export function ContractScheduleView({
           </div>
         </div>
       ) : (
-        // Single column on mobile/tablet (nothing to keep pinned beside on
-        // a narrow screen); two columns from `lg` up. Not sticky itself —
-        // the actual sticky left panel per Pre-Launch Feature 6 is the
-        // project-wide tab nav (see components/project-nav.tsx), not this
-        // schedule-specific totals/defaults box.
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
-          <div className="flex flex-col gap-4 rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">
+        // Full-width totals bar on top, every section/item stacked full-
+        // width beneath it — replaces the earlier narrow-left-column
+        // layout (the sticky left panel duty now belongs to the
+        // project-wide tab nav instead, see components/project-nav.tsx).
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-end gap-6 rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">
             <div>
               <p className="text-xs text-[#4c739a] dark:text-slate-400">Original Subcontract Sum</p>
               <p className="text-xl font-bold">{formatCurrency(totalValue)}</p>
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="flex flex-col gap-1 text-xs font-medium">
-                Default Erect %
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={defaultErect}
-                  onChange={(event) => setDefaultErect(event.target.value)}
-                  className="h-8 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs font-medium">
-                Default Dismantle %
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={defaultDismantle}
-                  onChange={(event) => setDefaultDismantle(event.target.value)}
-                  className="h-8 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
-                />
-              </label>
-              <button
-                onClick={saveDefaults}
-                disabled={isSavingDefaults}
-                className="h-8 px-3 rounded-md border border-[#e7edf3] dark:border-slate-700 text-xs font-medium disabled:opacity-60 self-start"
-              >
-                {isSavingDefaults ? "Saving..." : "Save defaults"}
-              </button>
-            </div>
-            <div className="flex flex-col gap-2 pt-2 border-t border-[#e7edf3] dark:border-slate-700">
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Default Erect %
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={defaultErect}
+                onChange={(event) => setDefaultErect(event.target.value)}
+                className="h-8 w-20 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Default Dismantle %
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={defaultDismantle}
+                onChange={(event) => setDefaultDismantle(event.target.value)}
+                className="h-8 w-20 rounded-md border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs"
+              />
+            </label>
+            <button
+              onClick={saveDefaults}
+              disabled={isSavingDefaults}
+              className="h-8 px-3 rounded-md border border-[#e7edf3] dark:border-slate-700 text-xs font-medium disabled:opacity-60"
+            >
+              {isSavingDefaults ? "Saving..." : "Save defaults"}
+            </button>
+            <div className="flex gap-2 ml-auto">
               <button
                 onClick={() => setIsExtractDialogOpen(true)}
                 className="h-9 px-3 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-xs font-bold hover:bg-[#f8fafc] dark:hover:bg-slate-800"
@@ -373,7 +370,7 @@ export function ContractScheduleView({
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 min-w-0">
+          <div className="flex flex-col gap-6">
             {Array.from(groups.entries()).map(([sectionLabel, groupItems]) => {
               const rows = groupItems.map((item) => (
                 <ContractItemRow

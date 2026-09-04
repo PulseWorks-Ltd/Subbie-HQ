@@ -52,7 +52,14 @@ export function ProjectNav({
   });
 
   return (
-    <nav className="flex flex-col gap-1 w-48 shrink-0">
+    // Sticky across every project tab (this nav is rendered once, in the
+    // project layout, so it wraps all of them) — `top-20` matches TopNav's
+    // real height (the same offset already used for in-page scroll
+    // anchors elsewhere, e.g. contract-schedule-view.tsx's item anchors),
+    // `self-start` stops the parent flex row's default stretch from
+    // forcing this nav to the main column's full height, which would
+    // otherwise leave nothing for "sticky" to actually do.
+    <nav className="flex flex-col gap-1 w-48 shrink-0 sticky top-20 self-start">
       {visibleItems.map((item) => {
         const href = `/projects/${projectId}${item.segment ? `/${item.segment}` : ""}`;
         const isActive = pathname === href || pathname.startsWith(`${href}/`);

@@ -318,13 +318,13 @@ export function ContractScheduleView({
           </div>
         </div>
       ) : (
-        // Pre-Launch Feature 6 — a sticky left panel (total + defaults +
-        // the two schedule-level actions) that stays in view while the
-        // (now collapsible, condensed) item list on the right scrolls past
-        // it. Single column on mobile/tablet (nothing to keep pinned
-        // beside on a narrow screen); two columns from `lg` up.
+        // Single column on mobile/tablet (nothing to keep pinned beside on
+        // a narrow screen); two columns from `lg` up. Not sticky itself —
+        // the actual sticky left panel per Pre-Launch Feature 6 is the
+        // project-wide tab nav (see components/project-nav.tsx), not this
+        // schedule-specific totals/defaults box.
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
-          <div className="lg:sticky lg:top-4 flex flex-col gap-4 rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">
+          <div className="flex flex-col gap-4 rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">
             <div>
               <p className="text-xs text-[#4c739a] dark:text-slate-400">Original Subcontract Sum</p>
               <p className="text-xl font-bold">{formatCurrency(totalValue)}</p>

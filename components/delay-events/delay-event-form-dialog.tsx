@@ -3,19 +3,31 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VariationItem } from "@prisma/client";
+import { SendDelayNoticeDialog } from "@/components/delay-events/send-delay-notice-dialog";
 
-// Logging a delay event is deliberately the only thing this dialog does —
-// notice drafting/sending and resolution are separate actions on the
-// detail page, once the event actually exists (mirroring how a Contract
-// Item is added first, then its progress is recorded separately).
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
+
+// Logging a delay event and sending its notice used to be two separate
+// actions (create here, then a second trip to "Send notice again" on the
+// detail page for what was really the FIRST send) — an unnecessary extra
+// step when the recipient's already known at logging time. "Email this to
+// the client now" is optional and off by default: leaving it unchecked
+// keeps the exact original behaviour (create, then go straight to the
+// detail page) for whoever just wants the delay recorded for now.
+//
+// Sending itself still reuses SendDelayNoticeDialog unchanged — it opens
+// automatically, targeting the delay event this dialog just created,
+// rather than needing its own separate mechanism.
 export function DelayEventFormDialog({
   projectId,
   taggableItems,
+  contacts,
   open,
   onClose
 }: {
   projectId: string;
   taggableItems: Pick<VariationItem, "id" | "reference" | "title">[];
+  contacts: ContactOption[];
   open: boolean;
   onClose: () => void;
 }) {
@@ -26,10 +38,37 @@ export function DelayEventFormDialog({
   const [endDate, setEndDate] = useState("");
   const [daysClaimed, setDaysClaimed] = useState("");
   const [variationItemId, setVariationItemId] = useState("");
+  const [emailNow, setEmailNow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set once the event's been created, if "email now" was checked — its
+  // presence is what switches this dialog over to the send step below.
+  const [createdDelayEventId, setCreatedDelayEventId] = useState<string | null>(null);
 
   if (!open) return null;
+
+  // Reached after either finishing (sent, or cancelled) the send step, or
+  // immediately after creating when "email now" wasn't checked — the one
+  // place that actually navigates to the new event's detail page, so both
+  // paths land in the same place.
+  function finish(delayEventId: string) {
+    setCreatedDelayEventId(null);
+    onClose();
+    router.push(`/projects/${projectId}/delay-events/${delayEventId}`);
+    router.refresh();
+  }
+
+  if (createdDelayEventId) {
+    return (
+      <SendDelayNoticeDialog
+        projectId={projectId}
+        delayEventId={createdDelayEventId}
+        contacts={contacts}
+        open
+        onClose={() => finish(createdDelayEventId)}
+      />
+    );
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -57,9 +96,13 @@ export function DelayEventFormDialog({
     }
 
     const { delayEvent } = await response.json();
-    onClose();
-    router.push(`/projects/${projectId}/delay-events/${delayEvent.id}`);
-    router.refresh();
+    if (emailNow) {
+      // Router state stays put (dialog remains open) — createdDelayEventId
+      // being set is what swaps this component over to the send step above.
+      setCreatedDelayEventId(delayEvent.id);
+      return;
+    }
+    finish(delayEvent.id);
   }
 
   return (
@@ -154,6 +197,17 @@ export function DelayEventFormDialog({
             </label>
           )}
 
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input type="checkbox" checked={emailNow} onChange={(event) => setEmailNow(event.target.checked)} />
+            Also email this to the client now
+          </label>
+          {emailNow && (
+            <p className="text-xs text-[#4c739a] dark:text-slate-400 -mt-2">
+              You'll pick a recipient and review the notice on the next step. Leave this unchecked to just log the delay for now — you
+              can still send it later.
+            </p>
+          )}
+
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex gap-3 justify-end mt-2">
@@ -165,7 +219,7 @@ export function DelayEventFormDialog({
               disabled={isSubmitting}
               className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
             >
-              {isSubmitting ? "Saving..." : "Log delay event"}
+              {isSubmitting ? "Saving..." : emailNow ? "Log & continue to send" : "Log delay event"}
             </button>
           </div>
         </form>

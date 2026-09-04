@@ -235,6 +235,48 @@ export async function sendExternalActionRequestEmail(params: {
   });
 }
 
+// Notifies the person who SENT an External Action request once the
+// recipient actually responds — fire-and-forget (a hiccup sending this
+// must never fail the recipient's own already-successful submission),
+// same reasoning as sendReminderEmail: no dedicated SendGrid template
+// exists for this yet. Genuinely missing before this: an Hours on Site
+// approval got its own dedicated confirmation email
+// (sendHoursOnSiteApprovedEmail), but every other target type (Variation/
+// SI, Day Works Sheet, Variation Package, Delay/EOT) left the sender with
+// no signal at all that a response had even arrived — the only way to
+// find out was to notice the status change in the app. This is the one
+// generic notification covering all of those.
+export async function sendExternalActionResponseEmail(params: {
+  to: string;
+  senderName: string;
+  responderName: string;
+  projectName: string;
+  sourceLabel: string;
+  typeLabel: string;
+  choice: "approved" | "rejected" | null;
+  comment: string | null;
+  itemUrl: string;
+}) {
+  const config = getConfiguredSendGrid();
+  if (!config) return;
+
+  const outcome = params.choice === "approved" ? "Approved" : params.choice === "rejected" ? "Rejected" : "Responded";
+
+  await sgMail.send({
+    to: params.to,
+    from: { email: config.fromEmail, name: "Subbie HQ" },
+    subject: `${outcome}: ${params.responderName} responded to your ${params.typeLabel.toLowerCase()} request — ${params.projectName}`,
+    html: `
+      <p>Hi ${params.senderName},</p>
+      <p><strong>${params.responderName}</strong> has responded to your ${params.typeLabel.toLowerCase()} request on <strong>${params.projectName}</strong>:</p>
+      <p>${params.sourceLabel}</p>
+      <p>Outcome: <strong>${outcome}</strong></p>
+      ${params.comment ? `<p>Comment: ${params.comment.replace(/\n/g, "<br />")}</p>` : ""}
+      <p><a href="${params.itemUrl}">View in Subbie HQ</a></p>
+    `
+  });
+}
+
 // Confirmation to the sheet's creator (Req 5) once a Site Manager approves
 // an Hours on Site sheet via its secure link — plain HTML, same reasoning
 // as sendReminderEmail: no dedicated SendGrid template exists for this yet.

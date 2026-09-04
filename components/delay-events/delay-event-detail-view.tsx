@@ -146,15 +146,33 @@ export function DelayEventDetailView({
         <div className="rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4 flex flex-col gap-2">
           <h3 className="text-sm font-bold mb-1">Notice history</h3>
           {delayEvent.externalActions.map((action) => (
-            <div key={action.id} className="text-sm flex items-center justify-between gap-3 border-b border-[#e7edf3]/60 dark:border-slate-800 py-1.5 last:border-0">
-              <span>
-                Sent to {action.recipientName ?? action.recipientEmail} on {formatDate(action.sentAt)}
-              </span>
-              <span className="text-xs font-medium text-[#4c739a] dark:text-slate-400">
-                {action.status === "responded" ? `Responded (${action.responseChoice ?? "—"})` : action.status}
-              </span>
+            <div key={action.id} className="flex flex-col gap-1 border-b border-[#e7edf3]/60 dark:border-slate-800 py-1.5 last:border-0">
+              <div className="text-sm flex items-center justify-between gap-3">
+                <span>
+                  Sent to {action.recipientName ?? action.recipientEmail} on {formatDate(action.sentAt)}
+                </span>
+                <span className="text-xs font-medium text-[#4c739a] dark:text-slate-400">
+                  {action.status === "responded" ? `Responded (${action.responseChoice ?? "—"})` : action.status}
+                </span>
+              </div>
+              {/* The full response — who actually answered, and any reasoning
+                  they gave — shown right here rather than only as a one-word
+                  status, since that reasoning is often the whole point of a
+                  response (e.g. approving fewer days than claimed). This is
+                  the same text also filed to Correspondence, see the link below. */}
+              {action.status === "responded" && (
+                <p className="text-xs text-[#4c739a] dark:text-slate-400">
+                  {action.responseName && <>By {action.responseName}
+                  {action.respondedAt ? ` on ${formatDate(action.respondedAt)}` : ""}
+                  {action.responseComment ? ": " : ""}</>}
+                  {action.responseComment && <span className="italic">&ldquo;{action.responseComment}&rdquo;</span>}
+                </p>
+              )}
             </div>
           ))}
+          <Link href={`/projects/${projectId}/correspondence`} className="text-xs font-medium text-primary hover:underline self-start mt-1">
+            View full correspondence trail →
+          </Link>
         </div>
       )}
 

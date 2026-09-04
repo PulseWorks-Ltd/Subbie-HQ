@@ -1,9 +1,10 @@
 import crypto from "crypto";
 import { prisma } from "./prisma";
-import { sendExternalActionRequestEmail, sendHoursOnSiteApprovedEmail } from "./email";
+import { sendExternalActionRequestEmail, sendHoursOnSiteApprovedEmail, sendExternalActionResponseEmail } from "./email";
 import { formatUserName } from "./user-display";
 import { EXTERNAL_ACTION_TYPE_LABELS, requiresValueSnapshot } from "./external-action-types";
 import { computePackageTotals, computeSheetRecordTotal } from "./variation-package";
+import { resolveDelayEvent } from "./delay-events";
 import type { ExternalActionChoice, ExternalActionType } from "@prisma/client";
 
 const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days, per the task brief
@@ -704,48 +705,127 @@ export async function submitExternalActionResponse(
     });
   }
 
-  // Req 4/5 — the one genuinely new side effect this feature adds on top
-  // of the existing ExternalAction mechanics: an approved Hours on Site
-  // sheet is marked Approved (locking further edits, see
-  // lib/hours-on-site.ts) and its creator gets a confirmation email. Every
-  // other target type (VariationItem/DayWorksSheet/VariationPackage) is
-  // untouched by a response today, and stays that way here.
-  if (action.hoursOnSiteSheetId && choice === "approved") {
-    const sheet = await prisma.hoursOnSiteSheet.update({
-      where: { id: action.hoursOnSiteSheetId },
-      data: {
-        approvedAt: respondedAt,
-        approvedByName: input.name.trim(),
-        approvedByExternalActionId: action.id
-      },
-      include: {
-        createdByUser: { select: { firstName: true, lastName: true, email: true } },
-        project: { select: { name: true } },
-        variationItem: { select: { reference: true, title: true } }
-      }
-    });
-
-    const creatorName = formatUserName(sheet.createdByUser) ?? sheet.createdByUser.email;
-    const sourceLabel = sheet.variationItem
-      ? `Hours on Site — ${sheet.variationItem.reference} — ${sheet.variationItem.title}`
-      : `Hours on Site — ${sheet.comments ?? "General labour"}`;
-    const baseUrl = process.env.AUTH_URL ?? "";
-
-    try {
-      await sendHoursOnSiteApprovedEmail({
-        to: sheet.createdByUser.email,
-        creatorName,
-        projectName: sheet.project.name,
-        sourceLabel,
-        approvedByName: input.name.trim(),
-        sheetUrl: `${baseUrl}/m/dayworks/${sheet.projectId}/${sheet.id}`
+  // Req 4/5 — Hours on Site keeps its own dedicated handling (an approved
+  // sheet is marked Approved, locking further edits, see
+  // lib/hours-on-site.ts) — untouched below, including the original rule
+  // that only an "approved" choice does anything for it. Every OTHER
+  // target type goes through the generic branch in the `else` instead.
+  if (action.hoursOnSiteSheetId) {
+    if (choice === "approved") {
+      const sheet = await prisma.hoursOnSiteSheet.update({
+        where: { id: action.hoursOnSiteSheetId },
+        data: {
+          approvedAt: respondedAt,
+          approvedByName: input.name.trim(),
+          approvedByExternalActionId: action.id
+        },
+        include: {
+          createdByUser: { select: { firstName: true, lastName: true, email: true } },
+          project: { select: { name: true } },
+          variationItem: { select: { reference: true, title: true } }
+        }
       });
-    } catch (error) {
-      // Non-fatal — the approval itself is already recorded; a hiccup
-      // sending the confirmation email shouldn't fail the recipient's
-      // submission (they've already told the sheet's creator nothing about
-      // whether their own click succeeded).
-      console.error("Failed to send Hours on Site approval confirmation email:", error);
+
+      const creatorName = formatUserName(sheet.createdByUser) ?? sheet.createdByUser.email;
+      const sourceLabel = sheet.variationItem
+        ? `Hours on Site — ${sheet.variationItem.reference} — ${sheet.variationItem.title}`
+        : `Hours on Site — ${sheet.comments ?? "General labour"}`;
+      const baseUrl = process.env.AUTH_URL ?? "";
+
+      try {
+        await sendHoursOnSiteApprovedEmail({
+          to: sheet.createdByUser.email,
+          creatorName,
+          projectName: sheet.project.name,
+          sourceLabel,
+          approvedByName: input.name.trim(),
+          sheetUrl: `${baseUrl}/m/dayworks/${sheet.projectId}/${sheet.id}`
+        });
+      } catch (error) {
+        // Non-fatal — the approval itself is already recorded; a hiccup
+        // sending the confirmation email shouldn't fail the recipient's
+        // submission (they've already told the sheet's creator nothing about
+        // whether their own click succeeded).
+        console.error("Failed to send Hours on Site approval confirmation email:", error);
+      }
+    }
+  } else {
+    // Every other target type — until now, genuinely untouched by a
+    // response (see this function's own history: only Hours on Site got a
+    // sender notification and any auto side-effect). Two things happen
+    // here for all of them: the original sender gets emailed the outcome
+    // (they previously had no signal a response had even arrived short of
+    // noticing the status change in the app), and a Delay Event
+    // additionally gets auto-resolved when the response is clean enough
+    // to act on without a human re-reading it first.
+    const [sender, project] = await Promise.all([
+      prisma.user.findUnique({ where: { id: action.sentByUserId }, select: { firstName: true, lastName: true, email: true } }),
+      prisma.project.findUnique({ where: { id: action.projectId }, select: { name: true } })
+    ]);
+    const baseUrl = process.env.AUTH_URL ?? "";
+    const typeLabel = EXTERNAL_ACTION_TYPE_LABELS[action.type];
+
+    let sourceLabel = "";
+    let itemUrl = `${baseUrl}/projects/${action.projectId}`;
+
+    if (action.delayEventId) {
+      const delayEvent = await prisma.delayEvent.findUnique({
+        where: { id: action.delayEventId },
+        select: { cause: true, daysClaimed: true, status: true }
+      });
+      sourceLabel = delayEvent ? `Delay/EOT — ${delayEvent.cause}` : "Delay/EOT notice";
+      itemUrl = `${baseUrl}/projects/${action.projectId}/delay-events/${action.delayEventId}`;
+
+      // Auto-resolve only a CLEAN response — approved/rejected with no
+      // comment attached, on an event still awaiting resolution, and (for
+      // an award) only when daysClaimed was actually given at logging
+      // time. Every piece of information needed to resolve it this way
+      // was already in the request that was sent; a comment means the
+      // recipient pushed back or qualified their answer, which needs a
+      // human to actually read it, not an automatic assumption it means
+      // "as claimed".
+      if (delayEvent && delayEvent.status === "notice_sent" && !input.comment?.trim()) {
+        if (choice === "approved" && delayEvent.daysClaimed != null) {
+          await resolveDelayEvent({ delayEventId: action.delayEventId, status: "awarded", daysAwarded: delayEvent.daysClaimed });
+        } else if (choice === "rejected") {
+          await resolveDelayEvent({ delayEventId: action.delayEventId, status: "rejected" });
+        }
+      }
+    } else if (action.variationItemId) {
+      const item = await prisma.variationItem.findUnique({
+        where: { id: action.variationItemId },
+        select: { reference: true, title: true }
+      });
+      sourceLabel = item ? `${item.reference} — ${item.title}` : "Variation/Site Instruction";
+      itemUrl = `${baseUrl}/projects/${action.projectId}/variations/${action.variationItemId}`;
+    } else if (action.dayWorksSheetId) {
+      const sheet = await prisma.dayWorksSheet.findUnique({
+        where: { id: action.dayWorksSheetId },
+        select: { variationItemId: true, variationItem: { select: { reference: true, title: true } } }
+      });
+      sourceLabel = sheet ? `Day Works Sheet — ${sheet.variationItem.reference}` : "Day Works Sheet";
+      itemUrl = sheet ? `${baseUrl}/projects/${action.projectId}/variations/${sheet.variationItemId}` : itemUrl;
+    }
+
+    if (sender?.email) {
+      try {
+        await sendExternalActionResponseEmail({
+          to: sender.email,
+          senderName: formatUserName(sender) ?? sender.email,
+          responderName: input.name.trim(),
+          projectName: project?.name ?? "your project",
+          sourceLabel,
+          typeLabel,
+          choice,
+          comment: input.comment?.trim() || null,
+          itemUrl
+        });
+      } catch (error) {
+        // Non-fatal — same reasoning as the Hours on Site email above: the
+        // response itself is already recorded, a notification hiccup
+        // shouldn't fail the recipient's already-successful submission.
+        console.error("Failed to send External Action response notification email:", error);
+      }
     }
   }
 

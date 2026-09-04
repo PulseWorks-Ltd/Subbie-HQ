@@ -14,7 +14,7 @@ export default async function DelayEventsPage({ params }: { params: Promise<{ pr
     redirect(`/projects/${projectId}`);
   }
 
-  const [delayEvents, taggableItems] = await Promise.all([
+  const [delayEvents, taggableItems, project] = await Promise.all([
     prisma.delayEvent.findMany({
       where: { projectId },
       include: {
@@ -27,8 +27,20 @@ export default async function DelayEventsPage({ params }: { params: Promise<{ pr
       where: { projectId, closedAt: null },
       select: { id: true, reference: true, title: true },
       orderBy: { createdAt: "desc" }
-    })
+    }),
+    prisma.project.findUnique({ where: { id: projectId }, select: { mainContractorId: true } })
   ]);
 
-  return <DelayEventsListView projectId={projectId} delayEvents={delayEvents} taggableItems={taggableItems} />;
+  // Same contact source as the detail page's own Send Notice dialog — the
+  // Log Delay Event dialog can now optionally send the notice as part of
+  // logging it (see DelayEventFormDialog), so it needs the same list.
+  const contacts = project?.mainContractorId
+    ? await prisma.mainContractorContact.findMany({
+        where: { mainContractorId: project.mainContractorId },
+        select: { id: true, name: true, email: true, role: true },
+        orderBy: { name: "asc" }
+      })
+    : [];
+
+  return <DelayEventsListView projectId={projectId} delayEvents={delayEvents} taggableItems={taggableItems} contacts={contacts} />;
 }

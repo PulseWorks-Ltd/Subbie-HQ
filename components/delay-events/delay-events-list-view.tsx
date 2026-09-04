@@ -10,6 +10,7 @@ type DelayEventRow = DelayEvent & {
   variationItem: Pick<VariationItem, "id" | "reference" | "title"> | null;
   externalActions: Pick<ExternalAction, "status" | "responseChoice" | "respondedAt">[];
 };
+type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 
 function formatDate(date: Date | string | null) {
   if (!date) return "—";
@@ -19,11 +20,13 @@ function formatDate(date: Date | string | null) {
 export function DelayEventsListView({
   projectId,
   delayEvents,
-  taggableItems
+  taggableItems,
+  contacts
 }: {
   projectId: string;
   delayEvents: DelayEventRow[];
   taggableItems: Pick<VariationItem, "id" | "reference" | "title">[];
+  contacts: ContactOption[];
 }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -82,7 +85,13 @@ export function DelayEventsListView({
         </div>
       )}
 
-      <DelayEventFormDialog projectId={projectId} taggableItems={taggableItems} open={isDialogOpen} onClose={() => setIsDialogOpen(false)} />
+      <DelayEventFormDialog
+        projectId={projectId}
+        taggableItems={taggableItems}
+        contacts={contacts}
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+      />
     </div>
   );
 }

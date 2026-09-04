@@ -415,6 +415,12 @@ model Organisation {
   // per-state Australian granularity later doesn't need a migration.
   // Nullable, defaults unset for every existing organisation.
   jurisdiction            String?
+  // Payment Claim PDF FROM-block details — free text, nullable (no
+  // existing organisation has one set). Postal address and GST
+  // registration number, both as the subcontractor would print them on
+  // their own letterhead.
+  address                 String?
+  gstNumber               String?
   variationCompletionMode VariationCompletionMode   @default(requires_confirmation)
   // Pilot-phase safety cap, not real billing — the sum of this org's
   // AiUsageLog.costUsd within the current calendar month is checked against
@@ -530,6 +536,11 @@ model Project {
   // Main Contractor's own job/contract number for this project — distinct
   // from `code`, which is Subbie HQ's internal project reference.
   jobNumber          String?
+  // The physical site address — "Location" on a Payment Claim PDF and
+  // (per-document override) the QA Document generator's own free-text
+  // field. No such field existed anywhere before this — genuinely new,
+  // not a rename.
+  siteAddress        String?
   mainContractorId   String?
   createdAt          DateTime  @default(now())
 
@@ -1119,6 +1130,9 @@ model MainContractor {
   id             String   @id @default(cuid())
   organisationId String
   name           String
+  // Payment Claim PDF TO-block — free text, nullable (no existing Main
+  // Contractor has one set).
+  address        String?
   createdAt      DateTime @default(now())
 
   organisation Organisation            @relation(fields: [organisationId], references: [id])

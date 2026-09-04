@@ -6,7 +6,9 @@ import { getOrganisationMembership, requireOrganisationAdmin } from "@/lib/organ
 import { hasModuleAccess } from "@/lib/permissions";
 
 const updateSchema = z.object({
-  name: z.string().min(1)
+  name: z.string().min(1).optional(),
+  // Payment Claim PDF TO-block.
+  address: z.string().min(1).nullable().optional()
 });
 
 export async function GET(request: Request, context: { params: { mainContractorId: string } }) {
@@ -55,7 +57,7 @@ export async function PATCH(request: Request, context: { params: { mainContracto
   const payload = updateSchema.parse(await request.json());
   const mainContractor = await prisma.mainContractor.update({
     where: { id: mainContractorId },
-    data: { name: payload.name }
+    data: { name: payload.name, address: payload.address }
   });
 
   return NextResponse.json({ mainContractor });

@@ -30,6 +30,22 @@ export function MainContractorDetailView({
   const [isEditingName, setIsEditingName] = useState(false);
   const [name, setName] = useState(mainContractor.name);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [address, setAddress] = useState(mainContractor.address ?? "");
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+
+  async function handleSaveAddress(event: React.FormEvent) {
+    event.preventDefault();
+    setIsSavingAddress(true);
+    await fetch(`/api/organisation/main-contractors/${mainContractor.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: address.trim() || null })
+    });
+    setIsSavingAddress(false);
+    setIsEditingAddress(false);
+    router.refresh();
+  }
 
   function openCreateContact() {
     setEditingContact(null);
@@ -97,6 +113,41 @@ export function MainContractorDetailView({
               className="text-xs font-bold text-primary hover:underline"
             >
               Rename
+            </button>
+          )}
+        </div>
+      )}
+
+      {isEditingAddress ? (
+        <form onSubmit={handleSaveAddress} className="flex items-center gap-3">
+          <input
+            type="text"
+            autoFocus
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            placeholder="Postal address — shown on Payment Claim PDFs"
+            className="h-10 flex-1 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm"
+          />
+          <button type="submit" disabled={isSavingAddress} className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60">
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAddress(mainContractor.address ?? "");
+              setIsEditingAddress(false);
+            }}
+            className="h-10 px-4 rounded-lg border border-[#e7edf3] dark:border-slate-700 text-sm font-medium"
+          >
+            Cancel
+          </button>
+        </form>
+      ) : (
+        <div className="flex items-center gap-3 -mt-3">
+          <p className="text-sm text-[#4c739a] dark:text-slate-400">{mainContractor.address || "No address on file"}</p>
+          {isAdmin && (
+            <button onClick={() => setIsEditingAddress(true)} className="text-xs font-bold text-primary hover:underline">
+              {mainContractor.address ? "Edit address" : "Add address"}
             </button>
           )}
         </div>

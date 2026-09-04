@@ -58,6 +58,7 @@ export default async function PaymentClaimDetailPage({
       scheduleThisClaim={data.figures.scheduleThisClaim}
       retentionPercent={data.retentionPercent}
       variations={data.variations}
+      approvedVariationsTotal={data.figures.approvedVariationsTotal}
     />
   );
 }

@@ -29,6 +29,7 @@ export function SettingsView({
   projectId,
   riskLevel: initialRiskLevel,
   invoiceModeEnabled: initialInvoiceModeEnabled,
+  siteAddress: initialSiteAddress,
   variationAutomationMode,
   contractTerms,
   contacts,
@@ -39,6 +40,7 @@ export function SettingsView({
   projectId: string;
   riskLevel: RiskLevel;
   invoiceModeEnabled: boolean;
+  siteAddress: string | null;
   variationAutomationMode: VariationAutomationMode;
   contractTerms: ContractTerms | null;
   contacts: ContactOption[];
@@ -49,6 +51,7 @@ export function SettingsView({
   const router = useRouter();
   const [riskLevel, setRiskLevel] = useState<RiskLevel>(initialRiskLevel);
   const [invoiceModeEnabled, setInvoiceModeEnabled] = useState(initialInvoiceModeEnabled);
+  const [siteAddress, setSiteAddress] = useState(initialSiteAddress ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSaveProject(event: React.FormEvent) {
@@ -57,7 +60,7 @@ export function SettingsView({
     await fetch(`/api/projects/${projectId}/settings`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ riskLevel, invoiceModeEnabled })
+      body: JSON.stringify({ riskLevel, invoiceModeEnabled, siteAddress: siteAddress.trim() || null })
     });
     setIsSaving(false);
     router.refresh();
@@ -97,6 +100,16 @@ export function SettingsView({
             className="size-4 rounded border-[#e7edf3] dark:border-slate-700"
           />
           Invoice mode enabled
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Site address <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional — shown as "Location" on Payment Claim PDFs)</span>
+          <input
+            type="text"
+            value={siteAddress}
+            onChange={(event) => setSiteAddress(event.target.value)}
+            className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
         </label>
 
         <div>

@@ -8,7 +8,10 @@ const updateSchema = z.object({
   invoiceModeEnabled: z.boolean().optional(),
   nextClaimDate: z.string().datetime().optional(),
   riskLevel: z.enum(["low", "medium", "high"]).optional(),
-  variationAutomationMode: z.enum(["manual", "automatic_with_approval", "fully_automatic"]).optional()
+  variationAutomationMode: z.enum(["manual", "automatic_with_approval", "fully_automatic"]).optional(),
+  // "Location" on a Payment Claim PDF — plain informational text, not
+  // gated admin-only like riskLevel/invoiceModeEnabled/variationAutomationMode below.
+  siteAddress: z.string().min(1).nullable().optional()
 });
 
 export async function PATCH(request: Request, context: { params: { projectId: string } }) {
@@ -56,6 +59,7 @@ export async function PATCH(request: Request, context: { params: { projectId: st
     data: {
       invoiceModeEnabled: payload.invoiceModeEnabled,
       nextClaimDate: payload.nextClaimDate ? new Date(payload.nextClaimDate) : undefined,
+      siteAddress: payload.siteAddress,
       riskLevel: payload.riskLevel,
       variationAutomationMode: payload.variationAutomationMode,
       // Attributed to whoever turns automation on — the real accountable

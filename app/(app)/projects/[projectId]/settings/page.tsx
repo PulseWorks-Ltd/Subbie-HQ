@@ -14,6 +14,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ proje
       organisationId: true,
       riskLevel: true,
       invoiceModeEnabled: true,
+      siteAddress: true,
       variationAutomationMode: true,
       mainContractorId: true,
       status: true
@@ -49,6 +50,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ proje
       projectId={projectId}
       riskLevel={project.riskLevel}
       invoiceModeEnabled={project.invoiceModeEnabled}
+      siteAddress={project.siteAddress}
       variationAutomationMode={project.variationAutomationMode}
       contractTerms={contractTerms}
       contacts={contacts}

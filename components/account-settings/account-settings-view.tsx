@@ -40,6 +40,8 @@ export function AccountSettingsView({
     name: string;
     trade: string | null;
     jurisdiction: string | null;
+    address: string | null;
+    gstNumber: string | null;
     accessStatus: string;
     planTier: string | null;
     trialEndsAt: Date | null;

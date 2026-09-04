@@ -190,6 +190,8 @@ export function OrganisationTab({
     name: string;
     trade: string | null;
     jurisdiction: string | null;
+    address: string | null;
+    gstNumber: string | null;
     accessStatus: string;
     planTier: string | null;
     trialEndsAt: Date | null;
@@ -206,6 +208,8 @@ export function OrganisationTab({
   );
   const [customTrade, setCustomTrade] = useState(!isPreset ? organisation.trade ?? "" : "");
   const [jurisdiction, setJurisdiction] = useState<string>(organisation.jurisdiction ?? "");
+  const [address, setAddress] = useState(organisation.address ?? "");
+  const [gstNumber, setGstNumber] = useState(organisation.gstNumber ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -221,7 +225,13 @@ export function OrganisationTab({
     const response = await fetch("/api/organisation", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), trade, jurisdiction: jurisdiction || null })
+      body: JSON.stringify({
+        name: name.trim(),
+        trade,
+        jurisdiction: jurisdiction || null,
+        address: address.trim() || null,
+        gstNumber: gstNumber.trim() || null
+      })
     });
     setIsSaving(false);
 
@@ -297,6 +307,26 @@ export function OrganisationTab({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Postal address <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional — shown on Payment Claim PDFs)</span>
+          <input
+            type="text"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          GST number <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+          <input
+            type="text"
+            value={gstNumber}
+            onChange={(event) => setGstNumber(event.target.value)}
+            className="h-10 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
         </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

@@ -43,6 +43,18 @@ export async function embedOrganisationLogo(doc: PDFDocument, logo: OrgLogo): Pr
   }
 }
 
+// Same fit-without-distorting scale math as drawLogo, but returns the
+// resulting box size WITHOUT drawing anything — for a caller that needs
+// to know the logo's final width before it can position it (e.g. a
+// top-right-anchored logo needs its width to compute x = PAGE_WIDTH -
+// MARGIN - width before drawLogo can be called). Added rather than
+// changing drawLogo's own signature, since every existing caller already
+// passes a fixed top-left x it computed itself.
+export function measureLogoSize(image: PDFImage, maxWidth: number, maxHeight: number): { width: number; height: number } {
+  const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
+  return { width: image.width * scale, height: image.height * scale };
+}
+
 // The one shared "logo in the corner" convention — scaled to fit inside a
 // fixed box without distorting its aspect ratio. (x, y) is the box's
 // top-left corner; pdf-lib's own coordinate origin is bottom-left, so this

@@ -123,6 +123,25 @@ export function computeRentalClaimedToDate(weeklyRate: number, checkpoints: Prog
   return computeRentalValueForPeriod(weeklyRate, sorted, sorted[0].effectiveDate, asOfDate);
 }
 
+// Payment Claim PDF's Hire Schedule page — "Days on hire (this period)".
+// Same day-walk as computeRentalValueForPeriod, but counting days with a
+// non-zero % rather than summing a dollar value — a separate function
+// rather than deriving it from the dollar total, since a day at a partial
+// % still counts as a full "day on hire" for this column even though it
+// contributes less than a full day's rate to the $ total.
+export function computeDaysOnHireForPeriod(checkpoints: ProgressCheckpoint[], periodStart: Date, periodEnd: Date): number {
+  const sorted = sortCheckpoints(checkpoints);
+  if (sorted.length === 0) return 0;
+
+  let days = 0;
+  const start = startOfDay(periodStart);
+  const end = startOfDay(periodEnd);
+  for (let day = start; day.getTime() <= end.getTime(); day = addDays(day, 1)) {
+    if (percentOnDay(sorted, day) > 0) days += 1;
+  }
+  return days;
+}
+
 // ============================================================
 // Prisma-shaped rollups — the read side the UI and Payment Claims page
 // actually call, wrapping the pure functions above around real component/
@@ -147,6 +166,17 @@ export type ComponentValueBreakdown = {
   claimedToDate: number;
   previousClaimedToDate: number;
   thisClaimAmount: number;
+  // Hire Schedule page (Payment Claim PDF) — meaningless for a "fixed"
+  // component, left at 0 rather than omitted so every component has the
+  // same shape regardless of kind.
+  weeklyRate: number;
+  daysOnHireThisPeriod: number;
+  percentOnHireAtPeriodEnd: number;
+  // Appendix B2's "Total Value (excl GST)" column — same convention as
+  // computeScheduleTotalValue (a weekly_hire component has no natural
+  // closing total; this is the quote's own originally-assumed total,
+  // rate × quoted duration, purely for display).
+  totalValue: number;
 };
 
 export type ContractItemValueBreakdown = {
@@ -184,7 +214,11 @@ export function computeScheduleClaimBreakdown(
           kind: component.kind,
           claimedToDate,
           previousClaimedToDate,
-          thisClaimAmount: computeRentalValueForPeriod(rate, checkpoints, periodStart, periodEnd)
+          thisClaimAmount: computeRentalValueForPeriod(rate, checkpoints, periodStart, periodEnd),
+          weeklyRate: rate,
+          daysOnHireThisPeriod: computeDaysOnHireForPeriod(checkpoints, periodStart, periodEnd),
+          percentOnHireAtPeriodEnd: resolvePhasePercent(checkpoints, periodEnd),
+          totalValue: round2(rate * (component.quotedDurationWeeks ?? 0))
         };
       }
 
@@ -198,6 +232,10 @@ export function computeScheduleClaimBreakdown(
       return {
         componentId: component.id,
         label: component.label,
+        weeklyRate: 0,
+        daysOnHireThisPeriod: 0,
+        percentOnHireAtPeriodEnd: 0,
+        totalValue: amount,
         kind: component.kind,
         claimedToDate,
         previousClaimedToDate,

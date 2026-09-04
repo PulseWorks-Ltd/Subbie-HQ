@@ -260,7 +260,8 @@ export function PaymentClaimDetailView({
   scheduleThisClaim,
   retentionPercent,
   variations,
-  contacts
+  contacts,
+  approvedVariationsTotal
 }: {
   projectId: string;
   claim: {
@@ -283,6 +284,13 @@ export function PaymentClaimDetailView({
   retentionPercent: number;
   variations: VariationRow[];
   contacts: ContactOption[];
+  // From lib/payment-claim.ts's getPaymentClaimComputedData — NOT
+  // re-derived here anymore. It used to be (a plain sum of every
+  // variation's value, approved or not), which is the exact bug the
+  // Payment Claim PDF rework fixed: a variation that's never actually
+  // been claimed doesn't count as "Approved" until it has been. Passed in
+  // so this on-screen summary and the generated PDF can never disagree.
+  approvedVariationsTotal: number;
 }) {
   const router = useRouter();
   const [allocationInputs, setAllocationInputs] = useState<Record<string, string>>(
@@ -290,7 +298,6 @@ export function PaymentClaimDetailView({
   );
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  const approvedVariationsTotal = variations.reduce((sum, v) => sum + v.value, 0);
   const variationsClaimedToDate = variations.reduce((sum, v) => sum + v.totalAllocatedAcrossAllClaims, 0);
   const variationsThisClaim = variations.reduce((sum, v) => sum + v.thisClaimAmount, 0);
 

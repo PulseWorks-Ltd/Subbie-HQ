@@ -1,6 +1,7 @@
 import type { ClaimEvidenceType } from "@prisma/client";
 import { prisma } from "./prisma";
 import { getContractScheduleForProject, computeScheduleClaimBreakdown, computeScheduleTotalValue, sumBreakdown, type ContractItemValueBreakdown } from "./contract-schedule";
+import { computeTotalRetentionWithheld } from "./retention";
 
 function round2(value: number) {
   return Math.round(value * 100) / 100;
@@ -14,6 +15,9 @@ export type PaymentClaimVariationRow = {
   closed: boolean;
   thisClaimAmount: number;
   totalAllocatedAcrossAllClaims: number;
+  // Derived, not stored — see the comment in getPaymentClaimComputedData
+  // on how "approved" is determined (ever claimed a non-zero amount).
+  approved: boolean;
 };
 
 // Every number the Payment Claim detail page shows AND the Payment Claim
@@ -54,7 +58,10 @@ export async function getPaymentClaimComputedData(projectId: string, claimId: st
       },
       orderBy: { variationCreatedAt: "asc" }
     }),
-    prisma.project.findUnique({ where: { id: projectId }, select: { name: true, mainContractorId: true, organisationId: true } })
+    prisma.project.findUnique({
+      where: { id: projectId },
+      select: { name: true, mainContractorId: true, organisationId: true, jobNumber: true, siteAddress: true }
+    })
   ]);
 
   const breakdown = schedule
@@ -73,19 +80,44 @@ export async function getPaymentClaimComputedData(projectId: string, claimId: st
       value: item.variationValue != null ? Number(item.variationValue) : 0,
       closed: item.closedAt != null,
       thisClaimAmount: thisClaimAllocation ? Number(thisClaimAllocation.amount) : 0,
-      totalAllocatedAcrossAllClaims: totalAllocated
+      totalAllocatedAcrossAllClaims: totalAllocated,
+      approved: totalAllocated > 0
     };
   });
 
+  // The fix for the reported bug: a variation only counts as "Approved"
+  // (rows 2/3/6) once it's actually been allocated a non-zero amount in
+  // SOME claim, ever — one that's never been claimed is "awaiting
+  // approval" (row 4) instead. The schema has no explicit MC-approval
+  // flag, so this is the agreed proxy (confirmed with the user), derived
+  // entirely from real allocation data already computed above. A direct
+  // consequence: row 7 ("variations waiting for approval... claimed to
+  // date") is always 0 by construction — an "awaiting" variation has
+  // never been claimed, so there's nothing to report there — which is
+  // exactly what keeps an unclaimed variation out of rows 10/12/14 even
+  // though row 10 = 5+6+7+8+9 sums row 7 in.
+  const approvedVariations = variations.filter((v) => v.approved);
+  const awaitingVariations = variations.filter((v) => !v.approved);
+
   const retentionPercent = contractTerms?.retentionPercent ?? 5;
-  const approvedVariationsTotal = variations.reduce((sum, v) => sum + v.value, 0);
-  const variationsClaimedToDate = variations.reduce((sum, v) => sum + v.totalAllocatedAcrossAllClaims, 0);
-  const variationsThisClaim = variations.reduce((sum, v) => sum + v.thisClaimAmount, 0);
+  const approvedVariationsTotal = approvedVariations.reduce((sum, v) => sum + v.value, 0);
+  const variationsAwaitingApprovalTotal = awaitingVariations.reduce((sum, v) => sum + v.value, 0);
+  const variationsClaimedToDate = approvedVariations.reduce((sum, v) => sum + v.totalAllocatedAcrossAllClaims, 0);
+  const variationsThisClaim = approvedVariations.reduce((sum, v) => sum + v.thisClaimAmount, 0);
   const otherAmount = Number(claim.otherAmount);
 
   const revisedSubcontractSum = round2(originalSubcontractSum + approvedVariationsTotal);
   const grossClaimToDate = round2(scheduleTotals.claimedToDate + variationsClaimedToDate + otherAmount);
-  const retention = round2(grossClaimToDate * (retentionPercent / 100));
+  // Row 11 — the real, existing Retention V2 calculation (lib/retention.ts),
+  // not a re-derived approximation. computeTotalRetentionWithheld excludes
+  // DRAFT claims (a claim not yet issued hasn't really had retention
+  // withheld yet) — but this PDF is most often previewed/downloaded before
+  // the first send, while the claim is still draft, so its own
+  // contribution needs adding on top in that case, or "retention to date"
+  // would silently exclude the very claim being viewed.
+  const retentionExcludingThisClaim = await computeTotalRetentionWithheld(projectId);
+  const thisClaimOwnRetention = claim.status === "draft" ? round2(Number(claim.claimedAmount) * (retentionPercent / 100)) : 0;
+  const retention = round2(retentionExcludingThisClaim + thisClaimOwnRetention);
   const netClaimToDate = round2(grossClaimToDate - retention);
 
   const thisClaimGross = round2(scheduleTotals.thisClaim + variationsThisClaim + otherAmount);
@@ -101,6 +133,8 @@ export async function getPaymentClaimComputedData(projectId: string, claimId: st
 
   return {
     projectName: project?.name ?? "",
+    projectJobNumber: project?.jobNumber ?? null,
+    projectSiteAddress: project?.siteAddress ?? null,
     mainContractorId: project?.mainContractorId ?? null,
     organisationId: project?.organisationId ?? null,
     claim: {
@@ -123,9 +157,11 @@ export async function getPaymentClaimComputedData(projectId: string, claimId: st
       originalSubcontractSum,
       approvedVariationsTotal,
       revisedSubcontractSum,
-      variationsAwaitingApproval: 0, // not modelled in this app — see comment above
+      variationsAwaitingApproval: variationsAwaitingApprovalTotal,
       scheduleClaimedToDate: scheduleTotals.claimedToDate,
       variationsClaimedToDate,
+      // Always 0 by construction — see the comment above where
+      // approvedVariations/awaitingVariations are split.
       variationsAwaitingApprovalToDate: 0,
       fluctuations: 0,
       materialsOnOffSite: 0,

@@ -4,23 +4,26 @@ import { prisma } from "./prisma";
 // lib/login-rate-limit.ts, keyed by source IP rather than email — there's
 // no email being submitted at token-lookup time, so IP is the only
 // available signal for "someone trying many different token guesses."
-// Only FAILED lookups are recorded (see lib/external-action.ts), so a
-// legitimate recipient opening their own valid link never spends this
-// budget. The token's own 256 bits of randomness already makes brute-force
-// computationally infeasible; this is defense-in-depth on top of that, not
-// the primary defense.
+// Shared by every public, no-login token-lookup route (external actions
+// AND organisation invites): only FAILED lookups are recorded by each
+// caller, so a legitimate recipient opening their own valid link never
+// spends this budget. `scope` keeps each token type's attempt count
+// independent — a burst of failed invite guesses must never eat into the
+// external-action budget, or vice versa.
+export type PublicTokenScope = "external-action" | "invite";
+
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS = 20;
 
-export async function isExternalActionLookupRateLimited(ipAddress: string): Promise<boolean> {
-  const recentCount = await prisma.externalActionLookupAttempt.count({
-    where: { ipAddress, createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) } }
+export async function isPublicTokenLookupRateLimited(scope: PublicTokenScope, ipAddress: string): Promise<boolean> {
+  const recentCount = await prisma.publicTokenLookupAttempt.count({
+    where: { scope, ipAddress, createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MS) } }
   });
   return recentCount >= RATE_LIMIT_MAX_ATTEMPTS;
 }
 
-export async function recordFailedExternalActionLookup(ipAddress: string): Promise<void> {
-  await prisma.externalActionLookupAttempt.create({ data: { ipAddress } });
+export async function recordFailedPublicTokenLookup(scope: PublicTokenScope, ipAddress: string): Promise<void> {
+  await prisma.publicTokenLookupAttempt.create({ data: { scope, ipAddress } });
 }
 
 // Next.js doesn't expose a first-class "client IP" API for server

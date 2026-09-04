@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSignedDownloadUrl } from "@/lib/s3";
-import { getClientIp, isExternalActionLookupRateLimited, recordFailedExternalActionLookup } from "@/lib/external-action-rate-limit";
+import { getClientIp, isPublicTokenLookupRateLimited, recordFailedPublicTokenLookup } from "@/lib/public-token-rate-limit";
 import crypto from "crypto";
 
 function hashToken(rawToken: string): string {
@@ -16,7 +16,7 @@ function hashToken(rawToken: string): string {
 // how valid it otherwise is.
 export async function GET(request: Request, context: { params: { token: string } }) {
   const ip = getClientIp(request);
-  if (await isExternalActionLookupRateLimited(ip)) {
+  if (await isPublicTokenLookupRateLimited("external-action", ip)) {
     return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
   }
 
@@ -26,7 +26,7 @@ export async function GET(request: Request, context: { params: { token: string }
   });
 
   if (!action || !action.variationPackage) {
-    await recordFailedExternalActionLookup(ip);
+    await recordFailedPublicTokenLookup("external-action", ip);
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   if (action.status === "expired" || (action.status === "pending" && action.expiresAt < new Date())) {

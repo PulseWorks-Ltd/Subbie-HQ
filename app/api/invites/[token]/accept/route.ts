@@ -4,18 +4,28 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/auth";
 import { splitFullName } from "@/lib/user-display";
+import { getClientIp, isPublicTokenLookupRateLimited, recordFailedPublicTokenLookup } from "@/lib/public-token-rate-limit";
 
 const acceptInviteSchema = z.object({
   name: z.string().min(1).optional(),
   password: z.string().min(8).optional()
 });
 
+// Same per-IP throttle as GET ../route.ts, on the same "invite" scope —
+// deliberately shared budget across GET/POST for a given token guesser
+// rather than each handler getting its own independent 20 attempts.
 export async function POST(request: Request, context: { params: { token: string } }) {
+  const ip = getClientIp(request);
+  if (await isPublicTokenLookupRateLimited("invite", ip)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+
   const invite = await prisma.organisationInvite.findUnique({
     where: { token: context.params.token }
   });
 
   if (!invite || invite.acceptedAt || invite.expiresAt < new Date()) {
+    await recordFailedPublicTokenLookup("invite", ip);
     return NextResponse.json({ error: "This invite link is invalid or has expired." }, { status: 404 });
   }
 

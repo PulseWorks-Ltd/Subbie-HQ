@@ -5,6 +5,7 @@ import { requireUserId } from "@/lib/auth";
 import { getOrganisationMembership, requireOrganisationAdmin } from "@/lib/organisation";
 import { hasModuleAccess } from "@/lib/permissions";
 import { uploadToS3 } from "@/lib/s3";
+import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
 const certificateTypeSchema = z.enum([
   "public_liability",
@@ -65,6 +66,12 @@ export async function POST(request: Request) {
   let storageKey: string | undefined = existingStorageKey || undefined;
 
   if (file instanceof File && file.size > 0) {
+    if (!isAllowedAttachmentType(file.type)) {
+      return NextResponse.json({ error: `File must be one of: ${ALLOWED_ATTACHMENT_TYPES.join(", ")}.` }, { status: 400 });
+    }
+    if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+      return NextResponse.json({ error: "File must be 20MB or smaller." }, { status: 400 });
+    }
     const buffer = new Uint8Array(await file.arrayBuffer());
     const uploadKey = `organisations/${admin.organisationId}/insurance-certificates/${Date.now()}-${file.name}`;
     const uploaded = await uploadToS3({ key: uploadKey, body: buffer, contentType: file.type || "application/octet-stream" });

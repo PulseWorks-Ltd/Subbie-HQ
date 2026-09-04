@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
+import { ALLOWED_IMAGE_TYPES, MAX_ATTACHMENT_SIZE_BYTES, isAllowedImageType } from "@/lib/update-attachments";
 
 async function moduleForItem(projectId: string, itemId: string) {
   const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
@@ -52,8 +53,11 @@ export async function POST(request: Request, context: { params: { projectId: str
   let photoContentType: string | null = null;
   const photo = formData.get("photo");
   if (photo instanceof File && photo.size > 0) {
-    if (!photo.type.startsWith("image/")) {
-      return NextResponse.json({ error: "The receipt attachment must be an image." }, { status: 400 });
+    if (!isAllowedImageType(photo.type)) {
+      return NextResponse.json({ error: `The receipt attachment must be a ${ALLOWED_IMAGE_TYPES.join(" or ")} image.` }, { status: 400 });
+    }
+    if (photo.size > MAX_ATTACHMENT_SIZE_BYTES) {
+      return NextResponse.json({ error: "The receipt attachment must be 20MB or smaller." }, { status: 400 });
     }
     const buffer = new Uint8Array(await photo.arrayBuffer());
     const uploadKey = `projects/${projectId}/variation-items/${itemId}/materials/${Date.now()}-${photo.name}`;

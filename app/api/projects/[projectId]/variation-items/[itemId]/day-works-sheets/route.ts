@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { downloadFromS3, uploadToS3 } from "@/lib/s3";
+import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
 async function moduleForItem(projectId: string, itemId: string) {
   const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
@@ -107,8 +108,14 @@ export async function POST(request: Request, context: { params: { projectId: str
 
   const formData = await request.formData();
   const file = formData.get("file");
-  if (!file || !(file instanceof File)) {
+  if (!file || !(file instanceof File) || file.size === 0) {
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
+  }
+  if (!isAllowedAttachmentType(file.type)) {
+    return NextResponse.json({ error: `File must be one of: ${ALLOWED_ATTACHMENT_TYPES.join(", ")}.` }, { status: 400 });
+  }
+  if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+    return NextResponse.json({ error: "File must be 20MB or smaller." }, { status: 400 });
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());

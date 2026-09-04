@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getExternalActionForToken, submitExternalActionResponse } from "@/lib/external-action";
-import {
-  getClientIp,
-  isExternalActionLookupRateLimited,
-  recordFailedExternalActionLookup
-} from "@/lib/external-action-rate-limit";
+import { getClientIp, isPublicTokenLookupRateLimited, recordFailedPublicTokenLookup } from "@/lib/public-token-rate-limit";
 
 // Genuinely public — no auth of any kind. Both handlers below are the
 // ENTIRE public surface for this feature (Task 3.3): a valid token
@@ -16,13 +12,13 @@ import {
 // infeasible.
 export async function GET(request: Request, context: { params: { token: string } }) {
   const ip = getClientIp(request);
-  if (await isExternalActionLookupRateLimited(ip)) {
+  if (await isPublicTokenLookupRateLimited("external-action", ip)) {
     return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
   }
 
   const result = await getExternalActionForToken(context.params.token);
   if (!result.ok) {
-    await recordFailedExternalActionLookup(ip);
+    await recordFailedPublicTokenLookup("external-action", ip);
     return NextResponse.json({ error: result.error }, { status: 404 });
   }
 
@@ -37,7 +33,7 @@ const responseSchema = z.object({
 
 export async function POST(request: Request, context: { params: { token: string } }) {
   const ip = getClientIp(request);
-  if (await isExternalActionLookupRateLimited(ip)) {
+  if (await isPublicTokenLookupRateLimited("external-action", ip)) {
     return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
   }
 
@@ -45,7 +41,7 @@ export async function POST(request: Request, context: { params: { token: string 
   const result = await submitExternalActionResponse(context.params.token, payload);
 
   if (!result.ok) {
-    await recordFailedExternalActionLookup(ip);
+    await recordFailedPublicTokenLookup("external-action", ip);
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 

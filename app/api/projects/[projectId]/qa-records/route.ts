@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { downloadFromS3, uploadToS3 } from "@/lib/s3";
 import { MAX_QA_ATTACHMENTS } from "@/lib/qa-record-attachments";
+import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
@@ -168,6 +169,12 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
   if (files.length > MAX_QA_ATTACHMENTS) {
     return NextResponse.json({ error: `You can attach up to ${MAX_QA_ATTACHMENTS} files per QA record.` }, { status: 400 });
+  }
+  if (files.some((file) => !isAllowedAttachmentType(file.type))) {
+    return NextResponse.json({ error: `Files must be one of: ${ALLOWED_ATTACHMENT_TYPES.join(", ")}.` }, { status: 400 });
+  }
+  if (files.some((file) => file.size > MAX_ATTACHMENT_SIZE_BYTES)) {
+    return NextResponse.json({ error: "Each file must be 20MB or smaller." }, { status: 400 });
   }
 
   const variationItemId = await resolveVariationItemId(variationItemIdRaw);

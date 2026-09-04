@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
+import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 
 export async function GET(request: Request, context: { params: { projectId: string } }) {
   const userId = await requireUserId(request);
@@ -64,6 +65,12 @@ export async function POST(request: Request, context: { params: { projectId: str
   let storageKey: string | undefined;
 
   if (file instanceof File && file.size > 0) {
+    if (!isAllowedAttachmentType(file.type)) {
+      return NextResponse.json({ error: `File must be one of: ${ALLOWED_ATTACHMENT_TYPES.join(", ")}.` }, { status: 400 });
+    }
+    if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+      return NextResponse.json({ error: "File must be 20MB or smaller." }, { status: 400 });
+    }
     const buffer = new Uint8Array(await file.arrayBuffer());
     const uploadKey = `projects/${projectId}/correspondence/${Date.now()}-${file.name}`;
     const uploaded = await uploadToS3({ key: uploadKey, body: buffer, contentType: file.type || "application/octet-stream" });

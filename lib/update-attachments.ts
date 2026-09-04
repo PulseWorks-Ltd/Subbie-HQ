@@ -25,6 +25,22 @@ export function isAllowedAttachmentType(contentType: string): boolean {
   return (ALLOWED_ATTACHMENT_TYPES as readonly string[]).includes(contentType);
 }
 
+// Narrower allow-list for routes that only ever expect a photo (variation
+// Pictures, and the materials/plant receipt-photo attachment) — deliberately
+// excludes image/svg+xml, which the broader "does it start with image/"
+// check these routes used to run would otherwise accept. An SVG is XML, not
+// pixel data — it can carry a <script> that executes wherever it's later
+// rendered, so treating it as safe "just because the prefix matches" is the
+// wrong call for something a site-manager's phone camera never actually
+// produces. Kept separate from ALLOWED_ATTACHMENT_TYPES (which intentionally
+// keeps allowing PDF/DOCX for its own routes) rather than folding SVG
+// exclusion into a single shared list every caller has to remember to filter.
+export const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg"] as const;
+
+export function isAllowedImageType(contentType: string): boolean {
+  return (ALLOWED_IMAGE_TYPES as readonly string[]).includes(contentType);
+}
+
 export type AttachmentKind = "image" | "pdf" | "docx" | "other";
 
 export function attachmentKind(contentType: string | null | undefined): AttachmentKind {

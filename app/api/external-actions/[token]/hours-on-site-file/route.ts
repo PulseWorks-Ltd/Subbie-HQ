@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getSheetWithDetail } from "@/lib/hours-on-site";
 import { generateHoursOnSitePdf, paramsFromSheet } from "@/lib/hours-on-site-pdf";
-import { getClientIp, isExternalActionLookupRateLimited, recordFailedExternalActionLookup } from "@/lib/external-action-rate-limit";
+import { getClientIp, isPublicTokenLookupRateLimited, recordFailedPublicTokenLookup } from "@/lib/public-token-rate-limit";
 
 function hashToken(rawToken: string): string {
   return crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -20,7 +20,7 @@ function hashToken(rawToken: string): string {
 // Site one) gets a 404 here regardless of how valid it otherwise is.
 export async function GET(request: Request, context: { params: { token: string } }) {
   const ip = getClientIp(request);
-  if (await isExternalActionLookupRateLimited(ip)) {
+  if (await isPublicTokenLookupRateLimited("external-action", ip)) {
     return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
   }
 
@@ -30,7 +30,7 @@ export async function GET(request: Request, context: { params: { token: string }
   });
 
   if (!action || !action.hoursOnSiteSheetId) {
-    await recordFailedExternalActionLookup(ip);
+    await recordFailedPublicTokenLookup("external-action", ip);
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   if (action.status === "expired" || (action.status === "pending" && action.expiresAt < new Date())) {

@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { PRESETS } from "@/lib/permissions";
 import { sendWelcomeEmail } from "@/lib/email";
 import { formatUserName } from "@/lib/user-display";
+import { isRegisterRateLimited, recordRegisterAttempt } from "@/lib/register-rate-limit";
+import { getClientIp } from "@/lib/public-token-rate-limit";
 
 // This is specifically the "sign up and create a brand new organisation"
 // flow — joining an EXISTING organisation via an invite is a separate,
@@ -23,6 +25,16 @@ const registerSchema = z.object({
 export async function POST(request: Request) {
   const payload = registerSchema.parse(await request.json());
   const email = payload.email.toLowerCase().trim();
+  const ip = getClientIp(request);
+
+  // Recorded regardless of outcome (see lib/register-rate-limit.ts) — a
+  // legitimate signup only ever needs to hit this endpoint once, so unlike
+  // login/token rate limiting there's no "don't penalize a genuine retry"
+  // case to protect here.
+  if (await isRegisterRateLimited(ip, email)) {
+    return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+  }
+  await recordRegisterAttempt(ip, email);
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
 import { generateThumbnail } from "@/lib/image-thumbnails";
+import { ALLOWED_IMAGE_TYPES, MAX_ATTACHMENT_SIZE_BYTES, isAllowedImageType } from "@/lib/update-attachments";
 
 const MAX_PHOTOS = 10;
 
@@ -69,8 +70,11 @@ export async function POST(request: Request, context: { params: { projectId: str
   if (files.length > MAX_PHOTOS) {
     return NextResponse.json({ error: `You can upload up to ${MAX_PHOTOS} photos at once.` }, { status: 400 });
   }
-  if (files.some((file) => !file.type.startsWith("image/"))) {
-    return NextResponse.json({ error: "Only image files can be uploaded here." }, { status: 400 });
+  if (files.some((file) => !isAllowedImageType(file.type))) {
+    return NextResponse.json({ error: `Only ${ALLOWED_IMAGE_TYPES.join(" or ")} images can be uploaded here.` }, { status: 400 });
+  }
+  if (files.some((file) => file.size > MAX_ATTACHMENT_SIZE_BYTES)) {
+    return NextResponse.json({ error: "Each photo must be 20MB or smaller." }, { status: 400 });
   }
 
   const photos = [];

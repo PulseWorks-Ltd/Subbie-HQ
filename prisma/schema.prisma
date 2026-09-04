@@ -401,6 +401,27 @@ model LoginAttempt {
   @@index([email, createdAt])
 }
 
+// Anti-abuse throttle for the public registration endpoint (lib/register-
+// rate-limit.ts) — deliberately different from LoginAttempt/
+// ExternalActionLookupAttempt above, which only record FAILED attempts so a
+// legitimate user who mistypes a password never spends their own budget.
+// There's no equivalent "legitimate retry" case at registration: a genuine
+// signup only ever needs to submit this form once, so every call is
+// recorded regardless of outcome (new account vs. "email already exists")
+// — that's what actually caps the bcrypt-hashing + welcome-email cost an
+// attacker can force per IP or per email address within a window. Indexed
+// on both columns since the route checks both independently (an attacker
+// probing many emails from one IP, or hammering one email from many IPs).
+model RegisterAttempt {
+  id        String   @id @default(cuid())
+  ipAddress String
+  email     String
+  createdAt DateTime @default(now())
+
+  @@index([ipAddress, createdAt])
+  @@index([email, createdAt])
+}
+
 model Organisation {
   id                      String                    @id @default(cuid())
   name                    String
@@ -2594,19 +2615,29 @@ model ExternalAction {
   approvedHoursOnSiteSheet HoursOnSiteSheet?      @relation("HoursOnSiteSheetApprovedBy")
 }
 
-// Sliding-window throttle for the public token-lookup/response route —
-// same DB-row-count pattern as lib/login-rate-limit.ts, keyed by source IP
-// rather than email since there's no email being submitted at lookup time
-// (the attacker-controlled input here is the token guess itself). Only
-// FAILED lookups are recorded (see lib/external-action.ts), so a
-// legitimate recipient opening their own valid link never spends this
-// budget — it exists purely to slow down someone trying many token
-// guesses, on top of the 256-bit token space already making that
-// computationally infeasible on its own.
-model ExternalActionLookupAttempt {
+// Sliding-window throttle shared by every public, no-login token-lookup
+// route (see lib/public-token-rate-limit.ts) — same DB-row-count pattern as
+// lib/login-rate-limit.ts, keyed by source IP rather than email since
+// there's no email being submitted at lookup time (the attacker-controlled
+// input here is the token guess itself). Only FAILED lookups are recorded
+// (see lib/external-action.ts and the invite routes), so a legitimate
+// recipient opening their own valid link never spends this budget — it
+// exists purely to slow down someone trying many token guesses, on top of
+// whatever randomness the token itself already has.
+// `scope` (e.g. "external-action", "invite") keeps each token type's own
+// attempt count independent — a burst of failed invite guesses must never
+// eat into the external-action budget or vice versa. Model renamed from
+// ExternalActionLookupAttempt now that it's shared across token types;
+// @@map keeps the underlying table (and its existing rows) unchanged so no
+// data migration/table rename is needed, only an additive column.
+model PublicTokenLookupAttempt {
   id        String   @id @default(cuid())
+  scope     String
   ipAddress String
   createdAt DateTime @default(now())
+
+  @@index([scope, ipAddress, createdAt])
+  @@map("ExternalActionLookupAttempt")
 }
 
 model PushSubscription {

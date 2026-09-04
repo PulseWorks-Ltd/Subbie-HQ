@@ -335,6 +335,7 @@ export function buildContractItemCreateData(scheduleId: string, item: ContractIt
 export type TaggableContractItem = {
   id: string;
   description: string;
+  sectionLabel: string | null;
   components: {
     id: string;
     label: string;
@@ -358,6 +359,7 @@ export async function getTaggableContractItems(projectId: string): Promise<Tagga
         select: {
           id: true,
           description: true,
+          sectionLabel: true,
           components: {
             orderBy: { sortOrder: "asc" },
             select: { id: true, label: true, kind: true, phases: { orderBy: { sortOrder: "asc" }, select: { id: true, label: true } } }
@@ -367,6 +369,18 @@ export async function getTaggableContractItems(projectId: string): Promise<Tagga
     }
   });
   return schedule?.items ?? [];
+}
+
+// The one place that decides how a Contract Item is LABELLED anywhere it's
+// picked or displayed by name (the "Assign to Contract Works" dropdown,
+// linked-item chips, the "+Progress" assign dialog) — a bare description
+// like "Perimeter Scaffold" is genuinely ambiguous on a real multi-section
+// job (a scaffold package commonly repeats the same component names under
+// "F2"/"F3"/"F4" elevation headings), so the section heading is prefixed
+// whenever one exists. Falls back to the description alone for an
+// unlabelled/ungrouped item, rather than printing a stray "- " prefix.
+export function getContractItemDisplayLabel(item: { sectionLabel: string | null; description: string }): string {
+  return item.sectionLabel ? `${item.sectionLabel} - ${item.description}` : item.description;
 }
 
 // ============================================================

@@ -17,7 +17,10 @@ export default async function DelayEventsPage({ params }: { params: Promise<{ pr
   const [delayEvents, taggableItems] = await Promise.all([
     prisma.delayEvent.findMany({
       where: { projectId },
-      include: { variationItem: { select: { id: true, reference: true, title: true } } },
+      include: {
+        variationItem: { select: { id: true, reference: true, title: true } },
+        externalActions: { select: { status: true, responseChoice: true, respondedAt: true } }
+      },
       orderBy: { startDate: "desc" }
     }),
     prisma.variationItem.findMany({

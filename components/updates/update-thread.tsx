@@ -11,7 +11,7 @@ import { AssignUpdateAsQaDialog } from "@/components/quality-assurance/assign-up
 import { AssignUpdateAsContractProgressDialog } from "@/components/contract-schedule/assign-update-as-contract-progress-dialog";
 import { ContractItemMultiSelect } from "@/components/contract-schedule/contract-item-multi-select";
 import { CategoryCascadeFields, SI_FREE_TEXT_SENTINEL } from "@/components/updates/category-cascade-fields";
-import type { TaggableContractItem } from "@/lib/contract-schedule";
+import { type TaggableContractItem, getContractItemDisplayLabel } from "@/lib/contract-schedule";
 import { formatUserName } from "@/lib/user-display";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
@@ -297,7 +297,7 @@ export function UpdateThread({
                   href={`/projects/${projectId}/contract-schedule#contract-item-${item.id}`}
                   className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400"
                 >
-                  {item.description}
+                  {getContractItemDisplayLabel(item)}
                 </Link>
               ))}
               {update.percentComplete != null && (

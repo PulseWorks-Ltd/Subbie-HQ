@@ -90,3 +90,57 @@ export const DELAY_EVENT_STATUS_LABELS: Record<DelayEventStatus, string> = {
   rejected: "Rejected",
   closed: "Closed"
 };
+
+export type DelayEventDisplayColor = DelayEventStatus | "responded";
+export type DelayEventDisplayStatus = { label: string; colorKey: DelayEventDisplayColor };
+
+// The one place that decides what status text/color actually shows for a
+// delay event — used by BOTH the list page's summary badge and the detail
+// page's own top badge, so the two can never disagree the way they used
+// to (a genuine bug report: the detail page's Notice History correctly
+// showed a recipient's response, but both badges kept reading the plain
+// DelayEventStatus enum, which only advances to "awarded"/"rejected" once
+// the subbie manually resolves it — days awarded can differ from what was
+// claimed or from the response itself, so that manual step is real and
+// stays required, but a badge frozen on "awaiting response" after a
+// response has actually arrived is misleading, not just incomplete).
+//
+// A genuinely resolved event (awarded/rejected) always wins and spells
+// out the outcome (days granted, if any) rather than the plain enum label
+// — this is the "Approved - 1 Day EOT Granted"-style summary. Short of
+// that, a "notice_sent" event whose most recent notice has a recorded
+// response surfaces that response instead of a stale "awaiting response".
+export function getDelayEventDisplayStatus(
+  delayEvent: { status: DelayEventStatus; daysAwarded: number | null },
+  externalActions: { status: string; responseChoice: string | null; respondedAt: Date | null }[]
+): DelayEventDisplayStatus {
+  if (delayEvent.status === "awarded") {
+    const days = delayEvent.daysAwarded ?? 0;
+    return { label: `Approved — ${days} day${days === 1 ? "" : "s"} EOT granted`, colorKey: "awarded" };
+  }
+  if (delayEvent.status === "rejected") {
+    return { label: "Rejected", colorKey: "rejected" };
+  }
+  if (delayEvent.status === "notice_sent") {
+    const mostRecentResponse = [...externalActions]
+      .filter((action) => action.status === "responded" && action.respondedAt)
+      .sort((a, b) => (b.respondedAt as Date).getTime() - (a.respondedAt as Date).getTime())[0];
+    if (mostRecentResponse) {
+      const choiceLabel = mostRecentResponse.responseChoice === "approved" ? "Approved" : "Rejected";
+      return { label: `${choiceLabel} by recipient — awaiting your resolution`, colorKey: "responded" };
+    }
+  }
+  return { label: DELAY_EVENT_STATUS_LABELS[delayEvent.status], colorKey: delayEvent.status };
+}
+
+// Shared by the list page's badge and the detail page's own top badge —
+// one color mapping, so the two can't drift into using different colors
+// for what's supposed to be the same status.
+export const DELAY_EVENT_STATUS_COLORS: Record<DelayEventDisplayColor, string> = {
+  open: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+  notice_sent: "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300",
+  responded: "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300",
+  awarded: "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300",
+  rejected: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300",
+  closed: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500"
+};

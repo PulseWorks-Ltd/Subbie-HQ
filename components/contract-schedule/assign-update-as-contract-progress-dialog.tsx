@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { TaggableContractItem } from "@/lib/contract-schedule";
+import { type TaggableContractItem, getContractItemDisplayLabel } from "@/lib/contract-schedule";
 
 // One flat "which component/phase" target list per contract item — a
 // weekly_hire component is itself the target (no phase concept, see
@@ -121,7 +121,7 @@ export function AssignUpdateAsContractProgressDialog({
           >
             {contractItems.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.description}
+                {getContractItemDisplayLabel(item)}
               </option>
             ))}
           </select>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { DelayEvent, ExternalAction, VariationItem } from "@prisma/client";
-import { DELAY_EVENT_STATUS_LABELS } from "@/lib/delay-events";
+import { getDelayEventDisplayStatus, DELAY_EVENT_STATUS_COLORS } from "@/lib/delay-events";
 import { SendDelayNoticeDialog } from "@/components/delay-events/send-delay-notice-dialog";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
@@ -40,6 +40,7 @@ export function DelayEventDetailView({
 
   const canSendNotice = delayEvent.status === "open" || delayEvent.status === "notice_sent";
   const canResolve = delayEvent.status === "open" || delayEvent.status === "notice_sent";
+  const displayStatus = getDelayEventDisplayStatus(delayEvent, delayEvent.externalActions);
 
   async function patch(fields: Record<string, unknown>) {
     setIsSavingField(true);
@@ -86,8 +87,8 @@ export function DelayEventDetailView({
         </Link>
         <div className="flex items-start justify-between gap-3 mt-1">
           <h2 className="text-lg font-bold">{delayEvent.cause}</h2>
-          <span className="text-xs font-bold px-2 py-1 rounded shrink-0 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-            {DELAY_EVENT_STATUS_LABELS[delayEvent.status]}
+          <span className={`text-xs font-bold px-2 py-1 rounded shrink-0 ${DELAY_EVENT_STATUS_COLORS[displayStatus.colorKey]}`}>
+            {displayStatus.label}
           </span>
         </div>
         <p className="text-sm text-[#4c739a] dark:text-slate-400">

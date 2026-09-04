@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
-import { itemInputSchema, validateComponents } from "@/app/api/projects/[projectId]/contract-schedule/items/route";
+import { itemInputSchema, validateComponents } from "@/lib/contract-schedule-schemas";
 import { buildContractItemCreateData } from "@/lib/contract-schedule";
 
 const confirmSchema = z.object({

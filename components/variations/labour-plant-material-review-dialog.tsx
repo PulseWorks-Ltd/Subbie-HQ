@@ -8,7 +8,7 @@ import {
   draftRecordsToRows,
   type SheetRecordRow
 } from "@/components/variations/day-works-sheet-record-review-dialog";
-import type { ClassifiedFileResult } from "@/app/api/projects/[projectId]/variation-items/[itemId]/labour-plant-material/classify/route";
+import type { ClassifiedFileResult } from "@/lib/labour-plant-material-classification-types";
 import type { ExtractedLineItem } from "@/lib/grok";
 
 // Below this, a file's classification isn't trusted enough to auto-route

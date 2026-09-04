@@ -13,7 +13,7 @@ import {
 import { LabourPlantMaterialReviewDialog } from "@/components/variations/labour-plant-material-review-dialog";
 import { RequestActionDialog } from "@/components/external-actions/request-action-dialog";
 import { ExternalActionList } from "@/components/external-actions/external-action-list";
-import type { ClassifiedFileResult } from "@/app/api/projects/[projectId]/variation-items/[itemId]/labour-plant-material/classify/route";
+import type { ClassifiedFileResult } from "@/lib/labour-plant-material-classification-types";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 

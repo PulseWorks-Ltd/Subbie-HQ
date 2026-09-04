@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
-import { itemUpdateInputSchema, validateComponents, type ComponentUpdateInput } from "@/app/api/projects/[projectId]/contract-schedule/items/route";
+import { itemUpdateInputSchema, validateComponents, type ComponentUpdateInput } from "@/lib/contract-schedule-schemas";
 
 // Full replace, not a diff-and-patch: an item's components/phases are one
 // small nested form the user edits and re-submits as a whole (see

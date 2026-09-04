@@ -5,27 +5,13 @@ import { downloadFromS3 } from "@/lib/s3";
 import { renderPdfPagesToImages, UnreadablePdfError } from "@/lib/pdf-text-extraction";
 import { extractDayWorksSheetSummariesFromImages } from "@/lib/grok";
 import { AiSpendCapExceededError } from "@/lib/ai-usage";
+import type { DraftSheetRecord } from "@/lib/day-works-sheet-extraction-types";
 
 async function moduleForItem(projectId: string, itemId: string) {
   const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
   if (!item) return null;
   return item.type === "variation" ? ("variations" as const) : ("site_instructions" as const);
 }
-
-export type DraftSheetRecord = {
-  sheetNumber: string;
-  teamLeaderCount: number;
-  teamMemberCount: number;
-  totalHours: number | null;
-  date: string | null; // YYYY-MM-DD
-  startTime: string | null;
-  finishTime: string | null;
-  task: string | null;
-  notes: string | null;
-  weather: string | null;
-  location: string | null;
-  confidence: number;
-};
 
 // No per-worker complexity here — unlike the previous version of this
 // route, there's no date-fallback or rate-boundary-splitting logic

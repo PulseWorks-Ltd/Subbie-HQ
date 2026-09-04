@@ -3,32 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { uploadToS3 } from "@/lib/s3";
 import { renderPdfPagesToImages, UnreadablePdfError } from "@/lib/pdf-text-extraction";
-import {
-  classifyAndExtractDayWorksDocument,
-  type ClassifiedDocumentType,
-  type ExtractedDayWorksSheetSummary,
-  type ExtractedLineItem
-} from "@/lib/grok";
+import { classifyAndExtractDayWorksDocument, type ExtractedDayWorksSheetSummary } from "@/lib/grok";
 import { AiSpendCapExceededError } from "@/lib/ai-usage";
-import type { DraftSheetRecord } from "@/app/api/projects/[projectId]/variation-items/[itemId]/day-works-sheets/[sheetId]/sheet-records/extract/route";
+import type { DraftSheetRecord } from "@/lib/day-works-sheet-extraction-types";
+import type { ClassifiedFileResult } from "@/lib/labour-plant-material-classification-types";
 
 async function moduleForItem(projectId: string, itemId: string) {
   const item = await prisma.variationItem.findFirst({ where: { id: itemId, projectId }, select: { type: true } });
   if (!item) return null;
   return item.type === "variation" ? ("variations" as const) : ("site_instructions" as const);
 }
-
-export type ClassifiedFileResult = {
-  fileName: string;
-  storageKey: string;
-  contentType: string;
-  documentType: ClassifiedDocumentType;
-  classificationConfidence: number;
-  dayWorksSheets: DraftSheetRecord[];
-  materialsLineItems: ExtractedLineItem[];
-  plantLineItems: ExtractedLineItem[];
-  error: string | null;
-};
 
 // Same normalization the original per-sheet extract route applies to its
 // own ExtractedDayWorksSheetSummary[] result (sheetNumber/crew counts get

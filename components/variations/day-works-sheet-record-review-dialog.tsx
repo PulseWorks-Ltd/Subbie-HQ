@@ -3,7 +3,7 @@
 import { Fragment, useState } from "react";
 import type { DayWorksSheetRecord } from "@prisma/client";
 import { computeSheetRecordTotal } from "@/lib/variation-package";
-import type { DraftSheetRecord } from "@/app/api/projects/[projectId]/variation-items/[itemId]/day-works-sheets/[sheetId]/sheet-records/extract/route";
+import type { DraftSheetRecord } from "@/lib/day-works-sheet-extraction-types";
 
 // Reasonable-uncertainty threshold below which a row gets flagged for
 // extra scrutiny in the review UI (Task 4) — rows are never blocked from

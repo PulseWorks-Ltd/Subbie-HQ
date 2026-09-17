@@ -30,7 +30,18 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' data: blob: https:",
-  "connect-src 'self' https://*.sentry.io https://*.ingest.sentry.io",
+  // fonts.googleapis.com/fonts.gstatic.com added here (2026-09) on top of
+  // style-src/font-src already allowing them — the mobile PWA's service
+  // worker (public/sw.js, scoped to /m) intercepts every fetch a
+  // controlled page makes, including this cross-origin Material Symbols
+  // stylesheet load, and re-issues it via its own fetch(event.request).
+  // Once a service worker's own fetch() is in the loop, that request can
+  // end up checked against connect-src instead of style-src/font-src,
+  // which broke the icon font (and therefore every icon rendering as its
+  // raw ligature text, e.g. "mic", "dark_mode") on /m specifically —
+  // desktop has no service worker and was never affected. Belt-and-braces
+  // alongside the sw.js fix (only intercept same-origin requests).
+  "connect-src 'self' https://*.sentry.io https://*.ingest.sentry.io https://fonts.googleapis.com https://fonts.gstatic.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -53,11 +64,33 @@ const CSP = [
 const CSRF_PROTECTED_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 // Paths this check deliberately skips — genuine server-to-server callers
-// (SendGrid's inbound-parse webhook, Stripe, Railway Cron) that authenticate
-// via their own signature/bearer-secret rather than a session cookie, and
-// so never send a browser Origin/Referer header at all. CSRF protection
-// exists to stop a browser from being tricked into firing a cookie-
-// authenticated request; it has nothing to say about these.
+// that authenticate via their own signature/bearer-secret rather than a
+// session cookie, and so never send a browser Origin/Referer header at all.
+// CSRF protection exists to stop a browser from being tricked into firing a
+// cookie-authenticated request; it has nothing to say about these. Prefix-
+// based (not an exact-path list) so a new route added under one of these
+// two directories is exempt automatically, without a middleware edit — but
+// that convenience is exactly why nothing that relies on session-cookie
+// auth may ever be added under either prefix; a route that needs both
+// "no login" AND CSRF protection doesn't exist yet in this app, and should
+// get its own dedicated prefix if it ever does, rather than reusing these.
+//
+// Every route this currently covers, confirmed by grepping app/api for
+// "sendgrid"/"stripe" and listing app/api/webhooks + app/api/cron directly
+// (2026-09-04) — re-confirm this list any time a new integration is added:
+//   /api/webhooks/inbound-email        — SendGrid Inbound Parse (shared-secret
+//                                         query param, see that route's own comment)
+//   /api/webhooks/stripe               — Stripe (stripe-signature header, verified
+//                                         via constructWebhookEvent)
+//   /api/cron/reminders                — Railway Cron (Authorization: Bearer CRON_SECRET)
+//   /api/cron/classify-inbound-emails  — Railway Cron (same bearer secret)
+//   /api/cron/variation-schedule       — Railway Cron (same bearer secret)
+//
+// Both SendGrid and Stripe are exempted the exact same way: pathname is
+// checked (and short-circuits the whole condition below) BEFORE Origin/
+// Referer is ever read, so neither webhook's lack of those headers is ever
+// evaluated in the first place — there's no code path in which one of the
+// two is let through and the other isn't.
 const CSRF_EXEMPT_PREFIXES = ["/api/webhooks/", "/api/cron/"];
 
 function expectedOrigin(request: NextRequest): string {
@@ -115,9 +148,15 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
   // sensitive tokens in the path that must never leak via a Referer header
   // to a third-party resource (e.g. Google Fonts).
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  // Denies every listed browser feature outright — this app doesn't use
-  // any of them from the browser.
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  // Camera/geolocation/payment/usb are denied outright — this app doesn't
+  // use those APIs from the browser. Microphone is scoped to 'self' rather
+  // than denied (2026-09 fix): the mobile diary's voice-note recorder
+  // (components/updates/update-composer.tsx, navigator.mediaDevices.
+  // getUserMedia({ audio: true })) genuinely needs it — denying it outright
+  // broke that feature with "Couldn't access the microphone." "Take photo"
+  // is unaffected either way since it uses <input capture> (the OS camera
+  // app), not a live getUserMedia video stream.
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(self), geolocation=(), payment=(), usb=()");
   response.headers.set("Content-Security-Policy", CSP);
   return response;
 }
@@ -143,22 +182,57 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (
-    CSRF_PROTECTED_METHODS.has(request.method) &&
-    pathname.startsWith("/api/") &&
-    !isCsrfExempt(pathname) &&
-    !isSameOriginRequest(request)
-  ) {
-    return applySecurityHeaders(NextResponse.json({ error: "Cross-origin request rejected." }, { status: 403 }));
+  if (CSRF_PROTECTED_METHODS.has(request.method) && pathname.startsWith("/api/") && !isCsrfExempt(pathname)) {
+    if (!isSameOriginRequest(request)) {
+      // Logged server-side (not just returned to the caller) specifically
+      // so a genuine integration that unexpectedly needs exempting shows up
+      // immediately in Railway's logs, instead of silently failing and
+      // being misdiagnosed later — include enough to tell "a real
+      // server-to-server caller hit a path that isn't on the exempt list
+      // yet" apart from "a browser really was cross-site" without needing
+      // to reproduce it.
+      console.warn("CSRF check rejected request:", {
+        method: request.method,
+        pathname,
+        origin: request.headers.get("origin"),
+        referer: request.headers.get("referer")
+      });
+      return applySecurityHeaders(NextResponse.json({ error: "Cross-origin request rejected." }, { status: 403 }));
+    }
   }
 
   const response = NextResponse.next();
   return applySecurityHeaders(response);
 }
 
-// Matches every route except static assets/images and the favicon, where
-// these headers are unnecessary overhead — this still covers every page
-// AND every /api/* route.
+// Matches every route except static assets/images/favicon, AND except
+// /api/webhooks/* + /api/cron/* — added after establishing that the CSRF
+// logic above was never actually the cause of SendGrid Inbound Parse
+// failing (its pathname-based exemption already short-circuits before
+// Origin/Referer is read — verified for both /api/webhooks/inbound-email
+// and /api/webhooks/stripe with identical results). What actually changed
+// for SendGrid: this middleware.ts file didn't exist at all before the
+// first security-hardening pass, and Next.js Edge Middleware sitting in
+// front of a route is a known source of request-body issues specifically
+// for large multipart/form-data POSTs (which SendGrid Inbound Parse sends,
+// carrying whole emails + attachments) — Stripe's much smaller raw
+// JSON/text webhook body was never at risk the same way, which is exactly
+// the asymmetry reported (Stripe fine, SendGrid broken) and why the
+// in-function isCsrfExempt() check alone wasn't a full fix: it stopped the
+// CSRF rejection, but didn't stop middleware from running in front of the
+// request at all. Excluding these two prefixes from the matcher means
+// middleware — this whole file — never executes for them, which is
+// strictly stronger than exempting them inside it: there is no longer any
+// Edge-runtime code sitting between SendGrid/Stripe/Cron and their route
+// handlers to interfere with body forwarding. Security headers (CSP/HSTS/
+// etc.) are meaningless to a non-browser caller anyway, so nothing of
+// value is lost by skipping this file for them. The CSRF exemption logic
+// above is kept as defense-in-depth in case this matcher is ever loosened
+// without the code-level check being noticed.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
+  // Trailing slash on the last two deliberately (api/webhooks/, api/cron/,
+  // not just api/webhooks) — this is a substring-prefix lookahead, not a
+  // path-segment match, so without it a hypothetical future route like
+  // /api/webhooks-legacy/... would also unintentionally bypass this file.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/webhooks/|api/cron/).*)"]
 };

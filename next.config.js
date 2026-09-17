@@ -9,7 +9,7 @@ const SECURITY_HEADERS = [
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), payment=(), usb=()" },
   {
     key: "Content-Security-Policy",
     value: [
@@ -18,7 +18,7 @@ const SECURITY_HEADERS = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://*.sentry.io https://*.ingest.sentry.io",
+      "connect-src 'self' https://*.sentry.io https://*.ingest.sentry.io https://fonts.googleapis.com https://fonts.gstatic.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

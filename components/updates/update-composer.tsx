@@ -11,6 +11,7 @@ import { CategoryCascadeFields, SI_FREE_TEXT_SENTINEL } from "@/components/updat
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType } from "@/lib/update-attachments";
 import { ASSIGN_QA_SENTINEL } from "@/lib/qa-tag";
 import { parseCategoryOptionValue } from "@/lib/update-category";
+import { postFormWithOfflineRetry } from "@/lib/offline-update-queue";
 
 type ContactOption = { id: string; name: string; email: string | null; role: string | null };
 type Recipient = { contactId?: string; email: string; label: string };
@@ -46,6 +47,11 @@ export function UpdateComposer({
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when a post couldn't reach the server (a real network error, not
+  // an HTTP error response) and was queued locally instead — see
+  // lib/offline-update-queue.ts. Cleared whenever the user starts a new
+  // entry so it doesn't linger stale over an unrelated later post.
+  const [queuedOffline, setQueuedOffline] = useState(false);
 
   const [isExternal, setIsExternal] = useState(false);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -250,7 +256,66 @@ export function UpdateComposer({
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/updates`, { method: "POST", body: formData });
+      // External sends stay online-only, deliberately not queued: queuing
+      // an email means either sending it hours later with no chance for
+      // the user to review it before it reaches an external Main
+      // Contractor, or building a whole "review before send" flow for
+      // when the app reopens — a materially bigger feature than what's
+      // needed to solve "I lost signal while writing an internal diary
+      // note." A genuine network error here surfaces as an error instead
+      // of a false "posted" state, same as before this fix (a network
+      // error used to be an unhandled rejection here — this at least
+      // turns it into a normal, visible failure for the one path that
+      // can't safely be queued).
+      if (isExternal) {
+        let response: Response;
+        try {
+          response = await fetch(`/api/projects/${projectId}/updates`, { method: "POST", body: formData });
+        } catch {
+          setError("You're offline — external emails can't be queued. Turn off \"Send externally\" to save this as a draft diary post, or try again once you're back online.");
+          return;
+        }
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setError(data.error || "Could not post this update.");
+          return;
+        }
+        if (data.sendError) {
+          setError(`Update posted, but the email failed to send: ${data.sendError} You can retry from the update.`);
+        }
+        if (isAssigningQa && data.update?.id) {
+          setPendingQaAssignment({ updateId: data.update.id, body: data.update.body ?? body });
+        }
+        setBody("");
+        setTagSelection("");
+        setVariationSecondary("");
+        setFreeTextSI("");
+        setContractItemIds([]);
+        setPercentComplete("");
+        setFiles([]);
+        resetExternalState();
+        router.refresh();
+        return;
+      }
+
+      const result = await postFormWithOfflineRetry(`/api/projects/${projectId}/updates`, formData);
+
+      if (result.queued) {
+        // Server never saw this post yet — nothing to assign QA against,
+        // no send-error to report, and nothing new to router.refresh().
+        setBody("");
+        setTagSelection("");
+        setVariationSecondary("");
+        setFreeTextSI("");
+        setContractItemIds([]);
+        setPercentComplete("");
+        setFiles([]);
+        resetExternalState();
+        setQueuedOffline(true);
+        return;
+      }
+
+      const response = result.response;
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(data.error || "Could not post this update.");
@@ -290,7 +355,10 @@ export function UpdateComposer({
     >
       <textarea
         value={body}
-        onChange={(event) => setBody(event.target.value)}
+        onChange={(event) => {
+          setBody(event.target.value);
+          setQueuedOffline(false);
+        }}
         rows={3}
         placeholder={isMobile ? "Post a progress diary entry..." : "Post a diary entry for the team..."}
         className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -482,6 +550,11 @@ export function UpdateComposer({
       )}
 
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {queuedOffline && (
+        <p className="text-xs text-amber-700 dark:text-amber-400 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 px-3 py-2">
+          Saved — will post once you're back online.
+        </p>
+      )}
 
       <button
         type="submit"

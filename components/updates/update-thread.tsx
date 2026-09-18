@@ -172,7 +172,7 @@ export function UpdateThread({
       update.variationItem?.reference ??
       (update.qaRecord ? `QA — ${update.qaRecord.stage}` : update.category ? UPDATE_CATEGORY_LABELS[update.category] : null);
     if (!label) return;
-    if (!confirm(`Remove this diary entry's tag from ${label}? The diary entry itself will remain on the Project Diary page.`)) {
+    if (!confirm(`Remove this diary entry's assignment from ${label}? The diary entry itself will remain on the Project Diary page.`)) {
       return;
     }
     setIsSavingTag(true);
@@ -223,112 +223,54 @@ export function UpdateThread({
     router.refresh();
   }
 
+  const hasAssignment = Boolean(update.variationItem || update.qaRecord || update.category);
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5">
+      {/* Read-only — what this entry is currently assigned to, if anything.
+          The actions that CHANGE this (Assign/Change assignment/Remove/
+          Progress) live in the action row at the bottom instead, alongside
+          Reply/Generate outbound email, rather than crowding the author's
+          name (2026-09 layout fix — the old inline buttons up here were
+          easy to miss entirely). */}
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-bold">{authorLabel(update.author)}</p>
-          {isEditingTag ? (
-            <div className="flex flex-col gap-2 w-full">
-              <div className="flex items-start gap-2 flex-wrap">
-                <CategoryCascadeFields
-                  primary={tagSelection}
-                  onPrimaryChange={(value) => {
-                    setTagSelection(value);
-                    setVariationSecondary("");
-                    setFreeTextSI("");
-                  }}
-                  currentCategory={update.category as Parameters<typeof categoryOptionValue>[0] | null}
-                  taggableItems={taggableItems}
-                  variationSecondary={variationSecondary}
-                  onVariationSecondaryChange={setVariationSecondary}
-                  freeText={freeTextSI}
-                  onFreeTextChange={setFreeTextSI}
-                />
-                <button
-                  onClick={handleSaveTag}
-                  disabled={isSavingTag}
-                  className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
-                >
-                  {isSavingTag ? "Saving..." : "Save"}
-                </button>
-                <button
-                  onClick={() => {
-                    setTagSelection(currentTagSelection(update));
-                    setVariationSecondary(currentVariationSecondary(update));
-                    setFreeTextSI(update.freeTextSiteInstructionReference ?? "");
-                    setContractItemIds(update.contractItemLinks.map((link) => link.contractItemId));
-                    setIsEditingTag(false);
-                  }}
-                  className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
-                >
-                  Cancel
-                </button>
-              </div>
-              <ContractItemMultiSelect items={contractItems} selectedIds={contractItemIds} onChange={setContractItemIds} />
-            </div>
-          ) : (
-            <>
-              {update.variationItem && (
-                <Link
-                  href={`/projects/${projectId}/variations/${update.variationItem.id}`}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary hover:bg-primary/20"
-                >
-                  {update.variationItem.reference}
-                </Link>
-              )}
-              {update.qaRecord && (
-                <Link
-                  href={`/projects/${projectId}/quality-assurance`}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary hover:bg-primary/20"
-                >
-                  QA · {update.qaRecord.stage}
-                </Link>
-              )}
-              {update.category && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                  {UPDATE_CATEGORY_LABELS[update.category]}
-                  {update.freeTextSiteInstructionReference ? ` · ${update.freeTextSiteInstructionReference}` : ""}
-                </span>
-              )}
-              {linkedContractItems.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/projects/${projectId}/contract-schedule#contract-item-${item.id}`}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400"
-                >
-                  {getContractItemDisplayLabel(item)}
-                </Link>
-              ))}
-              {update.percentComplete != null && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                  {Math.round(update.percentComplete)}% tagged
-                </span>
-              )}
-              <button
-                onClick={() => setIsEditingTag(true)}
-                className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
-              >
-                {update.variationItem || update.qaRecord || update.category ? "Change tag" : "+ Tag"}
-              </button>
-              {(update.variationItem || update.qaRecord || update.category) && (
-                <button
-                  onClick={handleRemoveTag}
-                  disabled={isSavingTag}
-                  className="text-[11px] font-medium text-red-600 hover:underline disabled:opacity-60"
-                >
-                  Remove tag
-                </button>
-              )}
-              {contractItems.length > 0 && (
-                <button
-                  onClick={() => setShowContractProgressDialog(true)}
-                  className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
-                >
-                  + Progress
-                </button>
-              )}
-            </>
+          {update.variationItem && (
+            <Link
+              href={`/projects/${projectId}/variations/${update.variationItem.id}`}
+              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary hover:bg-primary/20"
+            >
+              {update.variationItem.reference}
+            </Link>
+          )}
+          {update.qaRecord && (
+            <Link
+              href={`/projects/${projectId}/quality-assurance`}
+              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary hover:bg-primary/20"
+            >
+              QA · {update.qaRecord.stage}
+            </Link>
+          )}
+          {update.category && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              {UPDATE_CATEGORY_LABELS[update.category]}
+              {update.freeTextSiteInstructionReference ? ` · ${update.freeTextSiteInstructionReference}` : ""}
+            </span>
+          )}
+          {linkedContractItems.map((item) => (
+            <Link
+              key={item.id}
+              href={`/projects/${projectId}/contract-schedule#contract-item-${item.id}`}
+              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400"
+            >
+              {getContractItemDisplayLabel(item)}
+            </Link>
+          ))}
+          {update.percentComplete != null && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              {Math.round(update.percentComplete)}% tagged
+            </span>
           )}
         </div>
         <p className="text-xs text-[#4c739a] dark:text-slate-400 shrink-0">{formatTimestamp(update.createdAt)}</p>
@@ -393,7 +335,46 @@ export function UpdateThread({
       )}
 
       <div className="mt-4 pt-3 border-t border-[#e7edf3] dark:border-slate-800">
-        {isReplying ? (
+        {isEditingTag ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2 flex-wrap">
+              <CategoryCascadeFields
+                primary={tagSelection}
+                onPrimaryChange={(value) => {
+                  setTagSelection(value);
+                  setVariationSecondary("");
+                  setFreeTextSI("");
+                }}
+                currentCategory={update.category as Parameters<typeof categoryOptionValue>[0] | null}
+                taggableItems={taggableItems}
+                variationSecondary={variationSecondary}
+                onVariationSecondaryChange={setVariationSecondary}
+                freeText={freeTextSI}
+                onFreeTextChange={setFreeTextSI}
+              />
+              <button
+                onClick={handleSaveTag}
+                disabled={isSavingTag}
+                className="text-xs font-bold text-primary hover:underline disabled:opacity-60"
+              >
+                {isSavingTag ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => {
+                  setTagSelection(currentTagSelection(update));
+                  setVariationSecondary(currentVariationSecondary(update));
+                  setFreeTextSI(update.freeTextSiteInstructionReference ?? "");
+                  setContractItemIds(update.contractItemLinks.map((link) => link.contractItemId));
+                  setIsEditingTag(false);
+                }}
+                className="text-xs font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+            <ContractItemMultiSelect items={contractItems} selectedIds={contractItemIds} onChange={setContractItemIds} />
+          </div>
+        ) : isReplying ? (
           <form onSubmit={handleReply} className="flex flex-col gap-2">
             <textarea
               autoFocus
@@ -451,19 +432,46 @@ export function UpdateThread({
             }}
           />
         ) : (
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsReplying(true)} className="text-xs font-bold text-primary hover:underline">
-              Reply
-            </button>
-            <button
-              onClick={() => {
-                setSentMessage(null);
-                setIsGeneratingEmail(true);
-              }}
-              className="text-xs font-bold text-primary hover:underline"
-            >
-              Generate outbound email
-            </button>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsEditingTag(true)}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                {hasAssignment ? "Change assignment" : "+ Assign"}
+              </button>
+              {hasAssignment && (
+                <button
+                  onClick={handleRemoveTag}
+                  disabled={isSavingTag}
+                  className="text-xs font-bold text-red-600 hover:underline disabled:opacity-60"
+                >
+                  Remove assignment
+                </button>
+              )}
+              {contractItems.length > 0 && (
+                <button
+                  onClick={() => setShowContractProgressDialog(true)}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  + Progress
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <button onClick={() => setIsReplying(true)} className="text-xs font-bold text-primary hover:underline">
+                Reply
+              </button>
+              <button
+                onClick={() => {
+                  setSentMessage(null);
+                  setIsGeneratingEmail(true);
+                }}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Generate outbound email
+              </button>
+            </div>
           </div>
         )}
         {sentMessage && <p className="text-xs text-green-600 dark:text-green-400 mt-2">{sentMessage}</p>}

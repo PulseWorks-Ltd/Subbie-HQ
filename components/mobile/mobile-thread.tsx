@@ -119,6 +119,7 @@ export function MobileThread({
   const linkedContractItems = contractItems.filter((item) =>
     update.contractItemLinks.some((link) => link.contractItemId === item.id)
   );
+  const hasAssignment = Boolean(update.variationItem || update.qaRecord || update.category);
 
   // Same PATCH endpoint and tag semantics as desktop's UpdateThread (Task
   // 2.1) — "which SI/Variation this belongs to" often only becomes clear
@@ -166,7 +167,7 @@ export function MobileThread({
       update.variationItem?.reference ??
       (update.qaRecord ? `QA — ${update.qaRecord.stage}` : update.category ? UPDATE_CATEGORY_LABELS[update.category] : null);
     if (!label) return;
-    if (!confirm(`Remove this diary entry's tag from ${label}? The diary entry itself will remain on the Project Diary page.`)) {
+    if (!confirm(`Remove this diary entry's assignment from ${label}? The diary entry itself will remain on the Project Diary page.`)) {
       return;
     }
     setIsSavingTag(true);
@@ -206,46 +207,12 @@ export function MobileThread({
         <p className="text-[11px] text-[#4c739a] dark:text-slate-400 shrink-0">{formatTimestamp(update.createdAt)}</p>
       </div>
 
-      {isEditingTag ? (
-        <div className="flex flex-col gap-2 mb-1.5">
-          <div className="flex items-start gap-2 flex-wrap">
-            <CategoryCascadeFields
-              primary={tagSelection}
-              onPrimaryChange={(value) => {
-                setTagSelection(value);
-                setVariationSecondary("");
-                setFreeTextSI("");
-              }}
-              currentCategory={update.category as Parameters<typeof categoryOptionValue>[0] | null}
-              taggableItems={taggableItems}
-              variationSecondary={variationSecondary}
-              onVariationSecondaryChange={setVariationSecondary}
-              freeText={freeTextSI}
-              onFreeTextChange={setFreeTextSI}
-            />
-            <button
-              onClick={handleSaveTag}
-              disabled={isSavingTag}
-              className="text-[11px] font-bold text-primary hover:underline disabled:opacity-60"
-            >
-              {isSavingTag ? "Saving..." : "Save"}
-            </button>
-            <button
-              onClick={() => {
-                setTagSelection(currentTagSelection(update));
-                setVariationSecondary(currentVariationSecondary(update));
-                setFreeTextSI(update.freeTextSiteInstructionReference ?? "");
-                setContractItemIds(update.contractItemLinks.map((link) => link.contractItemId));
-                setIsEditingTag(false);
-              }}
-              className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
-            >
-              Cancel
-            </button>
-          </div>
-          <ContractItemMultiSelect items={contractItems} selectedIds={contractItemIds} onChange={setContractItemIds} />
-        </div>
-      ) : (
+      {/* Read-only — what this entry is currently assigned to, if
+          anything. The actions that CHANGE this (Assign/Change assignment/
+          Remove/Progress) live in the action row at the bottom instead,
+          alongside Reply, rather than crowding the author's name (2026-09
+          layout fix — the old inline buttons up here were easy to miss). */}
+      {hasAssignment && (
         <div className="flex items-center gap-2 flex-wrap mb-1.5">
           {update.variationItem && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
@@ -271,29 +238,6 @@ export function MobileThread({
               {getContractItemDisplayLabel(item)}
             </span>
           ))}
-          <button
-            onClick={() => setIsEditingTag(true)}
-            className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
-          >
-            {update.variationItem || update.qaRecord || update.category ? "Change tag" : "+ Tag"}
-          </button>
-          {(update.variationItem || update.qaRecord || update.category) && (
-            <button
-              onClick={handleRemoveTag}
-              disabled={isSavingTag}
-              className="text-[11px] font-medium text-red-600 hover:underline disabled:opacity-60"
-            >
-              Remove tag
-            </button>
-          )}
-          {contractItems.length > 0 && (
-            <button
-              onClick={() => setShowContractProgressDialog(true)}
-              className="text-[11px] font-medium text-[#4c739a] dark:text-slate-400 hover:text-primary hover:underline"
-            >
-              + Progress
-            </button>
-          )}
         </div>
       )}
 
@@ -339,7 +283,46 @@ export function MobileThread({
       )}
 
       <div className="mt-3 pt-2 border-t border-[#e7edf3] dark:border-slate-800">
-        {isReplying ? (
+        {isEditingTag ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2 flex-wrap">
+              <CategoryCascadeFields
+                primary={tagSelection}
+                onPrimaryChange={(value) => {
+                  setTagSelection(value);
+                  setVariationSecondary("");
+                  setFreeTextSI("");
+                }}
+                currentCategory={update.category as Parameters<typeof categoryOptionValue>[0] | null}
+                taggableItems={taggableItems}
+                variationSecondary={variationSecondary}
+                onVariationSecondaryChange={setVariationSecondary}
+                freeText={freeTextSI}
+                onFreeTextChange={setFreeTextSI}
+              />
+              <button
+                onClick={handleSaveTag}
+                disabled={isSavingTag}
+                className="text-xs font-bold text-primary hover:underline disabled:opacity-60"
+              >
+                {isSavingTag ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => {
+                  setTagSelection(currentTagSelection(update));
+                  setVariationSecondary(currentVariationSecondary(update));
+                  setFreeTextSI(update.freeTextSiteInstructionReference ?? "");
+                  setContractItemIds(update.contractItemLinks.map((link) => link.contractItemId));
+                  setIsEditingTag(false);
+                }}
+                className="text-xs font-medium text-[#4c739a] dark:text-slate-400 hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+            <ContractItemMultiSelect items={contractItems} selectedIds={contractItemIds} onChange={setContractItemIds} />
+          </div>
+        ) : isReplying ? (
           <form onSubmit={handleReply} className="flex flex-col gap-2">
             <textarea
               autoFocus
@@ -405,9 +388,36 @@ export function MobileThread({
             </div>
           </form>
         ) : (
-          <button onClick={() => setIsReplying(true)} className="text-xs font-bold text-primary">
-            Reply
-          </button>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => setIsEditingTag(true)}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                {hasAssignment ? "Change assignment" : "+ Assign"}
+              </button>
+              {hasAssignment && (
+                <button
+                  onClick={handleRemoveTag}
+                  disabled={isSavingTag}
+                  className="text-xs font-bold text-red-600 hover:underline disabled:opacity-60"
+                >
+                  Remove assignment
+                </button>
+              )}
+              {contractItems.length > 0 && (
+                <button
+                  onClick={() => setShowContractProgressDialog(true)}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  + Progress
+                </button>
+              )}
+            </div>
+            <button onClick={() => setIsReplying(true)} className="text-xs font-bold text-primary hover:underline">
+              Reply
+            </button>
+          </div>
         )}
       </div>
     </div>

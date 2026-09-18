@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { PushNotificationsButton } from "@/components/mobile/push-notifications-button";
+import { InstallAppButton } from "@/components/mobile/install-app-button";
 import { ServiceWorkerRegistration } from "@/components/mobile/service-worker-registration";
 import { MobileNav } from "@/components/mobile/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -42,6 +43,7 @@ export default async function MobileLayout({ children }: { children: React.React
         </a>
         <div className="flex items-center gap-3">
           <ThemeToggle />
+          <InstallAppButton />
           <PushNotificationsButton />
           <form
             action={async () => {

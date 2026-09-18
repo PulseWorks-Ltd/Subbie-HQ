@@ -11,6 +11,13 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
   const resetSuccess = searchParams.get("reset") === "success";
+  // Anyone who scans the /get-app QR code or opens the mobile link while
+  // logged out lands here first (app/m/layout.tsx redirects to
+  // /login?callbackUrl=/m before they ever see the mobile shell) — without
+  // this, the install prompt on /m is invisible until after they've
+  // already signed in, so a first-time visitor sees a bare login form with
+  // no hint that an "Install" step is coming next.
+  const isHeadingToMobileApp = callbackUrl?.startsWith("/m") ?? false;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +58,13 @@ export default function LoginPage() {
           {resetSuccess && (
             <p className="text-sm text-green-700 dark:text-green-400 mb-4">
               Your password has been reset. Sign in with your new password.
+            </p>
+          )}
+
+          {isHeadingToMobileApp && (
+            <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-4 bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+              After signing in, tap <span className="font-bold text-[#0d141b] dark:text-slate-50">Install app</span>{" "}
+              when it appears to add Subbie HQ to your home screen.
             </p>
           )}
 

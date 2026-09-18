@@ -1,7 +1,11 @@
 import QRCode from "qrcode";
+import Link from "next/link";
+import { auth } from "@/auth";
 import { CopyLinkButton } from "@/components/get-app/copy-link-button";
+import { SendDownloadLinkForm } from "@/components/get-app/send-download-link-form";
 
 export default async function GetAppPage() {
+  const session = await auth();
   const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
   const mobileUrl = `${baseUrl}/m`;
   const qrCodeDataUrl = await QRCode.toDataURL(mobileUrl, {
@@ -55,6 +59,21 @@ export default async function GetAppPage() {
             </p>
           </div>
         </div>
+
+        {session?.user?.id ? (
+          <SendDownloadLinkForm />
+        ) : (
+          // Signed out — the QR/copy-link above still work for anyone
+          // (they always have), but sending a link to someone else's inbox
+          // requires a real, accountable sender (see the route's own
+          // comment on why this isn't a public/anonymous mailer).
+          <p className="text-sm text-[#4c739a] dark:text-slate-400 mt-4">
+            <Link href={`/login?callbackUrl=/get-app`} className="text-primary font-medium">
+              Sign in
+            </Link>{" "}
+            to email this link directly to a teammate.
+          </p>
+        )}
       </div>
     </main>
   );

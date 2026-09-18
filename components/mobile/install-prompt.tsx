@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 
 const DISMISSED_KEY = "subbie-install-prompt-dismissed";
+// Snoozed, not silenced forever (2026-09 fix) — the old version stored a
+// plain "1" flag that hid this banner permanently the moment anyone tapped
+// the close button, on that browser profile, for good. That's most of why
+// pasting the /m URL straight into Chrome kept showing nothing: this page
+// gets tested/dismissed a lot during setup, and the very first dismiss
+// would have killed it forever afterwards. Now the key stores a timestamp,
+// and the banner is only suppressed for two weeks before re-offering.
+const DISMISS_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -20,7 +28,8 @@ export function InstallPrompt() {
       (window.navigator as { standalone?: boolean }).standalone === true;
 
     if (isStandalone) return;
-    if (window.localStorage.getItem(DISMISSED_KEY)) return;
+    const dismissedAt = Number(window.localStorage.getItem(DISMISSED_KEY));
+    if (dismissedAt && Date.now() - dismissedAt < DISMISS_SNOOZE_MS) return;
 
     setIsDismissed(false);
     setIsIos(/iPad|iPhone|iPod/.test(window.navigator.userAgent));
@@ -35,7 +44,7 @@ export function InstallPrompt() {
   }, []);
 
   function dismiss() {
-    window.localStorage.setItem(DISMISSED_KEY, "1");
+    window.localStorage.setItem(DISMISSED_KEY, String(Date.now()));
     setIsDismissed(true);
   }
 

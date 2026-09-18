@@ -366,6 +366,34 @@ export async function sendHoursOnSiteApprovedEmail(params: {
   });
 }
 
+// "Send Download Link" (app/(app)/get-app) — a logged-in user inviting a
+// real teammate onto the mobile PWA, not a public/anonymous mailer (see
+// app/api/get-app/send-download-link/route.ts's own auth + rate-limit
+// checks). Throws rather than silently no-opping if SendGrid isn't
+// configured, same as sendExternalUpdateEmail — the sender clicked "Send"
+// and expects either real delivery or a clear error to retry.
+export async function sendDownloadLinkEmail(params: { to: string; senderName: string; mobileUrl: string }) {
+  const config = getConfiguredSendGrid();
+  if (!config) {
+    throw new Error("Email sending isn't configured — SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are missing.");
+  }
+
+  const baseUrl = process.env.AUTH_URL ?? "";
+
+  await sgMail.send({
+    to: params.to,
+    from: { email: config.fromEmail, name: "Subbie HQ" },
+    subject: `${params.senderName} sent you a link to Subbie HQ`,
+    html: `
+      <p><img src="${baseUrl}/icons/icon-512.png" alt="Subbie HQ" width="48" height="48" /></p>
+      <p><strong>${escapeHtml(params.senderName)}</strong> thought you'd find Subbie HQ useful for posting site
+      updates from your phone.</p>
+      <p><a href="${params.mobileUrl}">Open Subbie HQ on your phone</a> — open this link on your phone, then follow
+      the on-screen prompt to add it to your home screen.</p>
+    `
+  });
+}
+
 export async function sendOrganisationInviteEmail(params: {
   to: string;
   organisationName: string;

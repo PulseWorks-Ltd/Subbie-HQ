@@ -2,7 +2,7 @@
   "name": "Subbie HQ",
   "short_name": "Subbie HQ",
   "description": "Post and receive project updates and Site Instructions on the go.",
-  "id": "/m?pwa=2",
+  "id": "/m?pwa=3",
   "start_url": "/m",
   "scope": "/m",
   "display": "standalone",

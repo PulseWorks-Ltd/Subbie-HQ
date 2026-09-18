@@ -430,6 +430,28 @@ model RegisterAttempt {
   @@index([email, createdAt])
 }
 
+// Throttle for the /get-app "Send Download Link" feature
+// (app/api/get-app/send-download-link/route.ts) — every call recorded, not
+// just failures, same reasoning as RegisterAttempt: there's no "wrong
+// guess" here, just a request that a genuine user only ever needs to make
+// a handful of times (inviting real teammates onto a real job site).
+// Deliberately requires a logged-in sender (this is "invite a teammate to
+// the app you're already using," not a public/anonymous mailer), so this
+// is keyed by userId rather than IP — a more accurate and more robust
+// signal now that there's a real accountable identity behind every call
+// (no shared-office-IP false positives, and it directly limits the actual
+// account rather than a NAT'd network). email is still bounded separately
+// so one recipient can't be hammered with repeats even by different users.
+model DownloadLinkRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  email     String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([email, createdAt])
+}
+
 model Organisation {
   id                      String                    @id @default(cuid())
   name                    String

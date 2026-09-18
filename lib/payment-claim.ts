@@ -7,6 +7,17 @@ function round2(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+// The single shared "is this Variation/SI approved" rule — a variation
+// counts as Approved once it's ever been allocated a non-zero amount in
+// SOME claim, ever (the schema has no explicit MC-approval flag, so this
+// is the agreed proxy). Extracted so lib/project-profitability.ts can
+// reuse the exact same rule rather than re-deriving it — see the fuller
+// reasoning in getPaymentClaimComputedData below, where this predicate
+// was originally inline.
+export function isVariationApproved(totalAllocatedAcrossAllClaims: number): boolean {
+  return totalAllocatedAcrossAllClaims > 0;
+}
+
 export type PaymentClaimVariationRow = {
   id: string;
   reference: string;
@@ -81,7 +92,7 @@ export async function getPaymentClaimComputedData(projectId: string, claimId: st
       closed: item.closedAt != null,
       thisClaimAmount: thisClaimAllocation ? Number(thisClaimAllocation.amount) : 0,
       totalAllocatedAcrossAllClaims: totalAllocated,
-      approved: totalAllocated > 0
+      approved: isVariationApproved(totalAllocated)
     };
   });
 

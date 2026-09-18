@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { getDashboardFeed } from "@/lib/dashboard";
 import { getUnreadUpdates } from "@/lib/updates-feed";
 import { getActiveCommercialReviewItems, canViewCommercialReview } from "@/lib/commercial-review";
+import { getPortfolioProfitabilitySummary } from "@/lib/project-profitability";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { HomepageView } from "@/components/marketing/homepage-view";
 
@@ -35,6 +36,10 @@ export default async function DashboardPage() {
     canViewCommercialReview(session.user.id)
   ]);
   const commercialReviewItems = canSeeCommercialReview ? await getActiveCommercialReviewItems(session.user.id) : [];
+  // getPortfolioProfitabilitySummary itself checks canViewPortfolioProfitability
+  // (isAdmin-gated) and returns null for anyone else — called unconditionally
+  // here, same pattern requireProjectAccess-style helpers use elsewhere.
+  const portfolioProfitability = await getPortfolioProfitabilitySummary(session.user.id);
 
   return (
     <DashboardView
@@ -42,6 +47,7 @@ export default async function DashboardPage() {
       initialUnreadUpdates={unreadUpdates}
       initialCommercialReviewItems={commercialReviewItems}
       showCommercialReview={canSeeCommercialReview}
+      portfolioProfitability={portfolioProfitability}
     />
   );
 }

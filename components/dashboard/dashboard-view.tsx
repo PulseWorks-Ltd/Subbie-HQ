@@ -2,10 +2,12 @@ import Link from "next/link";
 import type { DashboardItem, DashboardItemType } from "@/lib/dashboard";
 import type { UnreadUpdateItem } from "@/lib/updates-feed";
 import type { CommercialReviewFeedItem } from "@/lib/commercial-review";
+import type { PortfolioProfitabilitySummary } from "@/lib/project-profitability";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { DashboardItemRow } from "@/components/dashboard/dashboard-item-row";
 import { UpdatesDashboardSection } from "@/components/dashboard/updates-dashboard-section";
 import { CommercialReviewDashboardSection } from "@/components/dashboard/commercial-review-dashboard-section";
+import { PortfolioProfitabilitySection } from "@/components/dashboard/portfolio-profitability-section";
 
 const SECTIONS: { key: DashboardItemType; label: string; icon: string }[] = [
   { key: "site-instruction", label: "Site Instructions", icon: "assignment" },
@@ -26,12 +28,17 @@ export function DashboardView({
   initialItems,
   initialUnreadUpdates,
   initialCommercialReviewItems,
-  showCommercialReview
+  showCommercialReview,
+  portfolioProfitability
 }: {
   initialItems: DashboardItem[];
   initialUnreadUpdates: UnreadUpdateItem[];
   initialCommercialReviewItems: CommercialReviewFeedItem[];
   showCommercialReview: boolean;
+  // null for a non-admin (the section doesn't render at all — never a
+  // stripped-down or blurred version) or when the query genuinely
+  // couldn't run (e.g. permission check itself failed).
+  portfolioProfitability: PortfolioProfitabilitySummary | null;
 }) {
   const sections = SECTIONS.map((section) => {
     const items = sortItems(initialItems.filter((item) => item.type === section.key));
@@ -120,6 +127,12 @@ export function DashboardView({
         {showCommercialReview && (
           <div className="mt-4">
             <CommercialReviewDashboardSection initialItems={initialCommercialReviewItems} />
+          </div>
+        )}
+
+        {portfolioProfitability && (
+          <div className="mt-4">
+            <PortfolioProfitabilitySection summary={portfolioProfitability} />
           </div>
         )}
       </div>

@@ -264,11 +264,19 @@ export async function canViewCommercialReview(userId: string): Promise<boolean> 
   return !membership || membership.isAdmin;
 }
 
-export async function getActiveCommercialReviewItems(userId: string): Promise<CommercialReviewFeedItem[]> {
+// `projectId` narrows to a single project's items — reused as-is by the
+// per-project Profitability page (Commercial Gap panel) and the Portfolio
+// Profitability dashboard's cross-project count, so neither has to
+// duplicate this visibility/detection logic. Omitted, it behaves exactly
+// as before (every visible project).
+export async function getActiveCommercialReviewItems(
+  userId: string,
+  projectId?: string
+): Promise<CommercialReviewFeedItem[]> {
   if (!(await canViewCommercialReview(userId))) return [];
 
   const projects = await prisma.project.findMany({
-    where: await getVisibleProjectsWhere(userId),
+    where: { ...(await getVisibleProjectsWhere(userId)), ...(projectId ? { id: projectId } : {}) },
     select: { id: true, name: true }
   });
   if (projects.length === 0) return [];

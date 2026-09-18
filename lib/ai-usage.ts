@@ -29,7 +29,12 @@ export const AI_FEATURES = [
   "external_action_draft",
   "contract_schedule_extraction",
   "payment_claim_email_draft",
-  "qa_document_email_draft"
+  "qa_document_email_draft",
+  // Commercial Review (Project Diary dashboard) — enriches an ALREADY-
+  // pending diary entry with a plain-English rationale; unlike every AI
+  // feature above, this one never decides whether something is shown at
+  // all (see lib/commercial-review.ts) — it's pure explanation, not gating.
+  "commercial_item_detection"
 ] as const;
 
 export type AiFeature = (typeof AI_FEATURES)[number];

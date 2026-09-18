@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { getDashboardFeed } from "@/lib/dashboard";
 import { getUnreadUpdates } from "@/lib/updates-feed";
+import { getActiveCommercialReviewItems, canViewCommercialReview } from "@/lib/commercial-review";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { HomepageView } from "@/components/marketing/homepage-view";
 
@@ -28,10 +29,19 @@ export default async function DashboardPage() {
     return <HomepageView />;
   }
 
-  const [items, unreadUpdates] = await Promise.all([
+  const [items, unreadUpdates, canSeeCommercialReview] = await Promise.all([
     getDashboardFeed(session.user.id),
-    getUnreadUpdates(session.user.id)
+    getUnreadUpdates(session.user.id),
+    canViewCommercialReview(session.user.id)
   ]);
+  const commercialReviewItems = canSeeCommercialReview ? await getActiveCommercialReviewItems(session.user.id) : [];
 
-  return <DashboardView initialItems={items} initialUnreadUpdates={unreadUpdates} />;
+  return (
+    <DashboardView
+      initialItems={items}
+      initialUnreadUpdates={unreadUpdates}
+      initialCommercialReviewItems={commercialReviewItems}
+      showCommercialReview={canSeeCommercialReview}
+    />
+  );
 }

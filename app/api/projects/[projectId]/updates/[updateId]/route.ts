@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { UPDATE_CATEGORIES } from "@/lib/update-category";
 import { setContractItemDiaryLinks } from "@/lib/contract-schedule";
+import { evaluateUpdateForCommercialReview, enrichCommercialReviewItemWithAi } from "@/lib/commercial-review";
 
 // variationItemId, qaRecordId, and category are still mutually exclusive
 // (see schema comment on Update.category) — whichever one is sent always
@@ -122,6 +123,24 @@ export async function PATCH(request: Request, context: { params: { projectId: st
       return NextResponse.json({ error: "One or more Contract Works items were not found." }, { status: 400 });
     }
     await setContractItemDiaryLinks(updateId, payload.contractItemIds);
+  }
+
+  // Commercial Review — re-evaluate whenever the tag changes, since this
+  // is the second (and only other) place a top-level Update's
+  // variationItemId/qaRecordId/category can change after creation. Cheap/
+  // deterministic, awaited; AI enrichment only if this PATCH just made the
+  // entry newly unassigned again (e.g. a tag was cleared).
+  await evaluateUpdateForCommercialReview(updateId).catch((error) => {
+    console.error("Commercial Review evaluation failed for update", updateId, error);
+  });
+  const reviewItem = await prisma.commercialReviewItem.findUnique({
+    where: { updateId },
+    select: { id: true, pendingReason: true, aiSummary: true, detectionError: true }
+  });
+  if (reviewItem && reviewItem.pendingReason === "unassigned" && !reviewItem.aiSummary && !reviewItem.detectionError) {
+    void enrichCommercialReviewItemWithAi(reviewItem.id).catch((error) => {
+      console.error("Commercial Review AI enrichment failed for item", reviewItem.id, error);
+    });
   }
 
   const updated = await prisma.update.findUniqueOrThrow({ where: { id: updateId } });

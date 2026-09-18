@@ -2005,3 +2005,64 @@ export async function classifyInboundEmail(
 
   return InboundEmailClassificationSchema.parse(JSON.parse(raw));
 }
+
+// Commercial Review (see lib/commercial-review.ts) — unlike every other
+// classification function in this file, the diary entry this enriches is
+// ALREADY going to appear on the dashboard regardless of what this call
+// returns; there's no isPotentialCommercialItem gate here. This call's
+// only job is to produce the plain-English "why this needs a look" line a
+// human reviewer sees, plus a confidence figure used purely for ranking —
+// never to decide visibility. rationale must only reference signals
+// actually present in the text/summary handed to it, mirroring
+// DeviationCard's rationale rendering (components/contract/deviation-
+// report-view.tsx) — plain English, never raw model reasoning.
+const CommercialReviewAssessmentSchema = z.object({
+  confidence: z.number().min(0).max(1).nullish(),
+  rationale: z.string().nullish()
+});
+
+export type CommercialReviewAssessment = z.infer<typeof CommercialReviewAssessmentSchema>;
+
+export async function assessPotentialCommercialItem(
+  params: {
+    body: string;
+    attachmentCount: number;
+    hasRelatedCorrespondence: boolean;
+  },
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<CommercialReviewAssessment> {
+  const signalsText = [
+    `Attachments: ${params.attachmentCount}`,
+    `Has related correspondence already sent: ${params.hasRelatedCorrespondence ? "yes" : "no"}`
+  ].join("\n");
+
+  const response = await callGrok(
+    {
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "A subcontractor's Project Diary entry has no commercial record (Site Instruction, Variation, Dayworks, or Contract Works checkpoint) attached to it yet, and is about to be shown to a manager for review regardless of your answer — your job is only to write a short, plain-English note explaining what in this specific entry might be worth a second look, so the reviewer can judge it faster. " +
+            "Respond with only a JSON object matching this exact shape: " +
+            '{"confidence": number | null, "rationale": string | null}. ' +
+            "confidence: 0 to 1, how likely this describes work/cost genuinely beyond ordinary contracted scope (additional/extra/instructed/changed/relocated/removed/rework language, or effort disproportionate to a routine note) — not a decision, just a ranking signal. " +
+            "rationale: one short sentence (under 200 characters), plain English, referencing ONLY signals actually present below (e.g. specific wording used, attachment count, correspondence) — never invent a reason, never mention labour hours or cost figures unless they literally appear in the text. If nothing stands out beyond \"this simply has no tag yet\", say so plainly rather than manufacturing a reason. Never suggest what commercial category it should become — that decision belongs to the human reviewer."
+        },
+        {
+          role: "user",
+          content: `Diary entry text:\n${params.body}\n\n---\n\nOther signals:\n${signalsText}`
+        }
+      ]
+    },
+    { ...usageContext, feature: "commercial_item_detection" }
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  return CommercialReviewAssessmentSchema.parse(JSON.parse(raw));
+}

@@ -365,6 +365,7 @@ model User {
   createdDelayEvents             DelayEvent[]
   confirmedRetentions            Retention[]
   generatedQaDocuments           QaDocument[]
+  commercialReviewNoActions      CommercialReviewItem[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -662,6 +663,7 @@ model Project {
   contractSchedule             ContractSchedule?
   retention                    Retention?
   delayEvents                  DelayEvent[]
+  commercialReviewItems        CommercialReviewItem[]
 }
 
 enum VariationAutomationMode {
@@ -1906,6 +1908,7 @@ model Update {
   reads                       UpdateRead[]
   contractItemProgressEntries ContractItemProgressEntry[]
   contractItemLinks           ContractItemDiaryLink[]
+  commercialReviewItem        CommercialReviewItem?
 }
 
 // A plain association between a Project Diary entry and a Contract Item
@@ -1930,6 +1933,89 @@ model ContractItemDiaryLink {
   update       Update       @relation(fields: [updateId], references: [id])
 
   @@unique([contractItemId, updateId])
+}
+
+// "Commercial Review" — a dashboard worklist ensuring every Project Diary
+// entry eventually gets a commercial destination (or an explicit "No
+// Action Required"), not just the ones an AI happens to flag as
+// interesting. This is NOT a new commercial entity type — it never
+// represents a Variation/SI/Dayworks/Contract record itself; it's a
+// review-queue row over an existing Update, structurally the same role as
+// InboundEmail (see that model's own suggested*/reviewedByUserId comment).
+// Every real commercial outcome still goes through 100% existing
+// mechanisms (PATCH /updates, POST /qa-records, POST /day-works-sheets,
+// POST /contract-schedule/progress) — this table only tracks whether an
+// entry still needs a decision, and records the one new decision it adds
+// (No Action Required).
+//
+// Deliberately going-forward-only: rows are only ever created for Updates
+// posted after this feature shipped (see lib/commercial-review.ts's
+// COMMERCIAL_REVIEW_LAUNCH_CUTOVER) — no backfill/one-time backlog dump
+// against years of existing untagged diary entries.
+enum CommercialReviewPendingReason {
+  // No variationItemId/qaRecordId/category at all — genuinely untagged.
+  unassigned
+  // category = contract, linked via ContractItemDiaryLink, but no
+  // ContractItemProgressEntry.projectDiaryUpdateId has recorded a %
+  // checkpoint from it yet.
+  awaiting_percentage
+}
+
+enum CommercialReviewStatus {
+  pending_review
+  // Renamed from a plain "dismissed" so the product language matches what
+  // a user actually picks — this is a considered "nothing to do here"
+  // call, not an AI suggestion being rejected.
+  no_action_required
+}
+
+model CommercialReviewItem {
+  id            String                        @id @default(cuid())
+  projectId     String
+  // One row per diary entry — the dedup key. Detection always upserts on
+  // this, so a retry (cron sweep, a tag-change re-evaluation) can only
+  // ever update the existing row, never create a second alert for the
+  // same diary entry.
+  updateId      String                        @unique
+  pendingReason CommercialReviewPendingReason
+  status        CommercialReviewStatus        @default(pending_review)
+
+  // AI enrichment — best-effort, ONLY ever populated for
+  // pendingReason = unassigned (an awaiting_percentage row needs no AI,
+  // it's a plain missing-number check). Mirrors InboundEmail's
+  // suggested*/classificationError exactly: advisory only, never gates
+  // whether this item is treated as pending — only enriches its on-screen
+  // explanation. A failed enrichment call sets detectionError (distinct
+  // from "AI genuinely found nothing to add") and the cron sweep retries;
+  // the item still shows on the dashboard regardless, with a generic
+  // fallback reason if enrichment never completes.
+  aiSummary      String?
+  aiConfidence   Float?
+  detectionError String?
+  detectedAt     DateTime?
+
+  // Deterministic signal snapshot, computed once at row-creation/
+  // re-evaluation time — feeds both the dashboard card's indicator icons
+  // and ranking, even before/without AI enrichment.
+  attachmentCount           Int     @default(0)
+  hasAdditionalWorkLanguage Boolean @default(false)
+  hasRelatedCorrespondence  Boolean @default(false)
+
+  // The one human decision this row can record. Never touches the
+  // underlying Update — the diary entry itself is untouched either way.
+  noActionByUserId String?
+  noActionAt       DateTime?
+  noActionReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project        Project @relation(fields: [projectId], references: [id])
+  update         Update  @relation(fields: [updateId], references: [id])
+  noActionByUser User?   @relation(fields: [noActionByUserId], references: [id])
+
+  @@index([projectId, status])
+  @@index([status, pendingReason, createdAt])
 }
 
 // Per-user read state for an Update — private to each user (one user

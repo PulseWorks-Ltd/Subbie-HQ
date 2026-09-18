@@ -12,10 +12,10 @@ export default async function UpdatesPage({
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ q?: string; from?: string; to?: string; category?: string }>;
+  searchParams: Promise<{ q?: string; from?: string; to?: string; category?: string; update?: string }>;
 }) {
   const { projectId } = await params;
-  const { q, from, to, category } = await searchParams;
+  const { q, from, to, category, update: highlightUpdateId } = await searchParams;
   const trimmedQ = q?.trim();
   const fromDate = from ? new Date(`${from}T00:00:00`) : undefined;
   const toDate = to ? new Date(`${to}T23:59:59.999`) : undefined;
@@ -127,6 +127,7 @@ export default async function UpdatesPage({
       initialFrom={from ?? ""}
       initialTo={to ?? ""}
       initialCategory={validCategory ?? ""}
+      highlightUpdateId={highlightUpdateId}
     />
   );
 }

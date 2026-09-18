@@ -226,7 +226,10 @@ export function UpdateThread({
   const hasAssignment = Boolean(update.variationItem || update.qaRecord || update.category);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5">
+    <div
+      id={`update-${update.id}`}
+      className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5 scroll-mt-20 transition-shadow"
+    >
       {/* Read-only — what this entry is currently assigned to, if anything.
           The actions that CHANGE this (Assign/Change assignment/Remove/
           Progress) live in the action row at the bottom instead, alongside

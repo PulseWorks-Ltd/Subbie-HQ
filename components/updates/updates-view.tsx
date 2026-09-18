@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { Update, UpdateAttachment, VariationItem } from "@prisma/client";
 import type { TaggableContractItem } from "@/lib/contract-schedule";
 import { UpdateThread } from "@/components/updates/update-thread";
@@ -28,7 +29,8 @@ export function UpdatesView({
   initialQuery,
   initialFrom,
   initialTo,
-  initialCategory
+  initialCategory,
+  highlightUpdateId
 }: {
   projectId: string;
   updates: UpdateWithReplies[];
@@ -40,8 +42,24 @@ export function UpdatesView({
   initialFrom: string;
   initialTo: string;
   initialCategory: string;
+  highlightUpdateId?: string;
 }) {
   const isFiltered = Boolean(initialQuery || initialFrom || initialTo || initialCategory);
+
+  // Mirrors MobileUpdatesView's identical scroll-to-and-highlight effect —
+  // the "Review" action on the Commercial Review dashboard section (and
+  // any other deep link, e.g. a push notification) lands here via
+  // ?update=<id> and needs to actually land ON that entry, not just the
+  // top of a long list.
+  useEffect(() => {
+    if (!highlightUpdateId) return;
+    const el = document.getElementById(`update-${highlightUpdateId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-primary");
+    const timeout = setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2500);
+    return () => clearTimeout(timeout);
+  }, [highlightUpdateId]);
 
   return (
     <div className="flex flex-col gap-6">

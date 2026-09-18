@@ -1,9 +1,11 @@
 import Link from "next/link";
 import type { DashboardItem, DashboardItemType } from "@/lib/dashboard";
 import type { UnreadUpdateItem } from "@/lib/updates-feed";
+import type { CommercialReviewFeedItem } from "@/lib/commercial-review";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { DashboardItemRow } from "@/components/dashboard/dashboard-item-row";
 import { UpdatesDashboardSection } from "@/components/dashboard/updates-dashboard-section";
+import { CommercialReviewDashboardSection } from "@/components/dashboard/commercial-review-dashboard-section";
 
 const SECTIONS: { key: DashboardItemType; label: string; icon: string }[] = [
   { key: "site-instruction", label: "Site Instructions", icon: "assignment" },
@@ -22,10 +24,14 @@ function sortItems(items: DashboardItem[]) {
 
 export function DashboardView({
   initialItems,
-  initialUnreadUpdates
+  initialUnreadUpdates,
+  initialCommercialReviewItems,
+  showCommercialReview
 }: {
   initialItems: DashboardItem[];
   initialUnreadUpdates: UnreadUpdateItem[];
+  initialCommercialReviewItems: CommercialReviewFeedItem[];
+  showCommercialReview: boolean;
 }) {
   const sections = SECTIONS.map((section) => {
     const items = sortItems(initialItems.filter((item) => item.type === section.key));
@@ -110,6 +116,12 @@ export function DashboardView({
         <div className="mt-4">
           <UpdatesDashboardSection initialItems={initialUnreadUpdates} />
         </div>
+
+        {showCommercialReview && (
+          <div className="mt-4">
+            <CommercialReviewDashboardSection initialItems={initialCommercialReviewItems} />
+          </div>
+        )}
       </div>
     </main>
   );

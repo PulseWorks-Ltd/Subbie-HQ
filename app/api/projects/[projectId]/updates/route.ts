@@ -11,6 +11,7 @@ import { MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE_BYTES, isAllowedAttachmentType, at
 import { generateThumbnail } from "@/lib/image-thumbnails";
 import { UPDATE_CATEGORIES } from "@/lib/update-category";
 import { setContractItemDiaryLinks } from "@/lib/contract-schedule";
+import { evaluateUpdateForCommercialReview, enrichCommercialReviewItemWithAi } from "@/lib/commercial-review";
 
 const recipientSchema = z
   .object({
@@ -229,6 +230,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     await setContractItemDiaryLinks(update.id, payload.contractItemIds);
   }
 
+
   // The author has obviously "read" what they just wrote — without this,
   // every update they post would immediately show up as unread in their own
   // Dashboard Updates section.
@@ -285,6 +287,25 @@ export async function POST(request: Request, context: { params: { projectId: str
   }
 
   const attachments = await prisma.updateAttachment.findMany({ where: { updateId: update.id } });
+
+  // Commercial Review — cheap and deterministic (no AI in this call), so
+  // it's awaited: by the time this returns, attachmentCount reflects the
+  // files just uploaded above. AI enrichment is a separate, genuinely
+  // fire-and-forget step right after, only for a newly-unassigned entry.
+  if (!payload.parentId) {
+    await evaluateUpdateForCommercialReview(update.id).catch((error) => {
+      console.error("Commercial Review evaluation failed for update", update.id, error);
+    });
+    const reviewItem = await prisma.commercialReviewItem.findUnique({
+      where: { updateId: update.id },
+      select: { id: true, pendingReason: true }
+    });
+    if (reviewItem && reviewItem.pendingReason === "unassigned") {
+      void enrichCommercialReviewItemWithAi(reviewItem.id).catch((error) => {
+        console.error("Commercial Review AI enrichment failed for item", reviewItem.id, error);
+      });
+    }
+  }
 
   let sendError: string | undefined;
   if (isExternal) {

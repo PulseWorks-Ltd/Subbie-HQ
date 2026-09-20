@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { INBOUND_EMAIL_TYPE_PRESETS } from "./inbound-email-types";
 import { recordAiUsageSuccess, recordAiUsageFailure, assertWithinSpendCap, type AiUsageContext } from "./ai-usage";
+import { checkClaimReconciliation, computeDeclinedAmountFromLines } from "./payment-reconciliation";
 
 // Constructed lazily (not at module scope) — the OpenAI SDK validates apiKey
 // presence eagerly in its constructor, which would crash Next.js's build-time
@@ -2065,4 +2066,129 @@ export async function assessPotentialCommercialItem(
   }
 
   return CommercialReviewAssessmentSchema.parse(JSON.parse(raw));
+}
+
+// --- Payment Reconciliation: contractor Payment Schedule extraction ---
+
+const ExtractedDeclineLineVisionSchema = z.object({
+  description: z.string(),
+  amount: z.number(),
+  reason: z.string()
+});
+
+const ExtractedAdjustmentVisionSchema = z.object({
+  description: z.string(),
+  // Signed — positive = credit to the subcontractor, negative = a
+  // debit/charge/other deduction (same convention as
+  // PaymentReconciliationAdjustment.amount).
+  amount: z.number()
+});
+
+const ExtractedPaymentScheduleVisionSchema = z.object({
+  claimedAmount: z.number().nullable(),
+  certifiedAmount: z.number().nullable(),
+  declineLines: z.array(ExtractedDeclineLineVisionSchema),
+  statedRetentionAmount: z.number().nullable(),
+  adjustments: z.array(ExtractedAdjustmentVisionSchema),
+  paymentDueDate: z.string().nullable(),
+  paymentReceivedDate: z.string().nullable(),
+  receivedAmount: z.number().nullable(),
+  confidence: z.number().min(0).max(1),
+  notes: z.string().nullable()
+});
+
+export type ExtractedPaymentSchedule = {
+  claimedAmount: number | null;
+  certifiedAmount: number | null;
+  declineLines: { description: string; amount: number; reason: string }[];
+  statedRetentionAmount: number | null;
+  adjustments: { description: string; amount: number }[];
+  paymentDueDate: string | null;
+  paymentReceivedDate: string | null;
+  receivedAmount: number | null;
+  confidence: number;
+  notes: string | null;
+};
+
+// Never trust the model's own arithmetic (same discipline as
+// resolveDayWorksSheetSummary/resolveExtractedContractSchedule above):
+// reuses lib/payment-reconciliation.ts's own checkClaimReconciliation so
+// "does this reconcile" has exactly one definition, shared with the review
+// UI's live discrepancy warning. A mismatch never blocks the extraction or
+// alters a figure — only lowers confidence and appends a note for the
+// mandatory human review step.
+const RECONCILIATION_MISMATCH_CONFIDENCE_CAP = 0.35;
+
+function resolveExtractedPaymentSchedule(
+  parsed: z.infer<typeof ExtractedPaymentScheduleVisionSchema>
+): ExtractedPaymentSchedule {
+  const declinedAmount = computeDeclinedAmountFromLines(parsed.declineLines);
+  const check = checkClaimReconciliation(parsed.claimedAmount, parsed.certifiedAmount, declinedAmount);
+
+  let confidence = parsed.confidence;
+  let notes = parsed.notes;
+  if (check && !check.reconciles) {
+    confidence = Math.min(confidence, RECONCILIATION_MISMATCH_CONFIDENCE_CAP);
+    const mismatchNote = `Claimed ($${parsed.claimedAmount}) doesn't equal certified + declined (off by $${Math.abs(check.difference)}) — please verify against the original document.`;
+    notes = notes ? `${notes} ${mismatchNote}` : mismatchNote;
+  }
+
+  return { ...parsed, confidence, notes };
+}
+
+// Reads a contractor's Payment Schedule / payment response document (PDF
+// rendered to page images, or a photographed/scanned image directly) and
+// extracts the figures behind Payment Reconciliation — see
+// ContractorPaymentSchedule's own schema comment. Vision-based, same
+// reasoning as extractDayWorksSheetSummariesFromImages: a real payment
+// schedule's layout (which line is "certified" vs "claimed" vs a
+// retention deduction) is a document-understanding task, not a
+// text-extraction one. Deliberately permissive about missing fields (null
+// rather than a guess) since the result always lands in a draft row that
+// goes through a mandatory review-before-confirm step — never straight to
+// being treated as commercial fact.
+export async function extractPaymentScheduleFromImages(
+  images: { dataUrl: string }[],
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ExtractedPaymentSchedule> {
+  const response = await callGrok(
+    {
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You read a Main Contractor's Payment Schedule / payment response document, issued in response to a subcontractor's Payment Claim, and extract the figures it states. Respond with only a JSON object matching this exact shape: " +
+            '{"claimedAmount": number | null, "certifiedAmount": number | null, "declineLines": [{"description": string, "amount": number, "reason": string}], "statedRetentionAmount": number | null, "adjustments": [{"description": string, "amount": number}], "paymentDueDate": string | null, "paymentReceivedDate": string | null, "receivedAmount": number | null, "confidence": number, "notes": string | null}. ' +
+            "claimedAmount: the amount the document states was CLAIMED (what the subcontractor asked for) — null if not stated. " +
+            "certifiedAmount: the amount the document states was CERTIFIED or APPROVED for payment — this is almost always DIFFERENT from claimedAmount when anything was declined; never assume it equals claimedAmount, and null if genuinely not stated. " +
+            "declineLines: one entry per distinct item or amount the document states was declined, reduced, or rejected — description (what was declined, e.g. a variation reference or work item), amount (the declined amount for that line, always positive), reason (the document's own stated reason, e.g. 'insufficient supporting evidence', 'not yet approved', 'no signed daywork sheet' — preserve it as stated, do not paraphrase away specifics). Do not collapse multiple declined items into one line — list each separately. Empty array if nothing was declined. " +
+            "statedRetentionAmount: the retention amount the document itself states is being withheld this period — null if not stated. This is separate from anything else; do not confuse it with a decline. " +
+            "adjustments: any credit or other adjustment line stated on the document that isn't a decline (e.g. a prior credit note, a back-charge) — description, amount (positive = a credit TO the subcontractor, negative = a debit/charge against them). Empty array if none. " +
+            "paymentDueDate: the date the document states payment is due, as an ISO 8601 date (YYYY-MM-DD), or null if not stated. " +
+            "paymentReceivedDate/receivedAmount: ONLY populate these if the document itself explicitly confirms a payment was actually made/received (e.g. a remittance advice showing funds sent) — a Payment Schedule merely stating a certified amount and a due date is NOT evidence a payment has occurred, so in that far more common case both of these MUST be null. Never infer that a payment happened just because a certification exists. " +
+            "confidence: your own honest 0-1 confidence in the accuracy of this extraction as a whole — lower it for anything genuinely hard to read or ambiguous. " +
+            "notes: a brief plain-English note on anything uncertain or worth double-checking, or null if nothing is uncertain. " +
+            "Never invent a figure that isn't actually stated on the document — use null instead. Never assume a later stage (certified, received) from an earlier one (claimed, certified) — each is only ever read directly from what the document says."
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Read the Payment Schedule document in the following image(s) and extract the structured data described." },
+            ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image.dataUrl } }))
+          ]
+        }
+      ]
+    },
+    { ...usageContext, feature: "payment_schedule_extraction" }
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  const parsed = ExtractedPaymentScheduleVisionSchema.parse(JSON.parse(raw));
+  return resolveExtractedPaymentSchedule(parsed);
 }

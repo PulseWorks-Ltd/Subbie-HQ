@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ContractItemValueBreakdown } from "@/lib/contract-schedule";
+import { ContractorResponseSection, type SerializedReconciliation } from "@/components/payment-claims/contractor-response-section";
+import type { VariationOption } from "@/components/payment-claims/contractor-response-dialog";
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -261,7 +263,9 @@ export function PaymentClaimDetailView({
   retentionPercent,
   variations,
   contacts,
-  approvedVariationsTotal
+  approvedVariationsTotal,
+  reconciliationHistory,
+  calculatedRetention
 }: {
   projectId: string;
   claim: {
@@ -291,6 +295,8 @@ export function PaymentClaimDetailView({
   // been claimed doesn't count as "Approved" until it has been. Passed in
   // so this on-screen summary and the generated PDF can never disagree.
   approvedVariationsTotal: number;
+  reconciliationHistory: SerializedReconciliation[];
+  calculatedRetention: number;
 }) {
   const router = useRouter();
   const [allocationInputs, setAllocationInputs] = useState<Record<string, string>>(
@@ -416,6 +422,15 @@ export function PaymentClaimDetailView({
           </div>
         )}
       </div>
+
+      <ContractorResponseSection
+        projectId={projectId}
+        claimId={claim.id}
+        claimedAmount={claim.claimedAmount}
+        calculatedRetention={calculatedRetention}
+        variationOptions={variations.map((v): VariationOption => ({ id: v.id, reference: v.reference, title: v.title }))}
+        history={reconciliationHistory}
+      />
 
       <SendClaimPanel projectId={projectId} claimId={claim.id} contacts={contacts} />
 

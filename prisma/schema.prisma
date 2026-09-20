@@ -322,50 +322,53 @@ enum ExternalActionChoice {
 }
 
 model User {
-  id                             String                         @id @default(cuid())
-  email                          String                         @unique
-  passwordHash                   String
-  firstName                      String?
-  lastName                       String?
+  id                                  String                            @id @default(cuid())
+  email                               String                            @unique
+  passwordHash                        String
+  firstName                           String?
+  lastName                            String?
   // Free text — e.g. "Director", "Site Manager", "Quantity Surveyor", not a
   // fixed enum. Optional, same as MainContractorContact.role elsewhere.
-  jobTitle                       String?
+  jobTitle                            String?
   // Grants access to /platform-admin (AI usage cost dashboard) — deliberately
   // NOT settable from any UI/API, since this is a single-person,
   // manually-granted capability for the platform owner, not an org-level
   // role. Only ever flipped via a direct database write.
-  isPlatformAdmin                Boolean                        @default(false)
+  isPlatformAdmin                     Boolean                           @default(false)
   // Set whenever the password changes via the forgot-password reset flow
   // (see lib/password-reset.ts) — compared against a JWT session's `iat` in
   // auth.ts's session callback so any session issued before a reset is
   // treated as logged out on its next request. Not set by the My Settings
   // password-change flow (app/api/account/route.ts) today, only by reset.
-  passwordChangedAt              DateTime?
-  createdAt                      DateTime                       @default(now())
-  memberships                    ProjectMember[]
-  organisationMemberships        OrganisationMember[]
-  sentInvites                    OrganisationInvite[]
-  updates                        Update[]
-  pushSubscriptions              PushSubscription[]
-  updateReads                    UpdateRead[]
-  passwordResetTokens            PasswordResetToken[]
-  variationPackages              VariationPackage[]
-  sentExternalActions            ExternalAction[]
-  cancelledVariationScheduleRuns VariationScheduleRun[]
-  automationEnabledProjects      Project[]
-  closedVariationItems           VariationItem[]                @relation("VariationItemClosedBy")
-  reactivatedVariationItems      VariationItem[]                @relation("VariationItemReactivatedBy")
-  createdTasks                   Task[]                         @relation("TaskCreatedBy")
-  closedTasks                    Task[]                         @relation("TaskClosedBy")
-  closedProjects                 Project[]                      @relation("ProjectClosedBy")
-  variationItemClaimAllocations  VariationItemClaimAllocation[]
-  recordLifecycleEvents          RecordLifecycleEvent[]
-  hoursOnSiteSheets              HoursOnSiteSheet[]
-  contractItemProgressEntries    ContractItemProgressEntry[]
-  createdDelayEvents             DelayEvent[]
-  confirmedRetentions            Retention[]
-  generatedQaDocuments           QaDocument[]
-  commercialReviewNoActions      CommercialReviewItem[]
+  passwordChangedAt                   DateTime?
+  createdAt                           DateTime                          @default(now())
+  memberships                         ProjectMember[]
+  organisationMemberships             OrganisationMember[]
+  sentInvites                         OrganisationInvite[]
+  updates                             Update[]
+  pushSubscriptions                   PushSubscription[]
+  updateReads                         UpdateRead[]
+  passwordResetTokens                 PasswordResetToken[]
+  variationPackages                   VariationPackage[]
+  sentExternalActions                 ExternalAction[]
+  cancelledVariationScheduleRuns      VariationScheduleRun[]
+  automationEnabledProjects           Project[]
+  closedVariationItems                VariationItem[]                   @relation("VariationItemClosedBy")
+  reactivatedVariationItems           VariationItem[]                   @relation("VariationItemReactivatedBy")
+  createdTasks                        Task[]                            @relation("TaskCreatedBy")
+  closedTasks                         Task[]                            @relation("TaskClosedBy")
+  closedProjects                      Project[]                         @relation("ProjectClosedBy")
+  variationItemClaimAllocations       VariationItemClaimAllocation[]
+  recordLifecycleEvents               RecordLifecycleEvent[]
+  hoursOnSiteSheets                   HoursOnSiteSheet[]
+  contractItemProgressEntries         ContractItemProgressEntry[]
+  createdDelayEvents                  DelayEvent[]
+  confirmedRetentions                 Retention[]
+  generatedQaDocuments                QaDocument[]
+  commercialReviewNoActions           CommercialReviewItem[]
+  createdContractorPaymentSchedules   ContractorPaymentSchedule[]       @relation("ContractorPaymentScheduleCreatedBy")
+  confirmedContractorPaymentSchedules ContractorPaymentSchedule[]       @relation("ContractorPaymentScheduleConfirmedBy")
+  paymentReconciliationAdjustments    PaymentReconciliationAdjustment[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -1345,14 +1348,19 @@ model PaymentClaim {
   otherAmount         Decimal     @default(0)
   otherDescription    String?
 
-  project            Project                        @relation(fields: [projectId], references: [id])
+  project                    Project                        @relation(fields: [projectId], references: [id])
   // Legacy, pre-dates any real UI — this model was scaffolded before
   // VariationPackage/Correspondence/ExternalAction became the actual,
   // working evidence chain (see claimEvidenceLinks below, which links to
   // THAT chain instead). Left in place, unused, per "never delete".
-  evidenceLinks      EvidencePaymentClaim[]
-  allocations        VariationItemClaimAllocation[]
-  claimEvidenceLinks ClaimEvidenceLink[]
+  evidenceLinks              EvidencePaymentClaim[]
+  allocations                VariationItemClaimAllocation[]
+  claimEvidenceLinks         ClaimEvidenceLink[]
+  // Payment Reconciliation — see ContractorPaymentSchedule's own schema
+  // comment. Not unique: a claim can accumulate more than one response
+  // event over time (original, amended, corrected), each immutable once
+  // confirmed — see that model for why.
+  contractorPaymentSchedules ContractorPaymentSchedule[]
 
   @@unique([projectId, claimNumber])
 }
@@ -1549,6 +1557,11 @@ enum ClaimEvidenceType {
   external_action
   qa_record
   update
+  // The uploaded contractor Payment Schedule document behind a
+  // ContractorPaymentSchedule row (source: document_upload) — see that
+  // model's own schema comment. evidenceId is the ContractorPaymentSchedule
+  // id, resolved in getClaimEvidence same as every other case here.
+  contractor_payment_schedule
 }
 
 model ClaimEvidenceLink {
@@ -1561,6 +1574,157 @@ model ClaimEvidenceLink {
   paymentClaim PaymentClaim @relation(fields: [paymentClaimId], references: [id])
 
   @@unique([paymentClaimId, evidenceType, evidenceId])
+}
+
+// ============================================================
+// Payment Reconciliation — extends a Payment Claim from recording only
+// "what we claimed" (PaymentClaim.claimedAmount) to independently recording
+// what the contractor certified and what was actually received. See
+// lib/payment-reconciliation.ts for the calculations and lib/project-
+// profitability.ts's header comment for how this eventually feeds the
+// Portfolio Profitability dashboard's `payments` placeholder.
+//
+// The three stages are deliberately never derived from one another:
+// claimedAmount (as stated on the contractor's own response — compared
+// against, never overwriting, PaymentClaim.claimedAmount), certifiedAmount,
+// and receivedAmount are three independent facts. A null receivedAmount
+// means genuinely unknown, not zero — see every read-side helper in
+// lib/payment-reconciliation.ts for how that's enforced in code, not just
+// convention.
+// ============================================================
+
+enum ContractorPaymentScheduleSource {
+  manual
+  document_upload
+}
+
+// Deliberately just two states, not three — unlike ItemStatus's
+// draft/parsed/confirmed (Programme), there is no "parsed" middle ground
+// here: this is commercial/financial data, so a document_upload extraction
+// lands at draft (persisted immediately, so it survives a reload — see
+// lib/grok.ts's extractPaymentScheduleFromImages) and only an explicit
+// human Confirm action ever reaches confirmed. A manual entry goes
+// straight to confirmed — the person typing the numbers in IS the review
+// step.
+enum ContractorPaymentScheduleStatus {
+  draft
+  confirmed
+}
+
+// One row = one contractor response EVENT, not one row per PaymentClaim —
+// deliberately not unique on paymentClaimId. A claim can accumulate an
+// original response, then later an amended/corrected one, each its own
+// row. A confirmed row is immutable (enforced in lib/payment-
+// reconciliation.ts, not at the schema level): a correction never edits an
+// existing confirmed row, it creates a new one against the same claim —
+// see getLatestConfirmedReconciliation, the one place "what's the current
+// position" is defined, so nothing else needs its own
+// `orderBy: createdAt desc` guess.
+model ContractorPaymentSchedule {
+  id             String                          @id @default(cuid())
+  paymentClaimId String
+  source         ContractorPaymentScheduleSource
+  status         ContractorPaymentScheduleStatus @default(draft)
+
+  // Nullable at the schema level even though both are mandatory for a
+  // CONFIRMED row (enforced in lib/payment-reconciliation.ts, not here) —
+  // a draft AI extraction may genuinely fail to find one of these on the
+  // document (Section 15's "return null for figures not present"), and
+  // that draft must still be persisted and reviewable rather than
+  // rejected outright. Manual entry always supplies both up front.
+  //
+  // As stated on the contractor's document/entry — may differ slightly
+  // from PaymentClaim.claimedAmount (e.g. rounding); recorded for
+  // comparison, never overwrites the original claim.
+  claimedAmount         Decimal? @db.Decimal(12, 2)
+  certifiedAmount       Decimal? @db.Decimal(12, 2)
+  // Deterministically derived from the sum of declineLines at save time
+  // (see lib/payment-reconciliation.ts) — never an independently editable
+  // number that could disagree with its own child rows.
+  declinedAmount        Decimal  @default(0) @db.Decimal(12, 2)
+  // The contractor's own stated retention — a separate datum from
+  // lib/retention.ts's computeTotalRetentionWithheld, shown side by side
+  // with it, never substituted for it.
+  statedRetentionAmount Decimal? @db.Decimal(12, 2)
+
+  // Independently recorded — null means genuinely unknown, never treated
+  // as $0. See this file's header comment.
+  receivedAmount      Decimal?  @db.Decimal(12, 2)
+  paymentDueDate      DateTime?
+  paymentReceivedDate DateTime?
+
+  // Only set when source: document_upload — same fileName/storageKey/
+  // contentType convention as every other upload in this app.
+  fileName    String?
+  storageKey  String?
+  contentType String?
+
+  // AI extraction metadata — only set when source: document_upload. See
+  // lib/grok.ts's extractPaymentScheduleFromImages for how confidence is
+  // lowered and notes appended when the deterministic self-verification
+  // check finds an arithmetic discrepancy.
+  aiConfidence Float?
+  aiNotes      String?
+  extractedAt  DateTime?
+
+  confirmedAt       DateTime?
+  confirmedByUserId String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  paymentClaim    PaymentClaim                       @relation(fields: [paymentClaimId], references: [id])
+  createdByUser   User                               @relation("ContractorPaymentScheduleCreatedBy", fields: [createdByUserId], references: [id])
+  confirmedByUser User?                              @relation("ContractorPaymentScheduleConfirmedBy", fields: [confirmedByUserId], references: [id])
+  declineLines    PaymentReconciliationDeclineLine[]
+  adjustments     PaymentReconciliationAdjustment[]
+
+  @@index([paymentClaimId])
+}
+
+// Itemised decline lines, not a single parent number — a real contractor
+// response routinely declines several different items for different
+// reasons (e.g. one Variation for "insufficient evidence", another Site
+// Instruction for "not approved"), and collapsing that to one string would
+// lose exactly the detail Task 4's next-claim carry-forward needs to act
+// on line-by-line.
+model PaymentReconciliationDeclineLine {
+  id                          String  @id @default(cuid())
+  contractorPaymentScheduleId String
+  description                 String
+  amount                      Decimal @db.Decimal(12, 2)
+  // Free text, not an enum — real decline reasons are as varied as real
+  // contract clauses, same convention as Correspondence/DelayEvent.cause
+  // elsewhere in this schema.
+  reason                      String
+  // Optional — set only when the decline is identifiable against a
+  // specific Variation/SI. Never required: a decline against base
+  // Contract Schedule work, or one that can't be confidently identified,
+  // simply leaves this null.
+  variationItemId             String?
+
+  contractorPaymentSchedule ContractorPaymentSchedule @relation(fields: [contractorPaymentScheduleId], references: [id])
+  variationItem             VariationItem?            @relation(fields: [variationItemId], references: [id])
+
+  @@index([contractorPaymentScheduleId])
+}
+
+// Credits/adjustments as individual signed lines, not one net number — same
+// "the individual lines are commercially useful" reasoning as decline
+// lines above. amount is signed: positive = credit to the subcontractor,
+// negative = a debit/charge/other deduction.
+model PaymentReconciliationAdjustment {
+  id                          String   @id @default(cuid())
+  contractorPaymentScheduleId String
+  description                 String
+  amount                      Decimal  @db.Decimal(12, 2)
+  createdByUserId             String
+  createdAt                   DateTime @default(now())
+
+  contractorPaymentSchedule ContractorPaymentSchedule @relation(fields: [contractorPaymentScheduleId], references: [id])
+  createdByUser             User                      @relation(fields: [createdByUserId], references: [id])
+
+  @@index([contractorPaymentScheduleId])
 }
 
 // ============================================================
@@ -2115,31 +2279,35 @@ model VariationItem {
   reactivatedAt       DateTime?
   reactivatedByUserId String?
 
-  project                   Project                        @relation(fields: [projectId], references: [id])
-  updates                   Update[]
-  dayWorksSheets            DayWorksSheet[]
+  project                           Project                            @relation(fields: [projectId], references: [id])
+  updates                           Update[]
+  dayWorksSheets                    DayWorksSheet[]
   // Direct, sheet-independent relations (Labour, Plant & Material AI
   // Extraction feature) — the primary way materials/plant/labour records
   // attach to an item going forward; see DayWorksMaterial/DayWorksPlant/
   // DayWorksSheetRecord's own comments.
-  materials                 DayWorksMaterial[]
-  plant                     DayWorksPlant[]
-  sheetRecords              DayWorksSheetRecord[]
-  photos                    VariationPhoto[]
-  correspondence            Correspondence[]
-  packages                  VariationPackage[]
+  materials                         DayWorksMaterial[]
+  plant                             DayWorksPlant[]
+  sheetRecords                      DayWorksSheetRecord[]
+  photos                            VariationPhoto[]
+  correspondence                    Correspondence[]
+  packages                          VariationPackage[]
   // TODO: when preparing this item for submission (submitted_for_claim), surface
   // linked `correspondence` rows (including filed inbound emails) as supporting
   // evidence for the reviewer — not built yet, see Incoming Emails Task 4.2.
-  suggestedForInboundEmails InboundEmail[]                 @relation("InboundEmailSuggestedVariationItem")
-  qaRecords                 QARecord[]
-  externalActions           ExternalAction[]
-  tasks                     Task[]
-  claimAllocations          VariationItemClaimAllocation[]
-  closedByUser              User?                          @relation("VariationItemClosedBy", fields: [closedByUserId], references: [id])
-  reactivatedByUser         User?                          @relation("VariationItemReactivatedBy", fields: [reactivatedByUserId], references: [id])
-  hoursOnSiteSheets         HoursOnSiteSheet[]
-  delayEvents               DelayEvent[]
+  suggestedForInboundEmails         InboundEmail[]                     @relation("InboundEmailSuggestedVariationItem")
+  qaRecords                         QARecord[]
+  externalActions                   ExternalAction[]
+  tasks                             Task[]
+  claimAllocations                  VariationItemClaimAllocation[]
+  closedByUser                      User?                              @relation("VariationItemClosedBy", fields: [closedByUserId], references: [id])
+  reactivatedByUser                 User?                              @relation("VariationItemReactivatedBy", fields: [reactivatedByUserId], references: [id])
+  hoursOnSiteSheets                 HoursOnSiteSheet[]
+  delayEvents                       DelayEvent[]
+  // Payment Reconciliation — optional link from a decline line to the
+  // specific Variation/SI it declined, when identifiable. See
+  // PaymentReconciliationDeclineLine's own schema comment.
+  paymentReconciliationDeclineLines PaymentReconciliationDeclineLine[]
 }
 
 // A general-purpose, user-created work item — distinct from ProgrammeItem

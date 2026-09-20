@@ -357,6 +357,19 @@ export async function getClaimEvidence(paymentClaimId: string, projectId: string
         });
         break;
       }
+      case "contractor_payment_schedule": {
+        const schedule = await prisma.contractorPaymentSchedule.findUnique({
+          where: { id: link.evidenceId },
+          select: { fileName: true }
+        });
+        resolved.push({
+          evidenceType: link.evidenceType,
+          evidenceId: link.evidenceId,
+          label: schedule?.fileName ?? "Contractor Payment Schedule",
+          href: `/projects/${projectId}/payment-claims/${paymentClaimId}`
+        });
+        break;
+      }
     }
   }
 

@@ -10,6 +10,11 @@ import {
 } from "./contract-schedule";
 import { computeTotalRetentionWithheld } from "./retention";
 import { getActiveCommercialReviewItems } from "./commercial-review";
+import {
+  getLatestConfirmedReconciliationsForProject,
+  summarizePaymentTracking,
+  type PaymentTrackingSummary
+} from "./payment-reconciliation";
 
 // ============================================================
 // "Project Profitability" — a REPORTING layer over data every other module
@@ -30,28 +35,22 @@ import { getActiveCommercialReviewItems } from "./commercial-review";
 // is always represented as `baseContractCostTracked: false`, never as a
 // fabricated $0.
 //
-// Future Payment Received architecture (documented here, NOT implemented
-// in this pass — see the build prompt's own §10). The natural chain, once
-// a Payment Schedule feature exists, is:
-//   PaymentClaim (existing)
-//     -> ContractorPaymentSchedule (future model, one per PaymentClaim: the
-//        main contractor's response document)
-//     -> claimedAmount (existing, PaymentClaim.claimedAmount)
-//     -> certifiedAmount / approvedAmount (future, on ContractorPaymentSchedule)
-//     -> declinedAmount + declineReason (future, on ContractorPaymentSchedule)
-//     -> retention (existing, lib/retention.ts — orthogonal, already correct)
-//     -> credits/adjustments (future, a small line-item table keyed to the
-//        payment schedule, for amendments raised after the fact)
-//     -> paymentReceivedAt / paymentReceivedAmount (future, on
-//        ContractorPaymentSchedule or a child PaymentReceipt row, allowing
-//        partial/staggered payment of one certified amount)
-//     -> outstanding (derived: certifiedAmount - paymentReceivedAmount,
-//        never claimedAmount - paymentReceivedAmount, since a main
-//        contractor is only ever obliged to pay what they certified)
-// The `payments` sub-objects below are the intended landing spot: populate
-// their `null` fields from that future chain and flip `trackingEnabled` to
-// `true` — no reshaping of ProjectProfitabilitySummary/
-// PortfolioProfitabilitySummary or their callers required.
+// Payment Received architecture (Task 5 — now implemented). The chain
+// documented here when this file was first built is now real:
+//   PaymentClaim.claimedAmount (existing)
+//     -> ContractorPaymentSchedule (lib/payment-reconciliation.ts) — the
+//        main contractor's response, certifiedAmount/declinedAmount
+//     -> retention (existing, lib/retention.ts — orthogonal, unchanged)
+//     -> credits/adjustments (PaymentReconciliationAdjustment)
+//     -> receivedAmount / paymentReceivedDate (on ContractorPaymentSchedule)
+//     -> outstanding (derived: certifiedAmount - receivedAmount, never
+//        claimedAmount - receivedAmount, since a main contractor is only
+//        ever obliged to pay what they certified)
+// `payments` below is computed by lib/payment-reconciliation.ts's own
+// summarizePaymentTracking — see that function for exactly how
+// certifiedToDate/receivedToDate/outstanding/awaitingReceiptConfirmation
+// are kept as honestly separate figures (an unrecorded receipt is never
+// folded into either receivedToDate or outstanding).
 // ============================================================
 
 function round2(value: number): number {
@@ -86,12 +85,7 @@ export type ProjectProfitabilitySummary = {
     claimedToDate: number;
     retentionWithheld: number;
     netClaimedToDate: number;
-    payments: {
-      receivedToDate: number | null;
-      certifiedToDate: number | null;
-      outstanding: number | null;
-      trackingEnabled: false;
-    };
+    payments: PaymentTrackingSummary;
   };
 
   cost: {
@@ -139,7 +133,7 @@ async function computeProjectProfitability(project: {
   const isFrozen = project.closedAt != null || project.completedAt != null;
   const asOfDate = project.closedAt ?? project.completedAt ?? new Date();
 
-  const [schedule, contractTerms, variations] = await Promise.all([
+  const [schedule, contractTerms, variations, reconciliations] = await Promise.all([
     getContractScheduleForProject(project.id),
     prisma.contractTerms.findUnique({
       where: { projectId: project.id },
@@ -154,7 +148,8 @@ async function computeProjectProfitability(project: {
         materials: true,
         plant: true
       }
-    })
+    }),
+    getLatestConfirmedReconciliationsForProject(project.id)
   ]);
 
   const originalContractValue = schedule ? computeScheduleTotalValue(schedule) : 0;
@@ -230,7 +225,7 @@ async function computeProjectProfitability(project: {
       claimedToDate: round2(grossClaimedToDate),
       retentionWithheld: round2(retentionWithheld),
       netClaimedToDate: round2(netClaimedToDate),
-      payments: { receivedToDate: null, certifiedToDate: null, outstanding: null, trackingEnabled: false }
+      payments: summarizePaymentTracking(round2(grossClaimedToDate), reconciliations)
     },
     cost: {
       labour: round2(labourTotal),
@@ -282,12 +277,7 @@ export type PortfolioProfitabilitySummary = {
   claims: {
     claimedToDate: number;
     netClaimedToDate: number;
-    payments: {
-      receivedToDate: null;
-      certifiedToDate: null;
-      outstanding: null;
-      trackingEnabled: false;
-    };
+    payments: PaymentTrackingSummary;
   };
   approvedVariationsTotal: number;
   commercialItemsRequiringReview: number;
@@ -298,6 +288,9 @@ export type PortfolioProfitabilitySummary = {
     recordedCost: number;
     recordedMargin: number | null;
     claimedToDate: number;
+    certifiedToDate: number;
+    receivedToDate: number;
+    outstanding: number;
   }[];
 };
 
@@ -335,6 +328,10 @@ export async function getPortfolioProfitabilitySummary(userId: string): Promise<
   let approvedVariationsTotal = 0;
   let variationsClaimedToDateTotal = 0;
   let recordedMarginTotal = 0;
+  let certifiedToDateTotal = 0;
+  let receivedToDateTotal = 0;
+  let outstandingTotal = 0;
+  let awaitingReceiptConfirmationTotal = 0;
 
   for (const summary of summaries) {
     revisedContractValueTotal += summary.contractValue.revised;
@@ -344,6 +341,10 @@ export async function getPortfolioProfitabilitySummary(userId: string): Promise<
     approvedVariationsTotal += summary.contractValue.approvedVariations;
     variationsClaimedToDateTotal += summary.margin.variationsClaimedToDate;
     recordedMarginTotal += summary.margin.recordedMarginOnVariations ?? 0;
+    certifiedToDateTotal += summary.claims.payments.certifiedToDate;
+    receivedToDateTotal += summary.claims.payments.receivedToDate;
+    outstandingTotal += summary.claims.payments.outstanding;
+    awaitingReceiptConfirmationTotal += summary.claims.payments.awaitingReceiptConfirmation;
   }
 
   return {
@@ -360,7 +361,14 @@ export async function getPortfolioProfitabilitySummary(userId: string): Promise<
     claims: {
       claimedToDate: round2(claimedToDateTotal),
       netClaimedToDate: round2(netClaimedToDateTotal),
-      payments: { receivedToDate: null, certifiedToDate: null, outstanding: null, trackingEnabled: false }
+      payments: {
+        certifiedToDate: round2(certifiedToDateTotal),
+        receivedToDate: round2(receivedToDateTotal),
+        outstanding: round2(outstandingTotal),
+        awaitingReceiptConfirmation: round2(awaitingReceiptConfirmationTotal),
+        uncertifiedToDate: round2(claimedToDateTotal - certifiedToDateTotal),
+        trackingEnabled: true
+      }
     },
     approvedVariationsTotal: round2(approvedVariationsTotal),
     commercialItemsRequiringReview,
@@ -371,7 +379,10 @@ export async function getPortfolioProfitabilitySummary(userId: string): Promise<
         revisedContractValue: summary.contractValue.revised,
         recordedCost: summary.cost.total,
         recordedMargin: summary.margin.recordedMarginOnVariations,
-        claimedToDate: summary.claims.claimedToDate
+        claimedToDate: summary.claims.claimedToDate,
+        certifiedToDate: summary.claims.payments.certifiedToDate,
+        receivedToDate: summary.claims.payments.receivedToDate,
+        outstanding: summary.claims.payments.outstanding
       }))
       .sort((a, b) => b.revisedContractValue - a.revisedContractValue)
   };

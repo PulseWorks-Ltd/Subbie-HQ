@@ -96,14 +96,30 @@ export function ProfitabilityView({
           Recorded margin reflects Variations &amp; Site Instructions only. Base contract cost is not currently tracked.
         </p>
 
-        <div className="rounded-lg border border-dashed border-[#cfdbe7] dark:border-slate-700 px-3 py-2 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold text-[#4c739a] dark:text-slate-400">Payments Received</p>
-            <p className="text-[11px] text-[#4c739a] dark:text-slate-400">
-              Payment receipt tracking will be added in a future update.
-            </p>
+        <div className="rounded-lg border border-[#e7edf3] dark:border-slate-800 px-3 py-2 flex flex-col gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[#4c739a] dark:text-slate-400">
+            Claimed → Certified → Received
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
+            <Metric label="Certified to Date" value={formatCurrency(summary.claims.payments.certifiedToDate)} />
+            <Metric label="Received to Date" value={formatCurrency(summary.claims.payments.receivedToDate)} />
+            <Metric label="Outstanding (Confirmed)" value={formatCurrency(summary.claims.payments.outstanding)} />
+            <Metric
+              label="Uncertified"
+              value={formatCurrency(summary.claims.payments.uncertifiedToDate)}
+              hint={
+                summary.claims.payments.uncertifiedToDate < 0
+                  ? "Certified exceeds recorded claimed value — worth checking"
+                  : "Claimed but not yet certified"
+              }
+            />
           </div>
-          <span className="text-xs font-bold text-[#4c739a] dark:text-slate-400 shrink-0">Not yet tracked</span>
+          {summary.claims.payments.awaitingReceiptConfirmation > 0 && (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              {formatCurrency(summary.claims.payments.awaitingReceiptConfirmation)} is certified but hasn&apos;t had a payment
+              recorded yet — never assumed as received or outstanding.
+            </p>
+          )}
         </div>
       </div>
 

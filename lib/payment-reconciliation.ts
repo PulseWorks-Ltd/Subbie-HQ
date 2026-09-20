@@ -477,3 +477,99 @@ export async function resolveDeclineLineWithoutCarryForward(params: {
     }
   });
 }
+
+// ============================================================
+// Task 5 — feeding Certified/Received into Portfolio Profitability
+// (lib/project-profitability.ts). See that file's own header comment for
+// the full Claimed -> Certified -> Received chain this completes.
+// ============================================================
+
+// The project-wide counterpart to getLatestConfirmedReconciliation — one
+// query for every claim's confirmed rows, then the latest per claim kept
+// in memory, rather than N+1 separate lookups (this feeds the Portfolio
+// Profitability dashboard, so it needs to stay cheap across every active
+// project, not just one claim at a time).
+export async function getLatestConfirmedReconciliationsForProject(projectId: string): Promise<ContractorPaymentScheduleWithLines[]> {
+  const claims = await prisma.paymentClaim.findMany({ where: { projectId }, select: { id: true } });
+  if (claims.length === 0) return [];
+
+  const confirmed = await prisma.contractorPaymentSchedule.findMany({
+    where: { paymentClaimId: { in: claims.map((claim) => claim.id) }, status: "confirmed" },
+    orderBy: { createdAt: "desc" },
+    include: RECONCILIATION_INCLUDE
+  });
+
+  // confirmed is already newest-first, so the first row seen per claim is
+  // its latest — same definition of "current" as getLatestConfirmedReconciliation.
+  const latestByClaim = new Map<string, ContractorPaymentScheduleWithLines>();
+  for (const schedule of confirmed) {
+    if (!latestByClaim.has(schedule.paymentClaimId)) {
+      latestByClaim.set(schedule.paymentClaimId, schedule);
+    }
+  }
+  return Array.from(latestByClaim.values());
+}
+
+export type PaymentTrackingSummary = {
+  // Sum of certifiedAmount across every claim's latest confirmed
+  // response — real money the contractor has agreed to pay, always
+  // calculable once a response exists (0 for a project with no confirmed
+  // responses yet, which is a genuine $0, not an unknown one).
+  certifiedToDate: number;
+  // Sum of receivedAmount, counting ONLY claims where it's actually
+  // known (non-null) — never treats an unrecorded receipt as $0.
+  receivedToDate: number;
+  // Sum of (certified - received), counting ONLY claims where BOTH are
+  // known — this is genuine, confirmed outstanding money, not a guess.
+  outstanding: number;
+  // Sum of certifiedAmount for claims that ARE certified but whose
+  // receivedAmount is still unrecorded — the honest "we don't yet know"
+  // bucket this feature exists to keep separate from both receivedToDate
+  // and outstanding. certifiedToDate always equals receivedToDate +
+  // outstanding + awaitingReceiptConfirmation.
+  awaitingReceiptConfirmation: number;
+  // claimedToDate - certifiedToDate — money claimed that hasn't been
+  // certified at all yet (no confirmed response, or the contractor
+  // certified less than was claimed). Can go negative if a contractor's
+  // stated certifiedAmount somehow exceeds Subbie HQ's own claimedToDate
+  // (a genuine data discrepancy worth surfacing, never clamped away).
+  uncertifiedToDate: number;
+  trackingEnabled: true;
+};
+
+// The one place "what does Certified/Received look like across a set of
+// claims" is computed — used identically by the per-project Profitability
+// page and the cross-project Portfolio dashboard, so the two can never
+// define these figures differently.
+export function summarizePaymentTracking(
+  claimedToDate: number,
+  reconciliations: ContractorPaymentScheduleWithLines[]
+): PaymentTrackingSummary {
+  let certifiedToDate = 0;
+  let receivedToDate = 0;
+  let outstanding = 0;
+  let awaitingReceiptConfirmation = 0;
+
+  for (const schedule of reconciliations) {
+    const certified = schedule.certifiedAmount != null ? Number(schedule.certifiedAmount) : null;
+    if (certified == null) continue; // a confirmed row somehow missing certifiedAmount shouldn't happen (confirmReconciliation requires it), but never assume $0 if it does
+
+    certifiedToDate += certified;
+    const received = schedule.receivedAmount != null ? Number(schedule.receivedAmount) : null;
+    if (received == null) {
+      awaitingReceiptConfirmation += certified;
+    } else {
+      receivedToDate += received;
+      outstanding += certified - received;
+    }
+  }
+
+  return {
+    certifiedToDate: round2(certifiedToDate),
+    receivedToDate: round2(receivedToDate),
+    outstanding: round2(outstanding),
+    awaitingReceiptConfirmation: round2(awaitingReceiptConfirmation),
+    uncertifiedToDate: round2(claimedToDate - certifiedToDate),
+    trackingEnabled: true
+  };
+}

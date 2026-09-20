@@ -3,10 +3,11 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
 import { getPaymentClaimComputedData } from "@/lib/payment-claim";
-import { getReconciliationHistory } from "@/lib/payment-reconciliation";
+import { getReconciliationHistory, getOpenDeclineLinesForProject } from "@/lib/payment-reconciliation";
 import { computeTotalRetentionWithheld } from "@/lib/retention";
 import { PaymentClaimDetailView } from "@/components/payment-claims/payment-claim-detail-view";
 import type { SerializedReconciliation } from "@/components/payment-claims/contractor-response-section";
+import type { OpenDeclineLineView } from "@/components/payment-claims/previous-declines-panel";
 
 export default async function PaymentClaimDetailPage({
   params
@@ -43,6 +44,33 @@ export default async function PaymentClaimDetailPage({
     computeTotalRetentionWithheld(projectId)
   ]);
 
+  // Task 4 — only worth querying (and only ever actionable) on a claim
+  // that hasn't been sent yet; an issued/responded claim's own figures are
+  // fixed, so carrying an old decline into it would misrepresent what was
+  // actually submitted. See PreviousDeclinesPanel/carryForwardDeclineLine.
+  const openDeclineLinesRaw = data.claim.status === "draft" ? await getOpenDeclineLinesForProject(projectId, claimId) : [];
+  const variationLabelById = new Map(data.variations.map((v) => [v.id, `${v.reference} — ${v.title}`]));
+  const openDeclineLines: OpenDeclineLineView[] = openDeclineLinesRaw.map((line) => ({
+    id: line.id,
+    paymentClaimId: line.paymentClaimId,
+    claimNumber: line.claimNumber,
+    description: line.description,
+    amount: Number(line.amount),
+    reason: line.reason,
+    variationItemId: line.variationItemId,
+    variationLabel: line.variationItemId ? (variationLabelById.get(line.variationItemId) ?? "Linked Variation/SI") : null
+  }));
+
+  // Just for resolving a resolved decline line's resolvedInClaimId back to
+  // a human-readable claim number in the display below — never used for
+  // any calculation.
+  const allClaimNumbersById = new Map(
+    (await prisma.paymentClaim.findMany({ where: { projectId }, select: { id: true, claimNumber: true } })).map((c) => [
+      c.id,
+      c.claimNumber
+    ])
+  );
+
   const serializedHistory: SerializedReconciliation[] = reconciliationHistory.map((schedule) => ({
     id: schedule.id,
     source: schedule.source,
@@ -64,7 +92,9 @@ export default async function PaymentClaimDetailPage({
       description: line.description,
       amount: Number(line.amount),
       reason: line.reason,
-      variationItemId: line.variationItemId
+      variationItemId: line.variationItemId,
+      resolution: line.resolution,
+      resolvedInClaimNumber: line.resolvedInClaimId ? (allClaimNumbersById.get(line.resolvedInClaimId) ?? null) : null
     })),
     adjustments: schedule.adjustments.map((adjustment) => ({
       id: adjustment.id,
@@ -79,6 +109,7 @@ export default async function PaymentClaimDetailPage({
       contacts={contacts}
       reconciliationHistory={serializedHistory}
       calculatedRetention={calculatedRetention}
+      openDeclineLines={openDeclineLines}
       claim={{
         id: data.claim.id,
         claimNumber: data.claim.claimNumber,

@@ -16,7 +16,18 @@ function formatDate(date: string) {
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export type SerializedDeclineLine = { id: string; description: string; amount: number; reason: string; variationItemId: string | null };
+export type SerializedDeclineLine = {
+  id: string;
+  description: string;
+  amount: number;
+  reason: string;
+  variationItemId: string | null;
+  // Task 4 — how this decline was ultimately dealt with. "open" (the
+  // default) means it still shows up in a later draft claim's Previous
+  // Certification Position panel; every other value is terminal.
+  resolution: "open" | "carried_forward" | "credited" | "evidence_provided" | "resolved_other";
+  resolvedInClaimNumber: number | null;
+};
 export type SerializedAdjustment = { id: string; description: string; amount: number };
 export type SerializedReconciliation = {
   id: string;
@@ -123,6 +134,17 @@ function ConfirmedSummary({ schedule }: { schedule: SerializedReconciliation }) 
               <p key={line.id} className="text-xs text-[#4c739a] dark:text-slate-400">
                 <span className="font-bold text-[#0d141b] dark:text-slate-50">{formatCurrency(line.amount)}</span> — {line.description}
                 <span className="block">{line.reason}</span>
+                {line.resolution !== "open" && (
+                  <span className="block text-green-700 dark:text-green-400">
+                    {line.resolution === "carried_forward"
+                      ? `Carried forward into Claim ${line.resolvedInClaimNumber}`
+                      : line.resolution === "credited"
+                        ? "Applied as credit"
+                        : line.resolution === "evidence_provided"
+                          ? "Evidence provided"
+                          : "Resolved"}
+                  </span>
+                )}
               </p>
             ))}
           </div>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ContractItemValueBreakdown } from "@/lib/contract-schedule";
 import { ContractorResponseSection, type SerializedReconciliation } from "@/components/payment-claims/contractor-response-section";
 import type { VariationOption } from "@/components/payment-claims/contractor-response-dialog";
+import { PreviousDeclinesPanel, type OpenDeclineLineView } from "@/components/payment-claims/previous-declines-panel";
 
 function formatCurrency(amount: number) {
   return amount.toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -265,7 +266,8 @@ export function PaymentClaimDetailView({
   contacts,
   approvedVariationsTotal,
   reconciliationHistory,
-  calculatedRetention
+  calculatedRetention,
+  openDeclineLines
 }: {
   projectId: string;
   claim: {
@@ -297,6 +299,10 @@ export function PaymentClaimDetailView({
   approvedVariationsTotal: number;
   reconciliationHistory: SerializedReconciliation[];
   calculatedRetention: number;
+  // Only ever non-empty when this claim is still draft — see the page's
+  // own fetch, which skips the query entirely otherwise (Task 4: carrying
+  // an amount forward only ever makes sense into a claim not yet sent).
+  openDeclineLines: OpenDeclineLineView[];
 }) {
   const router = useRouter();
   const [allocationInputs, setAllocationInputs] = useState<Record<string, string>>(
@@ -367,6 +373,8 @@ export function PaymentClaimDetailView({
           page.
         </p>
       )}
+
+      <PreviousDeclinesPanel projectId={projectId} claimId={claim.id} lines={openDeclineLines} />
 
       <div className="rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">
         <h3 className="text-sm font-bold mb-3">Summary — this claim</h3>

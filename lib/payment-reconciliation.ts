@@ -1,5 +1,6 @@
 import type { ContractorPaymentSchedule, PaymentReconciliationAdjustment, PaymentReconciliationDeclineLine } from "@prisma/client";
 import { prisma } from "./prisma";
+import { setVariationAllocation, recomputeClaimTotal } from "./payment-claim";
 
 // ============================================================
 // Payment Reconciliation — see ContractorPaymentSchedule's own schema
@@ -349,4 +350,130 @@ export async function confirmReconciliation(id: string, userId: string): Promise
 
   await markClaimRespondedIfFirstConfirmation(existing.paymentClaimId, id);
   return prisma.contractorPaymentSchedule.findUniqueOrThrow({ where: { id }, include: RECONCILIATION_INCLUDE });
+}
+
+// ============================================================
+// Task 4 — carrying/resolving a previous claim's declines forward. Once a
+// decline is CONFIRMED (never a draft's), it either gets carried forward
+// (re-claimed on a later, still-draft claim) or resolved some other way
+// (credited, evidence provided, or otherwise). Every resolution is
+// terminal and one-way — this file never reopens a resolved line, matching
+// the immutability discipline the rest of this file already applies to a
+// confirmed ContractorPaymentSchedule itself.
+// ============================================================
+
+export type OpenDeclineLine = PaymentReconciliationDeclineLine & { paymentClaimId: string; claimNumber: number };
+
+// Every still-open decline line from any OTHER claim in the project,
+// newest claim first — sourced only from each claim's LATEST CONFIRMED
+// reconciliation (getLatestConfirmedReconciliation), so a decline that was
+// superseded by a later, more favourable response on the SAME claim never
+// resurfaces here as if it still needed resolving.
+export async function getOpenDeclineLinesForProject(projectId: string, excludingClaimId: string): Promise<OpenDeclineLine[]> {
+  const claims = await prisma.paymentClaim.findMany({
+    where: { projectId, id: { not: excludingClaimId } },
+    select: { id: true, claimNumber: true },
+    orderBy: { claimNumber: "desc" }
+  });
+
+  const results: OpenDeclineLine[] = [];
+  for (const claim of claims) {
+    const latest = await getLatestConfirmedReconciliation(claim.id);
+    if (!latest) continue;
+    for (const line of latest.declineLines) {
+      if (line.resolution === "open") {
+        results.push({ ...line, paymentClaimId: claim.id, claimNumber: claim.claimNumber });
+      }
+    }
+  }
+  return results;
+}
+
+// Re-claims a previously-declined amount on a later claim — the only
+// resolution with a real financial effect. Two paths, both reusing
+// EXISTING mechanisms rather than inventing a new one:
+//   - linked to a Variation/SI: adds to that item's own claim allocation
+//     on the target claim (lib/payment-claim.ts's setVariationAllocation
+//     — the same mechanism the Variations panel already uses), on top of
+//     whatever's already allocated there, so calling this twice by
+//     accident is additive, not a silent overwrite of unrelated work.
+//   - not linked to any item (base contract work, or unidentifiable): adds
+//     to the target claim's own free-text `otherAmount`/`otherDescription`
+//     — the existing ad hoc catch-all line PaymentClaim already has for
+//     exactly this shape of charge, rather than a new dedicated model for
+//     what should be a rare case in practice.
+// Only ever called against a DRAFT target claim (enforced by the caller,
+// the API route) — carrying an amount into an already-issued claim would
+// misrepresent what was actually submitted to the contractor.
+export async function carryForwardDeclineLine(params: {
+  declineLineId: string;
+  targetClaimId: string;
+  userId: string;
+}): Promise<void> {
+  const line = await prisma.paymentReconciliationDeclineLine.findUniqueOrThrow({ where: { id: params.declineLineId } });
+  if (line.resolution !== "open") {
+    throw new Error("This decline has already been resolved.");
+  }
+
+  if (line.variationItemId) {
+    const existingAllocation = await prisma.variationItemClaimAllocation.findUnique({
+      where: { variationItemId_paymentClaimId: { variationItemId: line.variationItemId, paymentClaimId: params.targetClaimId } }
+    });
+    const amount = round2((existingAllocation ? Number(existingAllocation.amount) : 0) + Number(line.amount));
+    await setVariationAllocation({
+      paymentClaimId: params.targetClaimId,
+      variationItemId: line.variationItemId,
+      amount,
+      userId: params.userId
+    });
+  } else {
+    const targetClaim = await prisma.paymentClaim.findUniqueOrThrow({ where: { id: params.targetClaimId } });
+    const note = `Carried forward: ${line.description} (${line.reason})`;
+    await prisma.paymentClaim.update({
+      where: { id: params.targetClaimId },
+      data: {
+        otherAmount: round2(Number(targetClaim.otherAmount) + Number(line.amount)),
+        otherDescription: targetClaim.otherDescription ? `${targetClaim.otherDescription}; ${note}` : note
+      }
+    });
+    await recomputeClaimTotal(params.targetClaimId);
+  }
+
+  await prisma.paymentReconciliationDeclineLine.update({
+    where: { id: params.declineLineId },
+    data: {
+      resolution: "carried_forward",
+      resolvedInClaimId: params.targetClaimId,
+      resolvedByUserId: params.userId,
+      resolvedAt: new Date()
+    }
+  });
+}
+
+// The other three resolutions — none change any claim's figures, they're
+// purely a record of how the subcontractor chose to deal with a decline
+// without re-claiming it (accepted as a credit/write-off, evidence has
+// since been provided so it's expected to be resolved on a future
+// response without needing to re-claim it here, or some other outcome
+// captured in the free-text note).
+export async function resolveDeclineLineWithoutCarryForward(params: {
+  declineLineId: string;
+  resolution: "credited" | "evidence_provided" | "resolved_other";
+  note: string | null;
+  userId: string;
+}): Promise<void> {
+  const line = await prisma.paymentReconciliationDeclineLine.findUniqueOrThrow({ where: { id: params.declineLineId } });
+  if (line.resolution !== "open") {
+    throw new Error("This decline has already been resolved.");
+  }
+
+  await prisma.paymentReconciliationDeclineLine.update({
+    where: { id: params.declineLineId },
+    data: {
+      resolution: params.resolution,
+      resolutionNote: params.note,
+      resolvedByUserId: params.userId,
+      resolvedAt: new Date()
+    }
+  });
 }

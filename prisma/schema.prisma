@@ -322,53 +322,54 @@ enum ExternalActionChoice {
 }
 
 model User {
-  id                                  String                            @id @default(cuid())
-  email                               String                            @unique
-  passwordHash                        String
-  firstName                           String?
-  lastName                            String?
+  id                                        String                             @id @default(cuid())
+  email                                     String                             @unique
+  passwordHash                              String
+  firstName                                 String?
+  lastName                                  String?
   // Free text — e.g. "Director", "Site Manager", "Quantity Surveyor", not a
   // fixed enum. Optional, same as MainContractorContact.role elsewhere.
-  jobTitle                            String?
+  jobTitle                                  String?
   // Grants access to /platform-admin (AI usage cost dashboard) — deliberately
   // NOT settable from any UI/API, since this is a single-person,
   // manually-granted capability for the platform owner, not an org-level
   // role. Only ever flipped via a direct database write.
-  isPlatformAdmin                     Boolean                           @default(false)
+  isPlatformAdmin                           Boolean                            @default(false)
   // Set whenever the password changes via the forgot-password reset flow
   // (see lib/password-reset.ts) — compared against a JWT session's `iat` in
   // auth.ts's session callback so any session issued before a reset is
   // treated as logged out on its next request. Not set by the My Settings
   // password-change flow (app/api/account/route.ts) today, only by reset.
-  passwordChangedAt                   DateTime?
-  createdAt                           DateTime                          @default(now())
-  memberships                         ProjectMember[]
-  organisationMemberships             OrganisationMember[]
-  sentInvites                         OrganisationInvite[]
-  updates                             Update[]
-  pushSubscriptions                   PushSubscription[]
-  updateReads                         UpdateRead[]
-  passwordResetTokens                 PasswordResetToken[]
-  variationPackages                   VariationPackage[]
-  sentExternalActions                 ExternalAction[]
-  cancelledVariationScheduleRuns      VariationScheduleRun[]
-  automationEnabledProjects           Project[]
-  closedVariationItems                VariationItem[]                   @relation("VariationItemClosedBy")
-  reactivatedVariationItems           VariationItem[]                   @relation("VariationItemReactivatedBy")
-  createdTasks                        Task[]                            @relation("TaskCreatedBy")
-  closedTasks                         Task[]                            @relation("TaskClosedBy")
-  closedProjects                      Project[]                         @relation("ProjectClosedBy")
-  variationItemClaimAllocations       VariationItemClaimAllocation[]
-  recordLifecycleEvents               RecordLifecycleEvent[]
-  hoursOnSiteSheets                   HoursOnSiteSheet[]
-  contractItemProgressEntries         ContractItemProgressEntry[]
-  createdDelayEvents                  DelayEvent[]
-  confirmedRetentions                 Retention[]
-  generatedQaDocuments                QaDocument[]
-  commercialReviewNoActions           CommercialReviewItem[]
-  createdContractorPaymentSchedules   ContractorPaymentSchedule[]       @relation("ContractorPaymentScheduleCreatedBy")
-  confirmedContractorPaymentSchedules ContractorPaymentSchedule[]       @relation("ContractorPaymentScheduleConfirmedBy")
-  paymentReconciliationAdjustments    PaymentReconciliationAdjustment[]
+  passwordChangedAt                         DateTime?
+  createdAt                                 DateTime                           @default(now())
+  memberships                               ProjectMember[]
+  organisationMemberships                   OrganisationMember[]
+  sentInvites                               OrganisationInvite[]
+  updates                                   Update[]
+  pushSubscriptions                         PushSubscription[]
+  updateReads                               UpdateRead[]
+  passwordResetTokens                       PasswordResetToken[]
+  variationPackages                         VariationPackage[]
+  sentExternalActions                       ExternalAction[]
+  cancelledVariationScheduleRuns            VariationScheduleRun[]
+  automationEnabledProjects                 Project[]
+  closedVariationItems                      VariationItem[]                    @relation("VariationItemClosedBy")
+  reactivatedVariationItems                 VariationItem[]                    @relation("VariationItemReactivatedBy")
+  createdTasks                              Task[]                             @relation("TaskCreatedBy")
+  closedTasks                               Task[]                             @relation("TaskClosedBy")
+  closedProjects                            Project[]                          @relation("ProjectClosedBy")
+  variationItemClaimAllocations             VariationItemClaimAllocation[]
+  recordLifecycleEvents                     RecordLifecycleEvent[]
+  hoursOnSiteSheets                         HoursOnSiteSheet[]
+  contractItemProgressEntries               ContractItemProgressEntry[]
+  createdDelayEvents                        DelayEvent[]
+  confirmedRetentions                       Retention[]
+  generatedQaDocuments                      QaDocument[]
+  commercialReviewNoActions                 CommercialReviewItem[]
+  createdContractorPaymentSchedules         ContractorPaymentSchedule[]        @relation("ContractorPaymentScheduleCreatedBy")
+  confirmedContractorPaymentSchedules       ContractorPaymentSchedule[]        @relation("ContractorPaymentScheduleConfirmedBy")
+  paymentReconciliationAdjustments          PaymentReconciliationAdjustment[]
+  resolvedPaymentReconciliationDeclineLines PaymentReconciliationDeclineLine[]
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -1348,7 +1349,7 @@ model PaymentClaim {
   otherAmount         Decimal     @default(0)
   otherDescription    String?
 
-  project                    Project                        @relation(fields: [projectId], references: [id])
+  project                    Project                            @relation(fields: [projectId], references: [id])
   // Legacy, pre-dates any real UI — this model was scaffolded before
   // VariationPackage/Correspondence/ExternalAction became the actual,
   // working evidence chain (see claimEvidenceLinks below, which links to
@@ -1361,6 +1362,10 @@ model PaymentClaim {
   // event over time (original, amended, corrected), each immutable once
   // confirmed — see that model for why.
   contractorPaymentSchedules ContractorPaymentSchedule[]
+  // Task 4 — decline lines from an EARLIER claim that were carried forward
+  // into this one (re-claimed here). See PaymentReconciliationDeclineLine's
+  // own comment.
+  carriedForwardDeclineLines PaymentReconciliationDeclineLine[]
 
   @@unique([projectId, claimNumber])
 }
@@ -1688,6 +1693,22 @@ model ContractorPaymentSchedule {
 // Instruction for "not approved"), and collapsing that to one string would
 // lose exactly the detail Task 4's next-claim carry-forward needs to act
 // on line-by-line.
+// How a decline was ultimately dealt with — Task 4's "the user can decide
+// whether to carry the amount forward, provide additional evidence, apply
+// a credit, or otherwise adjust the claim" (see lib/payment-reconciliation.ts's
+// carryForwardDeclineLine/resolveDeclineLineWithoutCarryForward). open is
+// the only state a decline line is ever created with; every other value is
+// a terminal, one-way resolution — a resolved line is never reopened, and
+// this codebase's "never delete" convention means the line itself is never
+// removed either, just annotated.
+enum PaymentReconciliationDeclineLineResolution {
+  open
+  carried_forward
+  credited
+  evidence_provided
+  resolved_other
+}
+
 model PaymentReconciliationDeclineLine {
   id                          String  @id @default(cuid())
   contractorPaymentScheduleId String
@@ -1703,8 +1724,24 @@ model PaymentReconciliationDeclineLine {
   // simply leaves this null.
   variationItemId             String?
 
+  // Task 4 — how this decline was ultimately dealt with, surfaced as a
+  // "Previous Certification Position" panel on whichever later DRAFT claim
+  // the user is preparing (never on an already-issued claim — retroactively
+  // changing a claim already sent to the contractor would misrepresent
+  // what was actually submitted). resolvedInClaimId is only ever set for
+  // carried_forward (the new claim the amount was re-claimed into);
+  // resolutionNote carries the human's own reasoning for every other
+  // resolution.
+  resolution        PaymentReconciliationDeclineLineResolution @default(open)
+  resolutionNote    String?
+  resolvedInClaimId String?
+  resolvedByUserId  String?
+  resolvedAt        DateTime?
+
   contractorPaymentSchedule ContractorPaymentSchedule @relation(fields: [contractorPaymentScheduleId], references: [id])
   variationItem             VariationItem?            @relation(fields: [variationItemId], references: [id])
+  resolvedInClaim           PaymentClaim?             @relation(fields: [resolvedInClaimId], references: [id])
+  resolvedByUser            User?                     @relation(fields: [resolvedByUserId], references: [id])
 
   @@index([contractorPaymentScheduleId])
 }

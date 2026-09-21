@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { PaymentClaim } from "@prisma/client";
 import type { RetentionSummary } from "@/lib/retention";
 import { RetentionCard } from "@/components/payment-claims/retention-card";
+import { ImportPaymentClaimDialog } from "@/components/payment-claims/import-payment-claim-dialog";
 
 function formatCurrency(amount: number | string | { toString(): string }) {
   return Number(amount).toLocaleString("en-NZ", { style: "currency", currency: "NZD" });
@@ -27,14 +28,21 @@ function defaultNextPeriod(claims: PaymentClaim[]): { start: string; end: string
 export function PaymentClaimsListView({
   projectId,
   claims,
-  retentionSummary
+  retentionSummary,
+  draftImports
 }: {
   projectId: string;
   claims: PaymentClaim[];
   retentionSummary: RetentionSummary;
+  // Payment Claim Import drafts still awaiting review/confirm — surfaced
+  // as a "resume" prompt so an in-progress review is never lost track of
+  // (Section 26: cancel without changing the project, not silently
+  // discard).
+  draftImports: { id: string; fileName: string; createdAt: string }[];
 }) {
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const initial = defaultNextPeriod(claims);
   const [periodStart, setPeriodStart] = useState(initial.start);
   const [periodEnd, setPeriodEnd] = useState(initial.end);
@@ -71,13 +79,35 @@ export function PaymentClaimsListView({
             Monthly claims under the Construction Contracts Act, built from the Contract Schedule and approved Variations.
           </p>
         </div>
-        <button
-          onClick={() => setIsDialogOpen(true)}
-          className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 shrink-0"
-        >
-          Create Claim
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setIsImportDialogOpen(true)}
+            className="h-10 px-4 rounded-lg border border-primary text-primary text-sm font-bold hover:bg-primary/5"
+          >
+            Import Existing Payment Claim
+          </button>
+          <button
+            onClick={() => setIsDialogOpen(true)}
+            className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90"
+          >
+            Create Claim
+          </button>
+        </div>
       </div>
+
+      {draftImports.length > 0 && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/10 px-4 py-3 flex flex-col gap-2">
+          <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Payment claim import in progress</p>
+          {draftImports.map((draft) => (
+            <div key={draft.id} className="flex items-center justify-between gap-3 text-xs text-amber-700 dark:text-amber-400">
+              <span>{draft.fileName} — uploaded {formatDate(draft.createdAt)}, not yet reviewed</span>
+              <Link href={`/projects/${projectId}/payment-claims/import/${draft.id}`} className="font-bold hover:underline shrink-0">
+                Resume review
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
 
       <RetentionCard projectId={projectId} summary={retentionSummary} />
 
@@ -90,12 +120,24 @@ export function PaymentClaimsListView({
       </p>
 
       {claims.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16">
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#cfdbe7] dark:border-slate-700 py-16 px-6 text-center">
           <p className="font-bold mb-1">No claims yet</p>
-          <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5">Create the first monthly claim for this project.</p>
-          <button onClick={() => setIsDialogOpen(true)} className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90">
-            Create Claim
-          </button>
+          <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-1">Create the first monthly claim for this project.</p>
+          <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-5 max-w-sm">
+            Already underway? Upload your latest payment claim to quickly establish your current commercial position instead of
+            recreating everything by hand.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsImportDialogOpen(true)}
+              className="h-10 px-4 rounded-lg border border-primary text-primary text-sm font-bold hover:bg-primary/5"
+            >
+              Import Existing Payment Claim
+            </button>
+            <button onClick={() => setIsDialogOpen(true)} className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90">
+              Create Claim
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -106,7 +148,14 @@ export function PaymentClaimsListView({
               className="flex items-center justify-between rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4 hover:border-primary/40"
             >
               <div>
-                <p className="font-bold">Claim {claim.claimNumber}</p>
+                <p className="font-bold flex items-center gap-2">
+                  Claim {claim.claimNumber}
+                  {claim.source === "imported_external" && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                      Imported
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-[#4c739a] dark:text-slate-400">
                   {formatDate(claim.periodStart)} – {formatDate(claim.periodEnd)}
                 </p>
@@ -159,6 +208,8 @@ export function PaymentClaimsListView({
           </div>
         </div>
       )}
+
+      {isImportDialogOpen && <ImportPaymentClaimDialog projectId={projectId} onClose={() => setIsImportDialogOpen(false)} />}
     </div>
   );
 }

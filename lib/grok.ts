@@ -2192,3 +2192,153 @@ export async function extractPaymentScheduleFromImages(
   const parsed = ExtractedPaymentScheduleVisionSchema.parse(JSON.parse(raw));
   return resolveExtractedPaymentSchedule(parsed);
 }
+
+// --- Payment Claim Import: SA-2017 external payment claim baseline extraction ---
+
+const ExtractedPaymentClaimItemVisionSchema = z.object({
+  reference: z.string().nullable(),
+  description: z.string(),
+  contractValue: z.number().nullable(),
+  revisedValue: z.number().nullable(),
+  claimedPercentToDate: z.number().nullable(),
+  claimedAmountToDate: z.number().nullable(),
+  currentPeriodAmount: z.number().nullable(),
+  previousClaimedAmount: z.number().nullable()
+});
+
+const ExtractedPaymentClaimVariationVisionSchema = z.object({
+  reference: z.string().nullable(),
+  description: z.string(),
+  submittedValue: z.number().nullable(),
+  approvedValue: z.number().nullable(),
+  claimedPercentToDate: z.number().nullable(),
+  claimedAmountToDate: z.number().nullable(),
+  currentPeriodAmount: z.number().nullable(),
+  approvalStatus: z.string().nullable()
+});
+
+const ExtractedPaymentClaimBaselineVisionSchema = z.object({
+  claimReference: z.string().nullable(),
+  claimDate: z.string().nullable(),
+  periodStart: z.string().nullable(),
+  periodEnd: z.string().nullable(),
+  projectNameOnDocument: z.string().nullable(),
+  projectReferenceOnDocument: z.string().nullable(),
+  contractReferenceOnDocument: z.string().nullable(),
+  originalContractSum: z.number().nullable(),
+  approvedVariationsTotal: z.number().nullable(),
+  revisedContractSum: z.number().nullable(),
+  pendingVariationsTotal: z.number().nullable(),
+  grossClaimToDate: z.number().nullable(),
+  retentionPercent: z.number().nullable(),
+  retentionToDate: z.number().nullable(),
+  netClaimToDate: z.number().nullable(),
+  previousClaims: z.number().nullable(),
+  currentClaim: z.number().nullable(),
+  contractItems: z.array(ExtractedPaymentClaimItemVisionSchema),
+  variations: z.array(ExtractedPaymentClaimVariationVisionSchema),
+  confidence: z.number().min(0).max(1),
+  notes: z.string().nullable()
+});
+
+export type ExtractedPaymentClaimBaselineRaw = z.infer<typeof ExtractedPaymentClaimBaselineVisionSchema>;
+
+export type ExtractedPaymentClaimBaselineResult = ExtractedPaymentClaimBaselineRaw & { arithmeticWarning: string | null };
+
+// Self-verification (deterministic, never trusting the model's own
+// arithmetic, same discipline as resolveExtractedContractSchedule above):
+// checks the SUMMARY figures for internal consistency — never "corrects"
+// a value, only surfaces a warning (Section 27: "Source document does not
+// reconcile"). Deliberately checks summary-internal arithmetic rather than
+// summing item/variation lists against a total — a real SA-2017 claim's
+// printed total can legitimately diverge from a naive item-sum for
+// reasons the extraction has no way to know (fluctuations, rounding,
+// items not itemised), so this only flags what the document's OWN stated
+// figures should agree on.
+const ARITHMETIC_TOLERANCE_ABSOLUTE = 50;
+const ARITHMETIC_TOLERANCE_FRACTION = 0.02;
+
+function amountsDisagree(a: number, b: number): boolean {
+  const tolerance = Math.max(ARITHMETIC_TOLERANCE_ABSOLUTE, Math.max(Math.abs(a), Math.abs(b)) * ARITHMETIC_TOLERANCE_FRACTION);
+  return Math.abs(a - b) > tolerance;
+}
+
+function resolvePaymentClaimBaselineExtraction(parsed: ExtractedPaymentClaimBaselineRaw): ExtractedPaymentClaimBaselineResult {
+  const warnings: string[] = [];
+
+  if (parsed.originalContractSum != null && parsed.approvedVariationsTotal != null && parsed.revisedContractSum != null) {
+    const expected = parsed.originalContractSum + parsed.approvedVariationsTotal;
+    if (amountsDisagree(expected, parsed.revisedContractSum)) {
+      warnings.push(
+        `Original contract sum ($${parsed.originalContractSum}) + approved variations ($${parsed.approvedVariationsTotal}) = $${expected}, but the document states the revised sum as $${parsed.revisedContractSum}.`
+      );
+    }
+  }
+
+  if (parsed.grossClaimToDate != null && parsed.retentionToDate != null && parsed.netClaimToDate != null) {
+    const expected = parsed.grossClaimToDate - parsed.retentionToDate;
+    if (amountsDisagree(expected, parsed.netClaimToDate)) {
+      warnings.push(
+        `Gross claim to date ($${parsed.grossClaimToDate}) − retention ($${parsed.retentionToDate}) = $${expected}, but the document states net claim to date as $${parsed.netClaimToDate}.`
+      );
+    }
+  }
+
+  return { ...parsed, arithmeticWarning: warnings.length > 0 ? warnings.join(" ") : null };
+}
+
+// Reads an externally-generated payment claim (initially SA-2017 format)
+// to establish a project's commercial baseline in Subbie HQ — see
+// lib/payment-claim-import.ts. Vision-based for the same reason
+// extractContractScheduleFromImages is: a real claim's B1/B2/B3 tables
+// vary in layout across contractors' own modified templates, and reading
+// which dollar figure belongs to which column/row is a document-
+// understanding task, not a fixed-coordinate one. All pages are sent in
+// one call (small claims are typically a handful of pages), matching that
+// same extractor's own precedent rather than inventing a map-reduce
+// pipeline for this.
+export async function extractPaymentClaimBaselineFromImages(
+  images: { dataUrl: string }[],
+  usageContext: Omit<AiUsageContext, "feature">
+): Promise<ExtractedPaymentClaimBaselineResult> {
+  const response = await callGrok(
+    {
+      model: GROK_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You read a construction Payment Claim document (commonly the NZ SA-2017 standard form, with sections often labelled Appendix B1 Payment Claim Summary, B2 Contract Works/Schedule of Values, B3 Variations — though the exact layout may be a modified Excel/PDF template with different fonts, inserted rows, or page breaks) and extract its structured commercial data. This is a REAL, already-issued claim being imported to establish a project's current position, not a claim being drafted. Respond with only a JSON object matching this exact shape: " +
+            '{"claimReference": string | null, "claimDate": string | null, "periodStart": string | null, "periodEnd": string | null, "projectNameOnDocument": string | null, "projectReferenceOnDocument": string | null, "contractReferenceOnDocument": string | null, "originalContractSum": number | null, "approvedVariationsTotal": number | null, "revisedContractSum": number | null, "pendingVariationsTotal": number | null, "grossClaimToDate": number | null, "retentionPercent": number | null, "retentionToDate": number | null, "netClaimToDate": number | null, "previousClaims": number | null, "currentClaim": number | null, "contractItems": [{"reference": string | null, "description": string, "contractValue": number | null, "revisedValue": number | null, "claimedPercentToDate": number | null, "claimedAmountToDate": number | null, "currentPeriodAmount": number | null, "previousClaimedAmount": number | null}], "variations": [{"reference": string | null, "description": string, "submittedValue": number | null, "approvedValue": number | null, "claimedPercentToDate": number | null, "claimedAmountToDate": number | null, "currentPeriodAmount": number | null, "approvalStatus": string | null}], "confidence": number, "notes": string | null}. ' +
+            "claimReference: the claim's own number/label exactly as printed (e.g. 'Payment Claim #07', 'PC-07'), or null. " +
+            "claimDate/periodStart/periodEnd: ISO 8601 dates (YYYY-MM-DD), or null if not stated. " +
+            "projectNameOnDocument/projectReferenceOnDocument/contractReferenceOnDocument: read exactly as printed — these are for the reviewer to compare against Subbie HQ's own project record, never applied automatically. " +
+            "originalContractSum/approvedVariationsTotal/revisedContractSum/pendingVariationsTotal: the B1 summary's contract-value lines — these are DISTINCT figures, never combine or derive one from another yourself; extract exactly what's printed for each, null if a line isn't present. " +
+            "grossClaimToDate/retentionPercent/retentionToDate/netClaimToDate/previousClaims/currentClaim: the B1 summary's claim-amount lines, same rule — extract only what's printed. " +
+            "contractItems: one entry per B2 (Contract Works/Schedule of Values) line — reference is the item's own number if printed (e.g. 'Item 01'), else null; extract contractValue/revisedValue/claimedPercentToDate/claimedAmountToDate/currentPeriodAmount/previousClaimedAmount only where actually stated for that line, null otherwise — never calculate a missing one from the others. " +
+            "variations: one entry per B3 (Variations) line — reference is the variation/SI number as printed (e.g. 'SI-014', 'VAR-012'); submittedValue is what was originally submitted, approvedValue is what was approved (these can differ, and approvedValue is often null for a variation still awaiting approval — do not assume it equals submittedValue); approvalStatus is free text exactly as the document indicates (e.g. 'approved', 'awaiting approval', 'pending') or null if not discernible. " +
+            "confidence: your own honest 0-1 confidence in this extraction as a whole — lower it for poor scan quality, handwritten/signed sections, or genuinely ambiguous figures. " +
+            "notes: a brief plain-English note on anything uncertain, a missing B1/B2/B3 section, or anything that looks like a modified/non-standard template — null if nothing is uncertain. " +
+            "Never invent a figure that isn't actually printed on the document — use null instead. Never assume claimed/certified/received are the same figure; this document only ever tells you what was CLAIMED."
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Read the Payment Claim document in the following image(s) and extract the structured data described." },
+            ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image.dataUrl } }))
+          ]
+        }
+      ]
+    },
+    { ...usageContext, feature: "payment_claim_import_extraction" }
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("No response from Grok.");
+  }
+
+  const parsed = ExtractedPaymentClaimBaselineVisionSchema.parse(JSON.parse(raw));
+  return resolvePaymentClaimBaselineExtraction(parsed);
+}

@@ -370,6 +370,8 @@ model User {
   confirmedContractorPaymentSchedules       ContractorPaymentSchedule[]        @relation("ContractorPaymentScheduleConfirmedBy")
   paymentReconciliationAdjustments          PaymentReconciliationAdjustment[]
   resolvedPaymentReconciliationDeclineLines PaymentReconciliationDeclineLine[]
+  createdPaymentClaimImports                PaymentClaimImport[]               @relation("PaymentClaimImportCreatedBy")
+  confirmedPaymentClaimImports              PaymentClaimImport[]               @relation("PaymentClaimImportConfirmedBy")
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -643,6 +645,7 @@ model Project {
   programmeItems               ProgrammeItem[]
   monthlyWorkRecords           MonthlyWorkRecord[]
   tasks                        Task[]
+  paymentClaimImports          PaymentClaimImport[]
   variations                   Variation[]
   paymentClaims                PaymentClaim[]
   invoices                     Invoice[]
@@ -1349,6 +1352,17 @@ model PaymentClaim {
   otherAmount         Decimal     @default(0)
   otherDescription    String?
 
+  // Payment Claim Import — a claim generated OUTSIDE Subbie HQ (before the
+  // subcontractor started using it) and uploaded to establish the
+  // project's commercial baseline. `internal` (the default) is every claim
+  // Subbie HQ itself generated, exactly as before this feature existed.
+  // `externalReference` holds the source document's OWN claim number/label
+  // (e.g. "Claim #07") — deliberately separate from `claimNumber`, which
+  // stays Subbie HQ's own sequential numbering so every existing
+  // claimNumber-based lookup (previousClaim ordering, the unique
+  // constraint below) keeps working unchanged for an imported claim too.
+  source                     PaymentClaimSource                 @default(internal)
+  externalReference          String?
   project                    Project                            @relation(fields: [projectId], references: [id])
   // Legacy, pre-dates any real UI — this model was scaffolded before
   // VariationPackage/Correspondence/ExternalAction became the actual,
@@ -1366,8 +1380,16 @@ model PaymentClaim {
   // into this one (re-claimed here). See PaymentReconciliationDeclineLine's
   // own comment.
   carriedForwardDeclineLines PaymentReconciliationDeclineLine[]
+  // Reverse of PaymentClaimImport.resultingPaymentClaimId — set only when
+  // source: imported_external.
+  paymentClaimImport         PaymentClaimImport?
 
   @@unique([projectId, claimNumber])
+}
+
+enum PaymentClaimSource {
+  internal
+  imported_external
 }
 
 // One row per project — the retention side of Payment Claims (Appendix
@@ -1765,6 +1787,226 @@ model PaymentReconciliationAdjustment {
 }
 
 // ============================================================
+// Payment Claim Import — establishes a project's CURRENT commercial
+// baseline from a payment claim generated outside Subbie HQ (e.g. a
+// subcontractor who's already 3-12 months into a project before adopting
+// it). One row per uploaded document; a mandatory review/match step
+// stands between extraction and any change to canonical data (ContractItem/
+// VariationItem/PaymentClaim) — see lib/payment-claim-import.ts.
+//
+// Deliberately NOT a second source of truth: PaymentClaimImportItem/
+// PaymentClaimImportVariation are a STAGING area only, exactly like
+// ContractorPaymentSchedule's own draft state (lib/payment-reconciliation.ts)
+// — every row here either links to (or, on confirm, creates) a real
+// ContractItem/VariationItem, and the rows themselves persist afterward
+// purely as the permanent provenance trail ("this ContractItem's baseline
+// came from Payment Claim Import X") — never re-read as the canonical
+// figure once confirmed.
+//
+// This never reconstructs history: confirming an import creates exactly
+// ONE PaymentClaim (source: imported_external) representing the single
+// uploaded snapshot, plus ONE dated progress/allocation entry per matched
+// item — never a fabricated series of prior claims. See
+// confirmPaymentClaimImport's own comment for exactly how "claimed to
+// date" is established without inventing claim-by-claim history.
+// ============================================================
+
+enum PaymentClaimImportStatus {
+  draft
+  confirmed
+  rejected
+}
+
+model PaymentClaimImport {
+  id        String                   @id @default(cuid())
+  projectId String
+  status    PaymentClaimImportStatus @default(draft)
+
+  // Upload — same fileName/storageKey/contentType convention as every
+  // other upload in this app.
+  fileName     String
+  storageKey   String
+  contentType  String
+  // sha256 of the uploaded bytes — the duplicate-import check (Section 33
+  // of the spec this implements) is keyed on this, not on extracted
+  // fields, so it works even before extraction runs.
+  documentHash String
+
+  // AI extraction metadata — same convention as every other AI-extracted
+  // draft in this app (ContractorPaymentSchedule, Day Works).
+  aiConfidence Float?
+  aiNotes      String?
+  extractedAt  DateTime?
+
+  // Header (as printed on the source document) — informational only,
+  // never auto-applied to Project's own fields. Shown on the review
+  // screen so the user can confirm it's the right document.
+  externalClaimReference      String?
+  claimDate                   DateTime?
+  periodStart                 DateTime?
+  periodEnd                   DateTime?
+  projectNameOnDocument       String?
+  projectReferenceOnDocument  String?
+  contractReferenceOnDocument String?
+
+  // B1 summary — nullable throughout (Section 5B: "do not assume every
+  // SA-2017 claim contains every field"), ex-GST like every other $ figure
+  // in this app. originalContractSum/approvedVariationsTotal/
+  // revisedContractSum/pendingVariationsTotal are kept as three genuinely
+  // separate figures (Section 19) — never combined or re-derived from one
+  // another.
+  originalContractSum     Decimal? @db.Decimal(12, 2)
+  approvedVariationsTotal Decimal? @db.Decimal(12, 2)
+  revisedContractSum      Decimal? @db.Decimal(12, 2)
+  pendingVariationsTotal  Decimal? @db.Decimal(12, 2)
+  grossClaimToDate        Decimal? @db.Decimal(12, 2)
+  retentionPercentStated  Float?
+  retentionToDateStated   Decimal? @db.Decimal(12, 2)
+  netClaimToDate          Decimal? @db.Decimal(12, 2)
+  previousClaimsTotal     Decimal? @db.Decimal(12, 2)
+  currentClaimAmount      Decimal? @db.Decimal(12, 2)
+
+  // Resolved baseline date this import will establish (Section 16):
+  // periodEnd, falling back to claimDate, falling back to null (in which
+  // case the review screen requires the user to confirm one before
+  // Confirm & Import is enabled).
+  baselineDate DateTime?
+
+  // Section 27 — a deterministic arithmetic cross-check (never an
+  // automatic correction): set when e.g. contractItems don't sum close to
+  // grossClaimToDate, or B3 approved values don't sum close to
+  // approvedVariationsTotal. Shown as a plain warning on the review screen.
+  arithmeticWarning String?
+
+  confirmedAt       DateTime?
+  confirmedByUserId String?
+  createdByUserId   String
+  createdAt         DateTime  @default(now())
+
+  // The ONE real PaymentClaim this import produces on confirmation
+  // (source: imported_external) — set only once, at confirm time, never
+  // reassigned. A rejected import never gets one.
+  resultingPaymentClaimId String? @unique
+
+  project               Project                       @relation(fields: [projectId], references: [id])
+  createdByUser         User                          @relation("PaymentClaimImportCreatedBy", fields: [createdByUserId], references: [id])
+  confirmedByUser       User?                         @relation("PaymentClaimImportConfirmedBy", fields: [confirmedByUserId], references: [id])
+  resultingPaymentClaim PaymentClaim?                 @relation(fields: [resultingPaymentClaimId], references: [id])
+  items                 PaymentClaimImportItem[]
+  variations            PaymentClaimImportVariation[]
+
+  @@index([projectId])
+  @@index([projectId, documentHash])
+}
+
+// Shared across items and variations — the vocabulary from Section 12/30's
+// matching engine. "matched"/"likely_match" are automatic proposals (both
+// carry a matchReason); "conflict" means a match was found but its value
+// disagrees with the extracted one beyond a small tolerance (never
+// silently resolved); "unresolved" means multiple equally-plausible
+// candidates exist (never silently picks one); "new" means no existing
+// record was found at all; "ignored" is the user's own explicit choice.
+enum PaymentClaimImportMatchStatus {
+  matched
+  likely_match
+  new
+  conflict
+  unresolved
+  ignored
+}
+
+enum PaymentClaimImportItemAction {
+  pending
+  accept_match
+  create_new
+  ignore
+}
+
+// One candidate B2 (Contract Works / Schedule of Values) line from the
+// uploaded claim. Never a canonical record on its own — matchedContractItemId
+// links to (Section 14) or, on confirm with userAction: create_new, gets
+// set to a freshly-created real ContractItem.
+model PaymentClaimImportItem {
+  id                    String   @id @default(cuid())
+  paymentClaimImportId  String
+  reference             String?
+  description           String
+  contractValue         Decimal? @db.Decimal(12, 2)
+  revisedValue          Decimal? @db.Decimal(12, 2)
+  claimedPercentToDate  Float?
+  claimedAmountToDate   Decimal? @db.Decimal(12, 2)
+  currentPeriodAmount   Decimal? @db.Decimal(12, 2)
+  previousClaimedAmount Decimal? @db.Decimal(12, 2)
+
+  matchStatus           PaymentClaimImportMatchStatus @default(unresolved)
+  matchedContractItemId String?
+  // Always set alongside an automatic matchStatus — "Exact reference
+  // match: X", "Normalized reference match: RAW -> NORMALISED", etc.
+  // (Section 30: "every automatic match must have a reason").
+  matchReason           String?
+  // Set only for matchStatus: conflict — e.g. "Payment claim: $125,000.
+  // Existing Subbie HQ record: $115,000."
+  conflictNote          String?
+  userAction            PaymentClaimImportItemAction  @default(pending)
+
+  paymentClaimImport  PaymentClaimImport @relation(fields: [paymentClaimImportId], references: [id])
+  matchedContractItem ContractItem?      @relation(fields: [matchedContractItemId], references: [id])
+
+  @@index([paymentClaimImportId])
+}
+
+enum PaymentClaimImportVariationAction {
+  pending
+  match_existing
+  create_new
+  update_existing
+  reactivate_and_update
+  ignore
+}
+
+// One candidate B3 (Variations) line. Reference matching reuses
+// lib/variation-item-lifecycle.ts's normalizeReference — the SAME
+// normalisation already used by the SI-reference resolver elsewhere in
+// this app, so "SI-241"/"SI 241"/"SI241" behave identically here.
+// matchedVariationItemId links to (or, on create_new, gets set to) a real
+// VariationItem — never a second Variation model (Section 3/49).
+model PaymentClaimImportVariation {
+  id                   String   @id @default(cuid())
+  paymentClaimImportId String
+  reference            String?
+  description          String
+  submittedValue       Decimal? @db.Decimal(12, 2)
+  approvedValue        Decimal? @db.Decimal(12, 2)
+  claimedPercentToDate Float?
+  claimedAmountToDate  Decimal? @db.Decimal(12, 2)
+  currentPeriodAmount  Decimal? @db.Decimal(12, 2)
+  // As printed on the document (e.g. "approved", "awaiting approval") —
+  // free text, informational only. The ACTUAL approval state a matched/
+  // created VariationItem ends up in is always derived the normal way
+  // (isVariationApproved, from real claim allocations), never from this
+  // string directly (Section 11: "do not automatically convert a
+  // payment-claim variation into an approved VariationItem if the claim
+  // indicates it is still awaiting approval").
+  approvalStatusRaw    String?
+
+  matchStatus            PaymentClaimImportMatchStatus     @default(unresolved)
+  matchedVariationItemId String?
+  matchReason            String?
+  conflictNote           String?
+  // Set when matchedVariationItemId points at a currently-CLOSED
+  // VariationItem — drives the Section 13 reactivation prompt on the
+  // review screen. Never bypassed: reactivate_and_update is the only
+  // userAction that's allowed to touch a closed record.
+  existingRecordClosed   Boolean                           @default(false)
+  userAction             PaymentClaimImportVariationAction @default(pending)
+
+  paymentClaimImport   PaymentClaimImport @relation(fields: [paymentClaimImportId], references: [id])
+  matchedVariationItem VariationItem?     @relation(fields: [matchedVariationItemId], references: [id])
+
+  @@index([paymentClaimImportId])
+}
+
+// ============================================================
 // Contract Schedule of Values — the "Original Subcontract Sum" side of a
 // Payment Claim (Appendix B2's equivalent), extracted from the subbie's own
 // priced quote. Deliberately separate from ProjectQuote above: ProjectQuote
@@ -1811,9 +2053,13 @@ model ContractItem {
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
 
-  schedule   ContractSchedule        @relation(fields: [scheduleId], references: [id])
-  components ContractItemComponent[]
-  diaryLinks ContractItemDiaryLink[]
+  schedule                  ContractSchedule         @relation(fields: [scheduleId], references: [id])
+  components                ContractItemComponent[]
+  diaryLinks                ContractItemDiaryLink[]
+  // Payment Claim Import — set when this item was matched against (or
+  // created by) an uploaded external payment claim. See
+  // PaymentClaimImportItem's own schema comment.
+  paymentClaimImportMatches PaymentClaimImportItem[]
 }
 
 // fixed = any lump-sum priced component (Supply, Install, Erect, Dismantle,
@@ -2345,6 +2591,10 @@ model VariationItem {
   // specific Variation/SI it declined, when identifiable. See
   // PaymentReconciliationDeclineLine's own schema comment.
   paymentReconciliationDeclineLines PaymentReconciliationDeclineLine[]
+  // Payment Claim Import — set when this item was matched against (or
+  // created by) an uploaded external payment claim's B3 lines. See
+  // PaymentClaimImportVariation's own schema comment.
+  paymentClaimImportMatches         PaymentClaimImportVariation[]
 }
 
 // A general-purpose, user-created work item — distinct from ProgrammeItem
@@ -2402,6 +2652,7 @@ enum RecordLifecycleEntityType {
   task
   project
   retention
+  payment_claim_import
 }
 
 enum RecordLifecycleEventType {

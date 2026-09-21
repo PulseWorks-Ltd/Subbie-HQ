@@ -281,6 +281,8 @@ export function PaymentClaimDetailView({
     contractWorksAmount: number;
     otherAmount: number;
     claimedAmount: number;
+    source: string;
+    externalReference: string | null;
   };
   hasSchedule: boolean;
   originalSubcontractSum: number;
@@ -356,6 +358,14 @@ export function PaymentClaimDetailView({
             >
               {claim.status}
             </span>
+            {claim.source === "imported_external" && (
+              <span
+                className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+                title="Generated outside Subbie HQ and imported to establish this project's commercial baseline"
+              >
+                External / Imported{claim.externalReference ? ` — ${claim.externalReference}` : ""}
+              </span>
+            )}
           </div>
           <p className="text-sm text-[#4c739a] dark:text-slate-400">
             {formatDate(claim.periodStart)} – {formatDate(claim.periodEnd)} · {claim.statutoryWording}
@@ -440,7 +450,24 @@ export function PaymentClaimDetailView({
         history={reconciliationHistory}
       />
 
-      <SendClaimPanel projectId={projectId} claimId={claim.id} contacts={contacts} />
+      {claim.source === "imported_external" ? (
+        <div className="rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-[#4c739a] dark:text-slate-400">
+            This claim was generated outside Subbie HQ and imported to establish the project&apos;s baseline — there&apos;s nothing
+            to send.
+          </p>
+          <a
+            href={`/api/projects/${projectId}/payment-claims/${claim.id}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-bold text-primary hover:underline shrink-0"
+          >
+            View original document
+          </a>
+        </div>
+      ) : (
+        <SendClaimPanel projectId={projectId} claimId={claim.id} contacts={contacts} />
+      )}
 
       <div className="rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">
         <h3 className="text-sm font-bold mb-3">Variations</h3>

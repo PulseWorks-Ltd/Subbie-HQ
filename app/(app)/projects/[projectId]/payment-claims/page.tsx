@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
 import { PaymentClaimsListView } from "@/components/payment-claims/payment-claims-list-view";
 import { getRetentionSummary } from "@/lib/retention";
+import { getPaymentClaimImportsForProject } from "@/lib/payment-claim-import";
 
 export default async function PaymentClaimsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
@@ -15,13 +16,20 @@ export default async function PaymentClaimsPage({ params }: { params: Promise<{ 
     redirect(`/projects/${projectId}`);
   }
 
-  const [claims, retentionSummary] = await Promise.all([
+  const [claims, retentionSummary, imports] = await Promise.all([
     prisma.paymentClaim.findMany({
       where: { projectId },
       orderBy: { claimNumber: "desc" }
     }),
-    getRetentionSummary(projectId)
+    getRetentionSummary(projectId),
+    getPaymentClaimImportsForProject(projectId)
   ]);
 
-  return <PaymentClaimsListView projectId={projectId} claims={claims} retentionSummary={retentionSummary} />;
+  const draftImports = imports
+    .filter((importRecord) => importRecord.status === "draft")
+    .map((importRecord) => ({ id: importRecord.id, fileName: importRecord.fileName, createdAt: importRecord.createdAt.toISOString() }));
+
+  return (
+    <PaymentClaimsListView projectId={projectId} claims={claims} retentionSummary={retentionSummary} draftImports={draftImports} />
+  );
 }

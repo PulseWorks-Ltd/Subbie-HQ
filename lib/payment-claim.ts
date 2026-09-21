@@ -158,7 +158,9 @@ export async function getPaymentClaimComputedData(projectId: string, claimId: st
       statutoryWording: claim.statutoryWording,
       contractWorksAmount: Number(claim.contractWorksAmount),
       otherAmount,
-      claimedAmount: Number(claim.claimedAmount)
+      claimedAmount: Number(claim.claimedAmount),
+      source: claim.source,
+      externalReference: claim.externalReference
     },
     hasSchedule: Boolean(schedule),
     scheduleBreakdown: breakdown,

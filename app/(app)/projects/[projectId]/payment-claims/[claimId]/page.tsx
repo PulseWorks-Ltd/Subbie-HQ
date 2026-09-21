@@ -120,7 +120,9 @@ export default async function PaymentClaimDetailPage({
         statutoryWording: data.claim.statutoryWording,
         contractWorksAmount: data.claim.contractWorksAmount,
         otherAmount: data.claim.otherAmount,
-        claimedAmount: data.claim.claimedAmount
+        claimedAmount: data.claim.claimedAmount,
+        source: data.claim.source,
+        externalReference: data.claim.externalReference
       }}
       hasSchedule={data.hasSchedule}
       originalSubcontractSum={data.figures.originalSubcontractSum}

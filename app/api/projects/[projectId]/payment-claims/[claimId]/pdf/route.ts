@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { generatePaymentClaimAppendixB1Pdf } from "@/lib/payment-claim-pdf";
+import { getSignedDownloadUrl } from "@/lib/s3";
 
 // Pre-Launch Feature 5 — "Preview/Download PDF" on the Payment Claim
 // detail page. Always regenerated fresh from current data (not served
 // from whatever was last persisted by a Send) — a claim's numbers can
 // change (a new allocation, an edited contract item) right up until it's
 // actually sent, and a stale download would be actively misleading.
+//
+// Payment Claim Import — an `imported_external` claim was never generated
+// BY Subbie HQ, so generating a fresh Appendix B1 PDF for it here would
+// misrepresent it as a Subbie-HQ-produced document. Serve the real
+// originally-uploaded file instead (its storageKey, set once at import —
+// see lib/payment-claim-import.ts's confirmPaymentClaimImport).
 export async function GET(request: Request, context: { params: { projectId: string; claimId: string } }) {
   const userId = await requireUserId(request);
   const { projectId, claimId } = context.params;
@@ -20,6 +28,22 @@ export async function GET(request: Request, context: { params: { projectId: stri
   const canAccessModule = await requireModuleAccess(projectId, userId, "payment_claims");
   if (!canAccessModule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const claim = await prisma.paymentClaim.findFirst({
+    where: { id: claimId, projectId },
+    select: { source: true, storageKey: true }
+  });
+  if (!claim) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (claim.source === "imported_external") {
+    if (!claim.storageKey) {
+      return NextResponse.json({ error: "The original uploaded document is not available." }, { status: 404 });
+    }
+    const signedUrl = await getSignedDownloadUrl(claim.storageKey);
+    return NextResponse.redirect(signedUrl);
   }
 
   let pdfBytes: Uint8Array;

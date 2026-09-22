@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { postWithOfflineRetry } from "@/lib/offline-retry-client";
+import { VoiceTranscribeButton } from "@/components/shared/voice-transcribe-button";
 
 type SiteInstructionOption = { id: string; reference: string; title: string };
 type SheetSummary = {
@@ -131,16 +132,23 @@ export function HoursOnSiteProjectView({
             </select>
           </label>
           {!variationItemId && (
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Comments <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
-              <textarea
-                value={comments}
-                onChange={(event) => setComments(event.target.value)}
-                rows={2}
-                placeholder="What's this work for?"
-                className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            <div className="flex flex-col gap-1">
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Comments <span className="font-normal text-[#4c739a] dark:text-slate-400">(optional)</span>
+                <textarea
+                  value={comments}
+                  onChange={(event) => setComments(event.target.value)}
+                  rows={2}
+                  placeholder="What's this work for?"
+                  className="rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </label>
+              <VoiceTranscribeButton
+                endpoint={`/api/projects/${projectId}/hours-on-site/transcribe`}
+                label="Describe by voice"
+                onTranscribed={(text) => setComments((current) => (current.trim() ? `${current.trim()} ${text}` : text))}
               />
-            </label>
+            </div>
           )}
           <button
             type="submit"

@@ -14,27 +14,30 @@ function formatDate(date: Date | null) {
 export function VariationItemCard({
   projectId,
   item,
-  unclaimedValue
+  unclaimedValue,
+  variationNumber
 }: {
   projectId: string;
   item: VariationItem;
   unclaimedValue: number;
+  variationNumber: number | undefined;
 }) {
-  const isSiteInstruction = item.type === "site_instruction";
   const hasVariation = item.variationCreatedAt != null;
   const href = `/projects/${projectId}/variations/${item.id}`;
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5 hover:border-primary/50 transition-colors">
       {/* Reference stays top-left, on its own row, so it never collides with
-          the type badges/Close button on the right, however long the
-          reference or those labels get. Only the type badges (Site
-          Instruction/Variation) + the unclaimed-value flag share this row
-          with it; the status badge (Open/Closed) lives in the bottom row
-          below, next to the other at-a-glance figures — see
-          close-variation-control.tsx for why Close reuses the exact same
-          review-then-confirm flow as the item's own detail page, not a
-          shortcut that skips it. This row sits OUTSIDE the card's
+          the Variation badge/Close button on the right, however long the
+          reference or those labels get. No separate "Site Instruction"
+          label — the reference itself (SI-/NTS-/PO- prefix) already says
+          that; the badge here only fires for a Variation identity, and
+          names its own sequential number ("Variation 3") rather than just
+          repeating the word "Variation". The status badge (Open/Closed)
+          lives in the bottom row below, next to the other at-a-glance
+          figures — see close-variation-control.tsx for why Close reuses the
+          exact same review-then-confirm flow as the item's own detail page,
+          not a shortcut that skips it. This row sits OUTSIDE the card's
           navigation link on purpose — Close must never double as a
           navigation click. */}
       <div className="flex items-start justify-between gap-3 mb-1">
@@ -47,14 +50,9 @@ export function VariationItemCard({
               ${unclaimedValue.toLocaleString("en-NZ", { minimumFractionDigits: 2 })} unclaimed
             </span>
           )}
-          {isSiteInstruction && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-              Site Instruction
-            </span>
-          )}
-          {hasVariation && (
+          {hasVariation && variationNumber != null && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary">
-              Variation
+              Variation {variationNumber}
             </span>
           )}
           {!item.closedAt && (

@@ -12,6 +12,7 @@ export function VariationsView({
   projectId,
   items,
   unclaimedValues,
+  variationNumbers,
   openSiteInstructions,
   canCreateVariation,
   canCreateSiteInstruction
@@ -23,6 +24,10 @@ export function VariationsView({
   // lib/payment-claim.ts). Absent/0 for a plain Site Instruction with no
   // Variation identity yet.
   unclaimedValues: Record<string, number>;
+  // Keyed by VariationItem.id — this item's 1-based position among every
+  // Variation-identity item in the project, ordered by variationCreatedAt.
+  // Absent for a plain Site Instruction with no Variation identity yet.
+  variationNumbers: Record<string, number>;
   openSiteInstructions: VariationItem[];
   canCreateVariation: boolean;
   canCreateSiteInstruction: boolean;
@@ -126,6 +131,7 @@ export function VariationsView({
               projectId={projectId}
               item={item}
               unclaimedValue={unclaimedValues[item.id] ?? 0}
+              variationNumber={variationNumbers[item.id]}
             />
           ))}
         </div>

@@ -22,7 +22,7 @@ export default async function VariationsPage({ params }: { params: Promise<{ pro
     ...(canSeeSiteInstructions ? (["site_instruction"] as const) : [])
   ];
 
-  const [variationItems, openSiteInstructions] = await Promise.all([
+  const [variationItems, openSiteInstructions, allProjectVariations] = await Promise.all([
     prisma.variationItem.findMany({
       where: { projectId, type: { in: visibleTypes } },
       include: { claimAllocations: { select: { amount: true } } },
@@ -36,11 +36,22 @@ export default async function VariationsPage({ params }: { params: Promise<{ pro
           where: { projectId, type: "site_instruction", variationCreatedAt: null, status: { not: "complete" }, closedAt: null },
           orderBy: { createdAt: "desc" }
         })
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    // Project-wide (not visibleTypes/closed-filtered) so "Variation N" is a
+    // stable identity — it never renumbers because of the closed-items
+    // toggle or because a particular viewer's module access hides some rows.
+    prisma.variationItem.findMany({
+      where: { projectId, variationCreatedAt: { not: null } },
+      select: { id: true, variationCreatedAt: true },
+      orderBy: { variationCreatedAt: "asc" }
+    })
   ]);
 
   const unclaimedValues = Object.fromEntries(
     variationItems.map((item) => [item.id, getUnclaimedVariationValue(item)])
+  );
+  const variationNumbers = Object.fromEntries(
+    allProjectVariations.map((item, index) => [item.id, index + 1])
   );
 
   return (
@@ -48,6 +59,7 @@ export default async function VariationsPage({ params }: { params: Promise<{ pro
       projectId={projectId}
       items={variationItems}
       unclaimedValues={unclaimedValues}
+      variationNumbers={variationNumbers}
       openSiteInstructions={openSiteInstructions}
       canCreateVariation={canSeeVariations}
       canCreateSiteInstruction={canSeeSiteInstructions}

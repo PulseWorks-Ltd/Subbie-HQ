@@ -57,6 +57,7 @@ export default async function PaymentClaimImportReviewPage({
         aiConfidence: importRecord.aiConfidence,
         aiNotes: importRecord.aiNotes,
         externalClaimReference: importRecord.externalClaimReference,
+        externalClaimNumber: importRecord.externalClaimNumber,
         claimDate: importRecord.claimDate?.toISOString() ?? null,
         periodStart: importRecord.periodStart?.toISOString() ?? null,
         periodEnd: importRecord.periodEnd?.toISOString() ?? null,

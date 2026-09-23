@@ -104,6 +104,7 @@ export async function POST(request: Request, context: { params: { projectId: str
     const raw = await extractPaymentClaimBaselineFromImages(images, { organisationId: project?.organisationId ?? null, userId, contextRef: projectId });
     extracted = {
       claimReference: raw.claimReference,
+      claimNumber: raw.claimNumber,
       claimDate: parseNullableDate(raw.claimDate),
       periodStart: parseNullableDate(raw.periodStart),
       periodEnd: parseNullableDate(raw.periodEnd),

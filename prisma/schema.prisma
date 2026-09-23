@@ -1360,10 +1360,16 @@ model PaymentClaim {
   // project's commercial baseline. `internal` (the default) is every claim
   // Subbie HQ itself generated, exactly as before this feature existed.
   // `externalReference` holds the source document's OWN claim number/label
-  // (e.g. "Claim #07") — deliberately separate from `claimNumber`, which
-  // stays Subbie HQ's own sequential numbering so every existing
+  // verbatim (e.g. "Claim #07") for display — always separate from
+  // `claimNumber`. `claimNumber` itself normally stays Subbie HQ's own
+  // sequential numbering, EXCEPT: when PaymentClaimImport.externalClaimNumber
+  // was confirmed and doesn't collide with an existing claim in the
+  // project, confirmPaymentClaimImport seeds this imported claim's
+  // claimNumber with that real-world number instead of MAX+1 — so a
+  // project onboarded mid-history (e.g. importing real Claim #10) numbers
+  // the very next in-app-generated claim 11, not 2. Every existing
   // claimNumber-based lookup (previousClaim ordering, the unique
-  // constraint below) keeps working unchanged for an imported claim too.
+  // constraint below) still works unchanged either way.
   source                     PaymentClaimSource                 @default(internal)
   externalReference          String?
   project                    Project                            @relation(fields: [projectId], references: [id])
@@ -1845,6 +1851,18 @@ model PaymentClaimImport {
   // never auto-applied to Project's own fields. Shown on the review
   // screen so the user can confirm it's the right document.
   externalClaimReference      String?
+  // The claim's own real-world sequence number, parsed from
+  // externalClaimReference where possible (e.g. "Payment Claim #07" -> 7).
+  // Editable on the review screen. When set and free of a
+  // @@unique([projectId, claimNumber]) collision, THIS becomes the
+  // resulting PaymentClaim's own claimNumber at confirm time (see
+  // confirmPaymentClaimImport) — a deliberate exception to claimNumber
+  // otherwise being pure Subbie-HQ-internal sequential numbering, so a
+  // project onboarded mid-way through its real payment-claim history
+  // continues that same numbering (Payment Claim 11 following an imported
+  // Payment Claim 10) rather than restarting at 1. Left null: falls back
+  // to the existing MAX(claimNumber)+1 behaviour, same as any in-app claim.
+  externalClaimNumber         Int?
   claimDate                   DateTime?
   periodStart                 DateTime?
   periodEnd                   DateTime?

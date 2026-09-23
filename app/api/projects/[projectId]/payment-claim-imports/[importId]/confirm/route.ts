@@ -31,8 +31,22 @@ export async function POST(request: Request, context: { params: { projectId: str
   const baselineDateRaw = typeof body?.baselineDate === "string" ? new Date(body.baselineDate) : null;
   const baselineDate = baselineDateRaw && !Number.isNaN(baselineDateRaw.getTime()) ? baselineDateRaw : undefined;
 
+  // Distinguishes "the review screen didn't address claim numbering at all"
+  // (key absent) from "the user cleared the field" (explicit null, meaning
+  // auto-number) — see confirmPaymentClaimImport's own precedence comment.
+  const hasClaimNumberField = body && typeof body === "object" && "claimNumber" in body;
+  const claimNumber = hasClaimNumberField
+    ? typeof body.claimNumber === "number" && Number.isInteger(body.claimNumber)
+      ? body.claimNumber
+      : null
+    : undefined;
+
   try {
-    const result = await confirmPaymentClaimImport(importId, userId, { baselineDate });
+    const result = await confirmPaymentClaimImport(
+      importId,
+      userId,
+      hasClaimNumberField ? { baselineDate, claimNumber } : { baselineDate }
+    );
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not import this payment claim." }, { status: 409 });

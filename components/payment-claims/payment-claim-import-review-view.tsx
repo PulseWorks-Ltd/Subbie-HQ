@@ -61,6 +61,7 @@ type ImportRecord = {
   aiConfidence: number | null;
   aiNotes: string | null;
   externalClaimReference: string | null;
+  externalClaimNumber: number | null;
   claimDate: string | null;
   periodStart: string | null;
   periodEnd: string | null;
@@ -315,6 +316,9 @@ export function PaymentClaimImportReviewView({
 }) {
   const router = useRouter();
   const [baselineDateInput, setBaselineDateInput] = useState(importRecord.baselineDate ? importRecord.baselineDate.slice(0, 10) : "");
+  const [claimNumberInput, setClaimNumberInput] = useState(
+    importRecord.externalClaimNumber != null ? String(importRecord.externalClaimNumber) : ""
+  );
   const [isConfirming, setIsConfirming] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -326,10 +330,15 @@ export function PaymentClaimImportReviewView({
   async function handleConfirm() {
     setConfirmError(null);
     setIsConfirming(true);
+    const trimmedClaimNumber = claimNumberInput.trim();
+    const parsedClaimNumber = trimmedClaimNumber === "" ? null : Number.parseInt(trimmedClaimNumber, 10);
     const response = await fetch(`/api/projects/${projectId}/payment-claim-imports/${importRecord.id}/confirm`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baselineDate: importRecord.baselineDate ? null : baselineDateInput || null })
+      body: JSON.stringify({
+        baselineDate: importRecord.baselineDate ? null : baselineDateInput || null,
+        claimNumber: parsedClaimNumber != null && Number.isInteger(parsedClaimNumber) ? parsedClaimNumber : null
+      })
     });
     setIsConfirming(false);
     const data = await response.json().catch(() => ({}));
@@ -488,6 +497,25 @@ export function PaymentClaimImportReviewView({
             />
           </div>
         )}
+      </div>
+
+      <div className="rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">
+        <p className="font-bold mb-2">This document&apos;s claim number</p>
+        <p className="text-sm text-[#4c739a] dark:text-slate-400 mb-2">
+          If this project already had real payment claims before you started using Subbie HQ, enter this document&apos;s
+          own claim number here — Subbie HQ will number the next claim it generates to continue straight on from it
+          (e.g. claim 10 here means the next one it generates is 11). Leave blank to have Subbie HQ number its own
+          claims starting from 1 instead.
+        </p>
+        <input
+          type="number"
+          min={1}
+          step={1}
+          value={claimNumberInput}
+          onChange={(event) => setClaimNumberInput(event.target.value)}
+          placeholder="e.g. 10"
+          className="h-9 w-32 rounded-lg border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-sm"
+        />
       </div>
 
       <div className="rounded-xl border border-[#e7edf3] dark:border-slate-700 p-4">

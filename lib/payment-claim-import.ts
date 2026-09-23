@@ -313,6 +313,7 @@ export type PaymentClaimImportWithLines = PaymentClaimImport & {
 
 export type ExtractedPaymentClaimBaseline = {
   claimReference: string | null;
+  claimNumber: number | null;
   claimDate: Date | null;
   periodStart: Date | null;
   periodEnd: Date | null;
@@ -365,6 +366,7 @@ export async function createDraftPaymentClaimImport(params: {
       aiNotes: params.extracted.notes,
       extractedAt: new Date(),
       externalClaimReference: params.extracted.claimReference,
+      externalClaimNumber: params.extracted.claimNumber,
       claimDate: params.extracted.claimDate,
       periodStart: params.extracted.periodStart,
       periodEnd: params.extracted.periodEnd,
@@ -570,7 +572,7 @@ function truncateTitle(text: string, max = 120): string {
 export async function confirmPaymentClaimImport(
   importId: string,
   userId: string,
-  options?: { baselineDate?: Date }
+  options?: { baselineDate?: Date; claimNumber?: number | null }
 ): Promise<{ paymentClaimId: string }> {
   const draft = await prisma.paymentClaimImport.findUnique({ where: { id: importId }, include: IMPORT_INCLUDE });
   if (!draft) throw new Error("Import not found.");
@@ -590,12 +592,36 @@ export async function confirmPaymentClaimImport(
   const resolvedPeriodStart = draft.periodStart ?? resolvedPeriodEnd;
   const progressDate = resolvedBaselineDate ?? resolvedPeriodEnd;
 
+  // Unlike baselineDate (options only fills a gap), the review screen always
+  // submits its current claim-number input verbatim — including an explicit
+  // null when the user cleared it to mean "just auto-number this" — so an
+  // explicitly-provided options.claimNumber always wins over whatever was
+  // extracted. Only fall back to the stored draft value when the caller
+  // didn't address claim numbering at all.
+  const resolvedExternalClaimNumber = options && "claimNumber" in options ? options.claimNumber ?? null : draft.externalClaimNumber;
+
   const paymentClaimId = await prisma.$transaction(
     async (tx) => {
       const latestClaim = await tx.paymentClaim.findFirst({
         where: { projectId: draft.projectId },
         orderBy: { claimNumber: "desc" }
       });
+
+      // Seed this imported claim's OWN claimNumber from the real-world
+      // number when one was confirmed and it's free of a collision (e.g.
+      // a second import, or a claim already generated in-app under that
+      // number) — see the schema comment on PaymentClaim.source for why.
+      // A collision silently falls back to the ordinary MAX+1 behaviour
+      // rather than failing the whole import over a numbering nicety.
+      let claimNumber = (latestClaim?.claimNumber ?? 0) + 1;
+      if (resolvedExternalClaimNumber != null) {
+        const collidingClaim = await tx.paymentClaim.findFirst({
+          where: { projectId: draft.projectId, claimNumber: resolvedExternalClaimNumber }
+        });
+        if (!collidingClaim) {
+          claimNumber = resolvedExternalClaimNumber;
+        }
+      }
 
       let scheduleId: string | null = null;
       const existingSchedule = await tx.contractSchedule.findUnique({ where: { projectId: draft.projectId } });
@@ -682,7 +708,7 @@ export async function confirmPaymentClaimImport(
       const claim = await tx.paymentClaim.create({
         data: {
           projectId: draft.projectId,
-          claimNumber: (latestClaim?.claimNumber ?? 0) + 1,
+          claimNumber,
           referenceDate: draft.claimDate ?? resolvedPeriodEnd,
           periodStart: resolvedPeriodStart,
           periodEnd: resolvedPeriodEnd,

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess } from "@/lib/auth";
+import { getUnclaimedVariationValue } from "@/lib/payment-claim";
 import { VariationsView } from "@/components/variations/variations-view";
 
 export default async function VariationsPage({ params }: { params: Promise<{ projectId: string }> }) {
@@ -24,6 +25,7 @@ export default async function VariationsPage({ params }: { params: Promise<{ pro
   const [variationItems, openSiteInstructions] = await Promise.all([
     prisma.variationItem.findMany({
       where: { projectId, type: { in: visibleTypes } },
+      include: { claimAllocations: { select: { amount: true } } },
       orderBy: { createdAt: "desc" }
     }),
     // For the "link to an existing Site Instruction" option when creating a
@@ -37,10 +39,15 @@ export default async function VariationsPage({ params }: { params: Promise<{ pro
       : Promise.resolve([])
   ]);
 
+  const unclaimedValues = Object.fromEntries(
+    variationItems.map((item) => [item.id, getUnclaimedVariationValue(item)])
+  );
+
   return (
     <VariationsView
       projectId={projectId}
       items={variationItems}
+      unclaimedValues={unclaimedValues}
       openSiteInstructions={openSiteInstructions}
       canCreateVariation={canSeeVariations}
       canCreateSiteInstruction={canSeeSiteInstructions}

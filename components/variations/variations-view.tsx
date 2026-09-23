@@ -11,12 +11,18 @@ type FilterKey = "all" | "variation" | "site_instruction";
 export function VariationsView({
   projectId,
   items,
+  unclaimedValues,
   openSiteInstructions,
   canCreateVariation,
   canCreateSiteInstruction
 }: {
   projectId: string;
   items: VariationItem[];
+  // Keyed by VariationItem.id — variationValue minus everything already
+  // allocated to a claim, all-time (see getUnclaimedVariationValue in
+  // lib/payment-claim.ts). Absent/0 for a plain Site Instruction with no
+  // Variation identity yet.
+  unclaimedValues: Record<string, number>;
   openSiteInstructions: VariationItem[];
   canCreateVariation: boolean;
   canCreateSiteInstruction: boolean;
@@ -115,7 +121,12 @@ export function VariationsView({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredItems.map((item) => (
-            <VariationItemCard key={item.id} projectId={projectId} item={item} />
+            <VariationItemCard
+              key={item.id}
+              projectId={projectId}
+              item={item}
+              unclaimedValue={unclaimedValues[item.id] ?? 0}
+            />
           ))}
         </div>
       )}

@@ -1,4 +1,4 @@
-import type { ClaimEvidenceType } from "@prisma/client";
+import type { ClaimEvidenceType, VariationItem, VariationItemClaimAllocation } from "@prisma/client";
 import { prisma } from "./prisma";
 import { getContractScheduleForProject, computeScheduleClaimBreakdown, computeScheduleTotalValue, sumBreakdown, type ContractItemValueBreakdown } from "./contract-schedule";
 import { computeTotalRetentionWithheld } from "./retention";
@@ -16,6 +16,20 @@ function round2(value: number) {
 // was originally inline.
 export function isVariationApproved(totalAllocatedAcrossAllClaims: number): boolean {
   return totalAllocatedAcrossAllClaims > 0;
+}
+
+// Companion to isVariationApproved — "how much of this Variation's value is
+// still unclaimed, all-time" (variationValue minus every allocation across
+// every claim, draft or issued). Shared so the Variations list badge and any
+// future caller agree with how claimed/unclaimed is already derived above,
+// rather than re-deriving it. 0 for a plain Site Instruction with no
+// Variation identity yet (variationValue is null).
+export function getUnclaimedVariationValue(
+  item: Pick<VariationItem, "variationValue"> & { claimAllocations: Pick<VariationItemClaimAllocation, "amount">[] }
+): number {
+  if (item.variationValue == null) return 0;
+  const claimedToDate = item.claimAllocations.reduce((sum, allocation) => sum + Number(allocation.amount), 0);
+  return round2(Number(item.variationValue) - claimedToDate);
 }
 
 export type PaymentClaimVariationRow = {

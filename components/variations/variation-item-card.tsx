@@ -11,28 +11,42 @@ function formatDate(date: Date | null) {
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function VariationItemCard({ projectId, item }: { projectId: string; item: VariationItem }) {
+export function VariationItemCard({
+  projectId,
+  item,
+  unclaimedValue
+}: {
+  projectId: string;
+  item: VariationItem;
+  unclaimedValue: number;
+}) {
   const isSiteInstruction = item.type === "site_instruction";
   const hasVariation = item.variationCreatedAt != null;
   const href = `/projects/${projectId}/variations/${item.id}`;
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-[#cfdbe7] dark:border-slate-800 p-5 hover:border-primary/50 transition-colors">
-      {/* Top row sits OUTSIDE the card's navigation link on purpose — a
-          quick "Close" button lives here (Section: Variations list quick-
-          close), and it must never double as a navigation click. Only the
-          type badges (Site Instruction/Variation) share this row; the
-          status badge (Open/Closed) moved to the bottom row below, next to
-          the other at-a-glance figures — see close-variation-control.tsx
-          for why Close reuses the exact same review-then-confirm flow as
-          the item's own detail page, not a shortcut that skips it. */}
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <Link href={href} className="min-w-0">
-          <h3 className="font-bold leading-tight">
-            {item.reference} <span className="font-normal text-[#4c739a] dark:text-slate-400">· {item.title}</span>
-          </h3>
+      {/* Reference stays top-left, on its own row, so it never collides with
+          the type badges/Close button on the right, however long the
+          reference or those labels get. Only the type badges (Site
+          Instruction/Variation) + the unclaimed-value flag share this row
+          with it; the status badge (Open/Closed) lives in the bottom row
+          below, next to the other at-a-glance figures — see
+          close-variation-control.tsx for why Close reuses the exact same
+          review-then-confirm flow as the item's own detail page, not a
+          shortcut that skips it. This row sits OUTSIDE the card's
+          navigation link on purpose — Close must never double as a
+          navigation click. */}
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <Link href={href} className="shrink-0">
+          <h3 className="font-bold leading-tight">{item.reference}</h3>
         </Link>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {hasVariation && unclaimedValue > 0.005 && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              ${unclaimedValue.toLocaleString("en-NZ", { minimumFractionDigits: 2 })} unclaimed
+            </span>
+          )}
           {isSiteInstruction && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
               Site Instruction
@@ -52,6 +66,13 @@ export function VariationItemCard({ projectId, item }: { projectId: string; item
           )}
         </div>
       </div>
+
+      {/* Heading text gets its own full-width row beneath the reference —
+          it used to sit inline next to the reference and would visually
+          clash with the badges/Close cluster on longer titles. */}
+      <Link href={href} className="block mb-2">
+        <h4 className="font-bold leading-snug text-[#0d141b] dark:text-slate-50">{item.title}</h4>
+      </Link>
 
       <Link href={href} className="block">
         {item.description && (

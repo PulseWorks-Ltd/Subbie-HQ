@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CopyLinkButton } from "@/components/get-app/copy-link-button";
 import { IncomingEmailCard } from "@/components/incoming-emails/incoming-email-card";
 import { IncomingEmailReviewDialog } from "@/components/incoming-emails/incoming-email-review-dialog";
-import type { IncomingEmailRow, ProjectOption } from "@/components/incoming-emails/incoming-emails-view";
+import type { IncomingEmailRow, ProjectOption, DayWorksExtractionInProgress } from "@/components/incoming-emails/incoming-emails-view";
 
 // Mobile shell around the exact same card/dialog components desktop uses
 // (Task 1.3 — "matching desktop behaviour exactly") — only the outer
@@ -15,11 +16,13 @@ import type { IncomingEmailRow, ProjectOption } from "@/components/incoming-emai
 export function MobileIncomingEmailsView({
   emails,
   projects,
-  inboundAddress
+  inboundAddress,
+  dayWorksExtractionsInProgress
 }: {
   emails: IncomingEmailRow[];
   projects: ProjectOption[];
   inboundAddress: string | null;
+  dayWorksExtractionsInProgress: DayWorksExtractionInProgress[];
 }) {
   const router = useRouter();
   const [reviewingEmailId, setReviewingEmailId] = useState<string | null>(null);
@@ -71,12 +74,33 @@ export function MobileIncomingEmailsView({
         </p>
       )}
 
-      {emails.length === 0 ? (
+      {dayWorksExtractionsInProgress.length > 0 && (
+        <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/10 p-3 flex flex-col gap-2">
+          <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Day Works batches in progress</p>
+          {dayWorksExtractionsInProgress.map((extraction) => (
+            <div key={extraction.id} className="flex items-center justify-between gap-2 text-xs text-amber-700 dark:text-amber-400">
+              <span>
+                {extraction.projectName} — {extraction.emailSubject}
+                {extraction.status === "extracting"
+                  ? " (reading document...)"
+                  : extraction.status === "failed"
+                    ? " (extraction failed)"
+                    : ` — ${extraction.filedSheets}/${extraction.totalSheets} filed`}
+              </span>
+              <Link href={`/projects/${extraction.projectId}/day-works-extractions/${extraction.id}`} className="font-bold hover:underline shrink-0">
+                Resume
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {emails.length === 0 && dayWorksExtractionsInProgress.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#e7edf3] dark:border-slate-700 py-12">
           <p className="font-bold mb-1 text-sm">Nothing to review</p>
           <p className="text-xs text-[#4c739a] dark:text-slate-400">Forwarded emails will appear here once they arrive.</p>
         </div>
-      ) : (
+      ) : emails.length > 0 ? (
         <div className="flex flex-col gap-3">
           {emails.map((email) => (
             <IncomingEmailCard
@@ -87,7 +111,7 @@ export function MobileIncomingEmailsView({
             />
           ))}
         </div>
-      )}
+      ) : null}
 
       {reviewingEmail && (
         <IncomingEmailReviewDialog

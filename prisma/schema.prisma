@@ -372,6 +372,8 @@ model User {
   resolvedPaymentReconciliationDeclineLines PaymentReconciliationDeclineLine[]
   createdPaymentClaimImports                PaymentClaimImport[]               @relation("PaymentClaimImportCreatedBy")
   confirmedPaymentClaimImports              PaymentClaimImport[]               @relation("PaymentClaimImportConfirmedBy")
+  createdDayWorksExtractions                InboundDayWorksExtraction[]
+  filedInboundDayWorksSheets                InboundDayWorksExtractionSheet[]   @relation("InboundDayWorksSheetFiledBy")
 }
 
 // One row per requested reset — tokenHash (not the raw token) is what's
@@ -646,6 +648,7 @@ model Project {
   monthlyWorkRecords           MonthlyWorkRecord[]
   tasks                        Task[]
   paymentClaimImports          PaymentClaimImport[]
+  dayWorksExtractions          InboundDayWorksExtraction[]
   variations                   Variation[]
   paymentClaims                PaymentClaim[]
   invoices                     Invoice[]
@@ -2245,13 +2248,14 @@ model InboundEmail {
   reviewedAt       DateTime?
   dismissedAt      DateTime?
 
-  organisation           Organisation             @relation(fields: [organisationId], references: [id])
-  project                Project?                 @relation("InboundEmailProject", fields: [projectId], references: [id])
-  suggestedProject       Project?                 @relation("InboundEmailSuggestedProject", fields: [suggestedProjectId], references: [id])
-  suggestedVariationItem VariationItem?           @relation("InboundEmailSuggestedVariationItem", fields: [suggestedVariationItemId], references: [id])
+  organisation           Organisation               @relation(fields: [organisationId], references: [id])
+  project                Project?                   @relation("InboundEmailProject", fields: [projectId], references: [id])
+  suggestedProject       Project?                   @relation("InboundEmailSuggestedProject", fields: [suggestedProjectId], references: [id])
+  suggestedVariationItem VariationItem?             @relation("InboundEmailSuggestedVariationItem", fields: [suggestedVariationItemId], references: [id])
   attachments            InboundEmailAttachment[]
   evidence               Evidence[]
   correspondence         Correspondence?
+  dayWorksExtraction     InboundDayWorksExtraction?
 }
 
 model InboundEmailAttachment {
@@ -2262,7 +2266,142 @@ model InboundEmailAttachment {
   contentType    String
   createdAt      DateTime @default(now())
 
-  inboundEmail InboundEmail @relation(fields: [inboundEmailId], references: [id])
+  inboundEmail             InboundEmail                     @relation(fields: [inboundEmailId], references: [id])
+  // Batch Day Works email-in — every physical sheet detected within this
+  // attachment (there can be several) becomes its own
+  // InboundDayWorksExtractionSheet. See InboundDayWorksExtraction's own
+  // schema comment.
+  dayWorksExtractionSheets InboundDayWorksExtractionSheet[]
+}
+
+// ============================================================
+// Batch Day Works email-in — a subcontractor forwards a scanned/photographed
+// BATCH of Day Works dockets (paper timesheets) in one InboundEmail, whose
+// attachment(s) may each bundle several physical sheets. This extracts each
+// sheet, proposes which existing Site Instruction/Variation it belongs to,
+// and holds that as a reviewable, resumable draft — exactly like
+// PaymentClaimImport/PaymentClaimImportItem (lib/payment-claim-import.ts) —
+// until a human files (or ignores) each one individually. Filing a sheet
+// creates a real DayWorksSheet/DayWorksSheetRecord (lib/inbound-day-works.ts)
+// — this is a STAGING area only, never a second source of truth for Day
+// Works data once filed.
+// ============================================================
+
+enum InboundDayWorksExtractionStatus {
+  extracting
+  ready_for_review
+  failed
+  completed
+}
+
+// One row per InboundEmail this was run against — 1:1, matching that
+// model's existing `correspondence Correspondence?` precedent (an
+// InboundEmail is filed into exactly one destination).
+model InboundDayWorksExtraction {
+  id              String                          @id @default(cuid())
+  inboundEmailId  String                          @unique
+  projectId       String
+  status          InboundDayWorksExtractionStatus @default(extracting)
+  // Set only when every attachment failed to extract (e.g. all over the
+  // page cap, or entirely unreadable) — surfaced in the review UI with a
+  // manual "Retry" action, same convention as InboundEmail.classificationError.
+  extractionError String?
+  createdByUserId String
+  createdAt       DateTime                        @default(now())
+  completedAt     DateTime?
+
+  inboundEmail  InboundEmail                     @relation(fields: [inboundEmailId], references: [id])
+  project       Project                          @relation(fields: [projectId], references: [id])
+  createdByUser User                             @relation(fields: [createdByUserId], references: [id])
+  sheets        InboundDayWorksExtractionSheet[]
+
+  @@index([projectId])
+}
+
+// How a detected sheet's proposed Variation/SI match was reached —
+// deliberately no "conflict" (unlike PaymentClaimImportMatchStatus, a Day
+// Works sheet carries no $ figure to disagree with an existing record) and
+// no "ignored" (that's the sheet's own userAction below, not folded into
+// match status).
+enum InboundDayWorksMatchStatus {
+  matched
+  likely_match
+  new
+  unresolved
+}
+
+enum InboundDayWorksSheetAction {
+  pending
+  match_existing
+  create_new
+  ignore
+}
+
+// One row per detected PHYSICAL sheet — an attachment can contain several
+// (extractDayWorksSheetSummariesFromImages, lib/grok.ts, already detects
+// this). Every AI-extracted field here is editable in the review screen
+// before filing; nothing is written to a real DayWorksSheetRecord until
+// userAction is explicitly set and the sheet is included in a file action —
+// partial batches are supported (some sheets filed now, others left
+// `pending` for a later review pass).
+model InboundDayWorksExtractionSheet {
+  id                          String @id @default(cuid())
+  inboundDayWorksExtractionId String
+  inboundEmailAttachmentId    String
+  // This attachment's own index of the sheet detected within it (0-based) —
+  // purely for stable display ordering, never shown to the user directly.
+  sheetIndexInAttachment      Int
+
+  // Same fields/nullability as DayWorksSheetRecord's own AI-extracted
+  // columns (see that model) — kept identical so filing is a direct copy,
+  // never a lossy remap.
+  sheetNumber     String?
+  teamLeaderCount Int?
+  teamMemberCount Int?
+  totalHours      Decimal?  @db.Decimal(6, 2)
+  ratePerHour     Decimal?  @db.Decimal(10, 2)
+  date            DateTime?
+  startTime       String?
+  finishTime      String?
+  task            String?
+  notes           String?
+  weather         String?
+  location        String?
+  confidence      Float?
+
+  // As read directly off the sheet by extractDayWorksSheetSummariesFromImages's
+  // new siReferenceOnSheet field — informational + the primary matching
+  // signal, never itself written anywhere once filed.
+  extractedSiReference   String?
+  matchStatus            InboundDayWorksMatchStatus @default(unresolved)
+  matchedVariationItemId String?
+  // Always populated alongside an automatic (non-"unresolved") matchStatus —
+  // "Exact reference match: SI-014", "Normalized reference match: SI 014 → SI-014",
+  // "Likely match based on description similarity" — same convention as
+  // PaymentClaimImportItem.matchReason.
+  matchReason            String?
+  userAction             InboundDayWorksSheetAction @default(pending)
+  // Only meaningful when userAction = create_new — plain manual entry, no
+  // second AI pass over this sheet's own short `task` text.
+  newItemReference       String?
+  newItemTitle           String?
+
+  // Set once this sheet has actually been filed — the permanent link to the
+  // real record it became.
+  filedDayWorksSheetRecordId String?   @unique
+  filedAt                    DateTime?
+  filedByUserId              String?
+
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  extraction               InboundDayWorksExtraction @relation(fields: [inboundDayWorksExtractionId], references: [id])
+  inboundEmailAttachment   InboundEmailAttachment    @relation(fields: [inboundEmailAttachmentId], references: [id])
+  matchedVariationItem     VariationItem?            @relation("InboundDayWorksSheetMatchedVariationItem", fields: [matchedVariationItemId], references: [id])
+  filedDayWorksSheetRecord DayWorksSheetRecord?      @relation(fields: [filedDayWorksSheetRecordId], references: [id])
+  filedByUser              User?                     @relation("InboundDayWorksSheetFiledBy", fields: [filedByUserId], references: [id])
+
+  @@index([inboundDayWorksExtractionId])
 }
 
 model EvidenceScopeItem {
@@ -2595,6 +2734,9 @@ model VariationItem {
   // created by) an uploaded external payment claim's B3 lines. See
   // PaymentClaimImportVariation's own schema comment.
   paymentClaimImportMatches         PaymentClaimImportVariation[]
+  // Batch Day Works email-in — set when a detected sheet from an
+  // InboundDayWorksExtraction was matched against (or created) this item.
+  inboundDayWorksExtractionSheets   InboundDayWorksExtractionSheet[]   @relation("InboundDayWorksSheetMatchedVariationItem")
 }
 
 // A general-purpose, user-created work item — distinct from ProgrammeItem
@@ -2765,8 +2907,11 @@ model DayWorksSheetRecord {
   sortOrder       Int       @default(0)
   createdAt       DateTime  @default(now())
 
-  variationItem VariationItem  @relation(fields: [variationItemId], references: [id])
-  dayWorksSheet DayWorksSheet? @relation(fields: [dayWorksSheetId], references: [id], onDelete: SetNull)
+  variationItem                  VariationItem                   @relation(fields: [variationItemId], references: [id])
+  dayWorksSheet                  DayWorksSheet?                  @relation(fields: [dayWorksSheetId], references: [id], onDelete: SetNull)
+  // Reverse of InboundDayWorksExtractionSheet.filedDayWorksSheetRecordId —
+  // set only when this record was filed from a batch email-in extraction.
+  inboundDayWorksExtractionSheet InboundDayWorksExtractionSheet?
 
   @@index([variationItemId])
 }

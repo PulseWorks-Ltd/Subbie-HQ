@@ -27,11 +27,14 @@ const patchSchema = z.discriminatedUnion("action", [
     projectId: z.string().min(1),
     category: z.string().min(1),
     // Mutually exclusive: link to an existing item, or (once the reviewer
-    // has confirmed the AI-extracted details) create a brand-new one, or
-    // file straight to a QA record instead of Correspondence-only.
+    // has confirmed the AI-extracted details) create a brand-new one, file
+    // straight to a QA record instead of Correspondence-only, or (Batch Day
+    // Works email-in) start a per-sheet extraction/review batch — nothing
+    // is matched/created yet at this point, see lib/inbound-day-works.ts.
     variationItemId: z.string().optional(),
     createVariationItem: createVariationItemSchema.optional(),
-    createQaRecord: createQaRecordSchema.optional()
+    createQaRecord: createQaRecordSchema.optional(),
+    createDayWorksExtraction: z.literal(true).optional()
   }),
   z.object({ action: z.literal("dismiss") }),
   z.object({ action: z.literal("reclassify") })
@@ -130,11 +133,12 @@ export async function PATCH(request: Request, context: { params: { emailId: stri
     variationItemId: payload.variationItemId,
     createVariationItem: payload.createVariationItem,
     createQaRecord: payload.createQaRecord,
+    createDayWorksExtraction: payload.createDayWorksExtraction,
     reviewerUserId: userId
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, dayWorksExtractionId: result.dayWorksExtractionId });
 }

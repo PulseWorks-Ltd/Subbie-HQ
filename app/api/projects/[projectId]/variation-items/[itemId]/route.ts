@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModuleAccess, requireProjectAccess, requireUserId } from "@/lib/auth";
 import { deleteFromS3 } from "@/lib/s3";
+import { giveVariationIdentity } from "@/lib/variation-item-lifecycle";
 
 const updateVariationItemSchema = z.object({
   title: z.string().min(1).optional(),
@@ -64,7 +65,6 @@ export async function PATCH(request: Request, context: { params: { projectId: st
     return NextResponse.json({ variationItem });
   }
 
-  let variationCreatedAt: Date | undefined;
   if (payload.createVariation) {
     // Adding a Variation identity is meaningfully a "variations" action —
     // require that module specifically, on top of whatever module the
@@ -74,13 +74,10 @@ export async function PATCH(request: Request, context: { params: { projectId: st
     if (!canCreateVariation) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    const current = await prisma.variationItem.findFirst({
-      where: { id: itemId, projectId },
-      select: { variationCreatedAt: true }
-    });
     // Idempotent — calling this again on an item that already has a
-    // Variation identity just leaves the original timestamp alone.
-    variationCreatedAt = current?.variationCreatedAt ?? new Date();
+    // Variation identity just leaves the original timestamp alone. Shared
+    // with Batch Day Works email-in's own "convert to Variation" opt-in.
+    await giveVariationIdentity(prisma, projectId, itemId);
   }
 
   const variationItem = await prisma.variationItem.update({
@@ -94,7 +91,6 @@ export async function PATCH(request: Request, context: { params: { projectId: st
       notifiedAt: payload.notifiedAt ? new Date(payload.notifiedAt) : undefined,
       dueAt: payload.dueAt ? new Date(payload.dueAt) : undefined,
       instructedByName: payload.instructedByName === undefined ? undefined : payload.instructedByName,
-      variationCreatedAt,
       variationValue: payload.variationValue === undefined ? undefined : payload.variationValue
     }
   });

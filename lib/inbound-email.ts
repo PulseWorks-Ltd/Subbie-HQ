@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { classifyInboundEmail, extractVariationItemFromText } from "./grok";
 import { getSignedDownloadUrl } from "./s3";
 import { extractPdfPagesWithOcrFallback } from "./pdf-text-extraction";
+import { startDayWorksExtraction, runDayWorksExtraction } from "./inbound-day-works";
 
 // Keeps a single pathological attachment (a huge multi-hundred-page PDF)
 // from blowing out the classification prompt — inbound-email attachments
@@ -76,8 +77,13 @@ export async function fileInboundEmail(params: {
     stage: string;
     variationItemId?: string;
   };
+  // Batch Day Works email-in (lib/inbound-day-works.ts) — mutually
+  // exclusive with the destinations above. Nothing is matched/filed yet at
+  // this point: this only starts the (persisted, resumable) extraction;
+  // the actual per-sheet review/filing happens on its own review screen.
+  createDayWorksExtraction?: boolean;
   reviewerUserId: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true; dayWorksExtractionId?: string } | { ok: false; error: string }> {
   const email = await prisma.inboundEmail.findUnique({ where: { id: params.emailId }, include: { attachments: true } });
   if (!email) {
     return { ok: false, error: "Email not found." };
@@ -86,9 +92,20 @@ export async function fileInboundEmail(params: {
     return { ok: false, error: "This email has already been reviewed." };
   }
 
+  let dayWorksExtractionId: string | undefined;
+
   await prisma.$transaction(async (tx) => {
     let variationItemId = params.variationItemId;
     let qaRecordId: string | undefined;
+
+    if (params.createDayWorksExtraction) {
+      const extraction = await startDayWorksExtraction(tx, {
+        emailId: email.id,
+        projectId: params.projectId,
+        createdByUserId: params.reviewerUserId
+      });
+      dayWorksExtractionId = extraction.id;
+    }
 
     if (params.createVariationItem) {
       const sourceAttachment = email.attachments[0];
@@ -157,7 +174,13 @@ export async function fileInboundEmail(params: {
     });
   });
 
-  return { ok: true };
+  // Fire-and-forget, same discipline as classifyAndSuggest below — the
+  // vision extraction call shouldn't block this response.
+  if (dayWorksExtractionId) {
+    void runDayWorksExtraction(dayWorksExtractionId);
+  }
+
+  return { ok: true, dayWorksExtractionId };
 }
 
 // No existing helper returns "all projects in this org + their Main

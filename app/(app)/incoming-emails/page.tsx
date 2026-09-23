@@ -17,7 +17,7 @@ export default async function IncomingEmailsPage() {
     redirect("/");
   }
 
-  const [emails, projects] = await Promise.all([
+  const [emails, projects, dayWorksExtractionsInProgress] = await Promise.all([
     prisma.inboundEmail.findMany({
       where: { organisationId: membership!.organisationId, status: "pending_review" },
       include: {
@@ -41,6 +41,23 @@ export default async function IncomingEmailsPage() {
         }
       },
       orderBy: { name: "asc" }
+    }),
+    // A "Day Works batch" email is marked `filed` the moment extraction
+    // starts (see fileInboundEmail), so it drops out of the pending_review
+    // list above immediately — this is the only remaining way to find a
+    // partially-worked batch again after navigating away (Section: badge
+    // linking back to the review screen).
+    prisma.inboundDayWorksExtraction.findMany({
+      where: { project: { organisationId: membership!.organisationId }, status: { not: "completed" } },
+      select: {
+        id: true,
+        projectId: true,
+        status: true,
+        project: { select: { name: true } },
+        inboundEmail: { select: { subject: true } },
+        sheets: { select: { filedAt: true } }
+      },
+      orderBy: { createdAt: "desc" }
     })
   ]);
 
@@ -49,6 +66,15 @@ export default async function IncomingEmailsPage() {
       emails={emails}
       projects={projects}
       inboundAddress={getInboundEmailAddress(membership!.organisationId)}
+      dayWorksExtractionsInProgress={dayWorksExtractionsInProgress.map((extraction) => ({
+        id: extraction.id,
+        projectId: extraction.projectId,
+        projectName: extraction.project.name,
+        emailSubject: extraction.inboundEmail.subject,
+        status: extraction.status,
+        totalSheets: extraction.sheets.length,
+        filedSheets: extraction.sheets.filter((sheet) => sheet.filedAt != null).length
+      }))}
     />
   );
 }

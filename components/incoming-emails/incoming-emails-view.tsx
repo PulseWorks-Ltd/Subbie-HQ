@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CopyLinkButton } from "@/components/get-app/copy-link-button";
 import { IncomingEmailCard } from "@/components/incoming-emails/incoming-email-card";
 import { IncomingEmailReviewDialog } from "@/components/incoming-emails/incoming-email-review-dialog";
@@ -34,14 +35,29 @@ export type ProjectOption = {
   }[];
 };
 
+export type DayWorksExtractionInProgress = {
+  id: string;
+  projectId: string;
+  projectName: string;
+  emailSubject: string;
+  status: string;
+  totalSheets: number;
+  filedSheets: number;
+};
+
 export function IncomingEmailsView({
   emails,
   projects,
-  inboundAddress
+  inboundAddress,
+  dayWorksExtractionsInProgress
 }: {
   emails: IncomingEmailRow[];
   projects: ProjectOption[];
   inboundAddress: string | null;
+  // A "Day Works batch" email is marked `filed` (and drops out of `emails`
+  // above) the moment extraction starts — this is what lets a partially-
+  // worked batch still be found again after navigating away.
+  dayWorksExtractionsInProgress: DayWorksExtractionInProgress[];
 }) {
   const router = useRouter();
   const [reviewingEmailId, setReviewingEmailId] = useState<string | null>(null);
@@ -103,14 +119,31 @@ export function IncomingEmailsView({
         )}
       </div>
 
-      {emails.length === 0 ? (
+      {dayWorksExtractionsInProgress.length > 0 && (
+        <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/10 p-4 flex flex-col gap-2">
+          <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Day Works batches in progress</p>
+          {dayWorksExtractionsInProgress.map((extraction) => (
+            <div key={extraction.id} className="flex items-center justify-between gap-3 text-xs text-amber-700 dark:text-amber-400">
+              <span>
+                {extraction.projectName} — {extraction.emailSubject}
+                {extraction.status === "extracting" ? " (reading document...)" : extraction.status === "failed" ? " (extraction failed)" : ` — ${extraction.filedSheets}/${extraction.totalSheets} filed`}
+              </span>
+              <Link href={`/projects/${extraction.projectId}/day-works-extractions/${extraction.id}`} className="font-bold hover:underline shrink-0">
+                Resume review
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {emails.length === 0 && dayWorksExtractionsInProgress.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#e7edf3] dark:border-slate-700 py-16">
           <p className="font-bold mb-1">Nothing to review</p>
           <p className="text-sm text-[#4c739a] dark:text-slate-400">
             Forwarded emails will appear here once they arrive.
           </p>
         </div>
-      ) : (
+      ) : emails.length > 0 ? (
         <div className="flex flex-col gap-4">
           {emails.map((email) => (
             <IncomingEmailCard
@@ -121,7 +154,7 @@ export function IncomingEmailsView({
             />
           ))}
         </div>
-      )}
+      ) : null}
 
       {reviewingEmail && (
         <IncomingEmailReviewDialog

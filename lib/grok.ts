@@ -183,7 +183,15 @@ const ExtractedDayWorksSheetVisionSchema = z.object({
   weather: z.string().nullable(),
   location: z.string().nullable(),
   confidence: z.number().min(0).max(1),
-  notes: z.string().nullable()
+  notes: z.string().nullable(),
+  // Batch Day Works email-in (lib/inbound-day-works.ts) — whatever Site
+  // Instruction/Variation reference is written on the sheet itself, read
+  // verbatim, or null if none is shown. Inert text, not a number needing
+  // arithmetic cross-verification, so it has no effect on the self-check
+  // below. The single-sheet upload flow (day-works-sheet-record-review-dialog.tsx)
+  // simply doesn't read this field — additive, not a breaking change to
+  // that caller.
+  siReferenceOnSheet: z.string().nullable()
 });
 
 const ExtractedDayWorksSheetsVisionSchema = z.object({
@@ -208,6 +216,7 @@ export type ExtractedDayWorksSheetSummary = {
   weather: string | null;
   location: string | null;
   confidence: number;
+  siReferenceOnSheet: string | null;
 };
 
 // Absolute-hours slack allowed between crewSize × hoursPerPerson and the
@@ -246,7 +255,7 @@ export async function extractDayWorksSheetSummariesFromImages(
           role: "system",
           content:
             "You read one or more photos/scans of construction Day Works Sheets, which are often handwritten, and extract a per-sheet SUMMARY. Look carefully at every number and word in the image(s) — do not guess from partial visibility. A single set of images may contain multiple distinct physical day works sheets bundled together (e.g. several pages, or several sheets photographed on one page) — first determine how many separate sheets are present, then produce exactly one summary object per sheet, in the order they appear. Do NOT extract a per-worker or per-time-entry breakdown; that level of detail is deliberately not wanted. Respond with only a JSON object matching this exact shape: " +
-            '{"sheets": [{"sheetNumber": string | null, "teamLeaderCount": number | null, "teamMemberCount": number | null, "startTime": string | null, "finishTime": string | null, "hoursPerPerson": number | null, "totalLabourHours": number | null, "date": string | null, "task": string | null, "weather": string | null, "location": string | null, "confidence": number, "notes": string | null}]}. ' +
+            '{"sheets": [{"sheetNumber": string | null, "teamLeaderCount": number | null, "teamMemberCount": number | null, "startTime": string | null, "finishTime": string | null, "hoursPerPerson": number | null, "totalLabourHours": number | null, "date": string | null, "task": string | null, "weather": string | null, "location": string | null, "confidence": number, "notes": string | null, "siReferenceOnSheet": string | null}]}. ' +
             "sheetNumber: the sheet's own reference/number exactly as printed or written (e.g. 'DW001', 'DW-15', 'Sheet 7', '23542'), or null if genuinely not shown — read every digit carefully, handwritten numbers are easy to misread. " +
             "teamLeaderCount: the number of foremen/leading hands/supervisors recorded on this sheet (usually 1), or null if not determinable. " +
             "teamMemberCount: the number of everyone else (regular workers) recorded on this sheet, or null if not determinable. " +
@@ -255,6 +264,7 @@ export async function extractDayWorksSheetSummariesFromImages(
             "startTime/finishTime/date/task/weather/location: extract only if clearly legible on the sheet; null if not shown — their absence is normal and never blocks extraction. " +
             "confidence: your own honest 0-1 confidence in the accuracy of THIS sheet's extraction as a whole — lower it for anything genuinely hard to read (poor handwriting, smudged ink, ambiguous digits); a field being genuinely blank on the sheet is normal and should NOT by itself lower confidence. " +
             "notes: a brief plain-English note on anything uncertain or unreadable on this sheet, so a human reviewer knows exactly what to double-check — null if nothing is uncertain. " +
+            "siReferenceOnSheet: the Site Instruction or Variation reference number written on this sheet, exactly as shown (e.g. 'SI-241', 'VN 12', 'Variation 7'), or null if none is written — this is separate from sheetNumber (the day works sheet's own number), do not confuse the two. " +
             "Never guess or invent a number you can't reasonably support from what's visible — use null instead."
         },
         {
@@ -327,7 +337,8 @@ function resolveDayWorksSheetSummary(
     notes,
     weather: sheet.weather,
     location: sheet.location,
-    confidence
+    confidence,
+    siReferenceOnSheet: sheet.siReferenceOnSheet
   };
 }
 

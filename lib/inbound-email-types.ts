@@ -12,10 +12,19 @@
 // Payment Claims once that feature is built out), and categories not listed
 // here at all (H&S, Contract, Evidence) would need a similar per-destination
 // creation flow designed for each of their own models.
+//
+// "Day Works" (batch email-in) DOES have a real structured destination —
+// see lib/inbound-day-works.ts and fileInboundEmail's createDayWorksExtraction
+// flag. Classification is text-based (attachments[].extractedText), which is
+// known to be unreliable for handwritten sheets — this preset only needs to
+// get the human reviewer looking in the right place; the actual data
+// extraction always uses the proven vision path once "Day Works batch" is
+// chosen in the review dialog, never this classification step.
 export const INBOUND_EMAIL_TYPE_PRESETS = [
   "Variation",
   "Site Instruction",
   "QA",
+  "Day Works",
   "Programme change",
   "Scope of works addition/change",
   "General reference information",

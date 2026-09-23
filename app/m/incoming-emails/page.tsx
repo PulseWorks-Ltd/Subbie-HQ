@@ -23,7 +23,7 @@ export default async function MobileIncomingEmailsPage() {
     redirect("/m");
   }
 
-  const [emails, projects] = await Promise.all([
+  const [emails, projects, dayWorksExtractionsInProgress] = await Promise.all([
     prisma.inboundEmail.findMany({
       where: { organisationId: membership!.organisationId, status: "pending_review" },
       include: {
@@ -43,6 +43,18 @@ export default async function MobileIncomingEmailsPage() {
         }
       },
       orderBy: { name: "asc" }
+    }),
+    prisma.inboundDayWorksExtraction.findMany({
+      where: { project: { organisationId: membership!.organisationId }, status: { not: "completed" } },
+      select: {
+        id: true,
+        projectId: true,
+        status: true,
+        project: { select: { name: true } },
+        inboundEmail: { select: { subject: true } },
+        sheets: { select: { filedAt: true } }
+      },
+      orderBy: { createdAt: "desc" }
     })
   ]);
 
@@ -51,6 +63,15 @@ export default async function MobileIncomingEmailsPage() {
       emails={emails}
       projects={projects}
       inboundAddress={getInboundEmailAddress(membership!.organisationId)}
+      dayWorksExtractionsInProgress={dayWorksExtractionsInProgress.map((extraction) => ({
+        id: extraction.id,
+        projectId: extraction.projectId,
+        projectName: extraction.project.name,
+        emailSubject: extraction.inboundEmail.subject,
+        status: extraction.status,
+        totalSheets: extraction.sheets.length,
+        filedSheets: extraction.sheets.filter((sheet) => sheet.filedAt != null).length
+      }))}
     />
   );
 }

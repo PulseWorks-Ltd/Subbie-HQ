@@ -255,3 +255,30 @@ export async function archiveMonthFor(variationItemId: string): Promise<string |
   }
   return candidates.sort().at(-1)!;
 }
+
+// --- Variation identity ---------------------------------------------------
+
+// Shared by the "Create Variation" PATCH route
+// (app/api/projects/[projectId]/variation-items/[itemId]/route.ts) and
+// Batch Day Works email-in's "convert to Variation" opt-in
+// (lib/inbound-day-works.ts's fileDayWorksExtractionSheets) — the ONE place
+// "give this item a Variation identity" is defined, so both call sites stay
+// idempotent and behave identically. Deliberately never sets
+// variationValue here — pricing stays a deliberate, separate manual step
+// (see VariationItem.variationValue's own schema comment); a caller that
+// also wants to set a value does so via its own subsequent update.
+// Accepts a Prisma client OR an active transaction handle so it can be
+// called either standalone or as one step inside a larger $transaction.
+export async function giveVariationIdentity(
+  client: { variationItem: { findFirst: typeof prisma.variationItem.findFirst; update: typeof prisma.variationItem.update } },
+  projectId: string,
+  itemId: string
+): Promise<Date> {
+  const current = await client.variationItem.findFirst({
+    where: { id: itemId, projectId },
+    select: { variationCreatedAt: true }
+  });
+  const variationCreatedAt = current?.variationCreatedAt ?? new Date();
+  await client.variationItem.update({ where: { id: itemId, projectId }, data: { variationCreatedAt } });
+  return variationCreatedAt;
+}

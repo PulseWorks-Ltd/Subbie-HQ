@@ -56,7 +56,9 @@ export async function findConfirmedDuplicateImport(projectId: string, documentHa
 // ------------------------------------------------------------------
 
 const VALUE_CONFLICT_TOLERANCE = 1;
-const DESCRIPTION_SIMILARITY_THRESHOLD = 0.6;
+// Exported — lib/inbound-day-works.ts reuses this exact threshold so "is
+// this a likely match" means the same thing in both places.
+export const DESCRIPTION_SIMILARITY_THRESHOLD = 0.6;
 
 function normalizeDescription(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, " ");
@@ -67,7 +69,11 @@ function normalizeDescription(raw: string): string {
 // that "dangerous fuzzy matching" must never silently merge unrelated
 // records, so this is used only to PROPOSE a "likely_match" (always
 // user-confirmable, never auto-applied like an exact/normalized match is).
-function descriptionSimilarity(a: string, b: string): number {
+// Exported for reuse — lib/inbound-day-works.ts's own matcher applies the
+// exact same heuristic against a Day Works sheet's task text vs each
+// VariationItem's title, so "how similar are two descriptions" only has one
+// definition/threshold anywhere in this app.
+export function descriptionSimilarity(a: string, b: string): number {
   const wordsA = new Set(normalizeDescription(a).split(" ").filter(Boolean));
   const wordsB = new Set(normalizeDescription(b).split(" ").filter(Boolean));
   if (wordsA.size === 0 || wordsB.size === 0) return 0;

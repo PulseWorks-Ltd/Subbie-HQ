@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { INBOUND_EMAIL_TYPE_PRESETS } from "@/lib/inbound-email-types";
 import type { IncomingEmailRow, ProjectOption } from "@/components/incoming-emails/incoming-emails-view";
 
@@ -18,6 +19,12 @@ function matchItemType(category: string): "variation" | "site_instruction" | nul
 // defect record" should all match a reviewer's slight rewording of the preset.
 function matchesQa(category: string): boolean {
   return category.toLowerCase().includes("qa");
+}
+
+// Batch Day Works email-in (lib/inbound-day-works.ts) — same loose-substring
+// convention as the other matchers above.
+function matchesDayWorks(category: string): boolean {
+  return category.toLowerCase().includes("day works");
 }
 
 // "SI-83", "SI83", "si 83" should all collide — references get typed and
@@ -38,6 +45,7 @@ export function IncomingEmailReviewDialog({
   onClose: () => void;
   onFiled: () => void;
 }) {
+  const router = useRouter();
   const [projectId, setProjectId] = useState(email.suggestedProject?.id ?? "");
   const [category, setCategory] = useState(email.suggestedType ?? "");
   const [variationItemId, setVariationItemId] = useState(email.suggestedVariationItem?.id ?? "");
@@ -68,10 +76,36 @@ export function IncomingEmailReviewDialog({
   const [qaStage, setQaStage] = useState("");
   const [qaVariationItemId, setQaVariationItemId] = useState("");
 
+  const [isStartingDayWorks, setIsStartingDayWorks] = useState(false);
+  const [dayWorksError, setDayWorksError] = useState<string | null>(null);
+
   const selectedProject = useMemo(() => projects.find((project) => project.id === projectId), [projects, projectId]);
   const matchedItemType = useMemo(() => matchItemType(category), [category]);
   const matchedQa = useMemo(() => matchesQa(category), [category]);
+  const matchedDayWorks = useMemo(() => matchesDayWorks(category), [category]);
   const itemTypeLabel = matchedItemType === "site_instruction" ? "Site Instruction" : "Variation";
+
+  // Each attachment is read separately and every sheet matched to its own
+  // Site Instruction/Variation, so unlike the other destinations above this
+  // doesn't file straight to Correspondence here — it hands off to its own
+  // review screen (components/day-works/day-works-extraction-review-view.tsx).
+  async function handleFileDayWorksBatch() {
+    if (!projectId) return;
+    setIsStartingDayWorks(true);
+    setDayWorksError(null);
+    const response = await fetch(`/api/organisation/incoming-emails/${email.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "file", projectId, category: "Day Works", createDayWorksExtraction: true })
+    });
+    const data = await response.json().catch(() => ({}));
+    setIsStartingDayWorks(false);
+    if (!response.ok) {
+      setDayWorksError(typeof data.error === "string" ? data.error : "Could not start extraction for this email.");
+      return;
+    }
+    router.push(`/projects/${projectId}/day-works-extractions/${data.dayWorksExtractionId}`);
+  }
 
   async function handleExtractDetails() {
     if (!matchedItemType || !selectedProject) return;
@@ -234,6 +268,17 @@ export function IncomingEmailReviewDialog({
               </datalist>
             </label>
 
+            {selectedProject && matchedDayWorks && (
+              <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 flex flex-col gap-2">
+                <p className="text-sm font-bold">Day Works batch</p>
+                <p className="text-xs text-[#4c739a] dark:text-slate-400">
+                  Each attachment will be read on its own review screen — every physical sheet is matched to a Site
+                  Instruction/Variation separately, and nothing is filed until you confirm each one there.
+                </p>
+                {dayWorksError && <p className="text-xs text-red-600 dark:text-red-400">{dayWorksError}</p>}
+              </div>
+            )}
+
             {selectedProject && matchedQa && (
               <div className="rounded-lg border border-[#e7edf3] dark:border-slate-700 p-3 flex flex-col gap-3">
                 <p className="text-sm font-bold">File as QA Record</p>
@@ -365,7 +410,7 @@ export function IncomingEmailReviewDialog({
                 Cancel
               </button>
 
-              {(showExtractChoice || matchedQa) && (
+              {(showExtractChoice || matchedQa) && !matchedDayWorks && (
                 <button
                   type="button"
                   onClick={() => handleFile("plain")}
@@ -376,7 +421,16 @@ export function IncomingEmailReviewDialog({
                 </button>
               )}
 
-              {matchedQa ? (
+              {matchedDayWorks ? (
+                <button
+                  type="button"
+                  onClick={handleFileDayWorksBatch}
+                  disabled={isStartingDayWorks || !projectId}
+                  className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {isStartingDayWorks ? "Starting..." : "Extract Day Works Sheets →"}
+                </button>
+              ) : matchedQa ? (
                 <button
                   type="button"
                   onClick={() => handleFile("qa")}

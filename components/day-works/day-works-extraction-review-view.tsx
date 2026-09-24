@@ -90,6 +90,7 @@ export function DayWorksExtractionReviewView({
   const [isRetrying, setIsRetrying] = useState(false);
   const [isFiling, setIsFiling] = useState(false);
   const [isIgnoring, setIsIgnoring] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -146,6 +147,15 @@ export function DayWorksExtractionReviewView({
     });
   }
 
+  const allSelected = unfiledSheets.length > 0 && unfiledSheets.every((sheet) => selected.has(sheet.id));
+
+  function toggleSelectAll() {
+    setSelected((current) => {
+      if (unfiledSheets.every((sheet) => current.has(sheet.id))) return new Set();
+      return new Set(unfiledSheets.map((sheet) => sheet.id));
+    });
+  }
+
   async function handleRetry() {
     setIsRetrying(true);
     setActionError(null);
@@ -195,6 +205,27 @@ export function DayWorksExtractionReviewView({
     router.refresh();
   }
 
+  async function handleDeleteSelected() {
+    if (selected.size === 0) return;
+    if (
+      !confirm(
+        `Permanently delete ${selected.size} sheet${selected.size === 1 ? "" : "s"}? This removes them from this batch entirely — unlike Ignore, they can't be recovered or filed later.`
+      )
+    ) {
+      return;
+    }
+    setIsDeleting(true);
+    setActionError(null);
+    await fetch(`/api/projects/${projectId}/day-works-extractions/${extraction.id}/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sheetIds: Array.from(selected) })
+    });
+    setIsDeleting(false);
+    setSelected(new Set());
+    router.refresh();
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-8 flex flex-col gap-6">
       <div>
@@ -235,7 +266,9 @@ export function DayWorksExtractionReviewView({
           <table className="w-full text-xs min-w-[900px]">
             <thead>
               <tr className="text-left text-[#4c739a] dark:text-slate-400 border-b border-[#e7edf3] dark:border-slate-700">
-                <th className="p-2 w-8"></th>
+                <th className="p-2 w-8">
+                  <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} title="Select all" />
+                </th>
                 <th className="p-2">Sheet</th>
                 <th className="p-2">Task</th>
                 <th className="p-2 text-right">Hours</th>
@@ -266,12 +299,13 @@ export function DayWorksExtractionReviewView({
                         <p className="text-[10px] text-[#4c739a] dark:text-slate-400">{sheet.attachmentFileName}</p>
                         {isLowConfidence && <p className="text-[10px] text-amber-700 dark:text-amber-400">Low confidence — check carefully</p>}
                       </td>
-                      <td className="p-2 max-w-[16rem]">
-                        <input
+                      <td className="p-2 min-w-[14rem] max-w-[20rem]">
+                        <textarea
                           value={sheet.task ?? ""}
                           onChange={(event) => patchSheet(sheet.id, { task: event.target.value || null })}
                           disabled={isSaving}
-                          className="w-full h-8 rounded border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-1"
+                          rows={2}
+                          className="w-full rounded border border-[#e7edf3] dark:border-slate-700 bg-white dark:bg-slate-800 px-1 py-1 text-xs leading-snug resize-y"
                         />
                       </td>
                       <td className="p-2 text-right">
@@ -455,6 +489,13 @@ export function DayWorksExtractionReviewView({
           <div className="p-3 border-t border-[#e7edf3] dark:border-slate-800 flex items-center justify-between">
             <p className="text-xs text-[#4c739a] dark:text-slate-400">{selected.size} selected</p>
             <div className="flex gap-2">
+              <button
+                onClick={handleDeleteSelected}
+                disabled={selected.size === 0 || isDeleting}
+                className="h-9 px-3 rounded-lg border border-red-300 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-60"
+              >
+                {isDeleting ? "Deleting..." : "Delete selected"}
+              </button>
               <button
                 onClick={handleIgnoreSelected}
                 disabled={selected.size === 0 || isIgnoring}

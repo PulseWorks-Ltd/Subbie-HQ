@@ -346,6 +346,19 @@ export async function ignoreDayWorksExtractionSheets(extractionId: string, sheet
   await recomputeExtractionStatus(extractionId);
 }
 
+// Distinct from "Ignore" (which keeps the row, just excluded from filing) —
+// this permanently removes rows that never should have existed at all
+// (e.g. a misread duplicate, or the vision model splitting one physical
+// sheet into two). Same filedAt: null guard as ignore above — a filed
+// sheet is already a real DayWorksSheetRecord elsewhere, so it's silently
+// left alone rather than deleted out from under that record.
+export async function deleteDayWorksExtractionSheets(extractionId: string, sheetIds: string[]): Promise<void> {
+  await prisma.inboundDayWorksExtractionSheet.deleteMany({
+    where: { id: { in: sheetIds }, inboundDayWorksExtractionId: extractionId, filedAt: null }
+  });
+  await recomputeExtractionStatus(extractionId);
+}
+
 async function recomputeExtractionStatus(extractionId: string): Promise<void> {
   const pendingCount = await prisma.inboundDayWorksExtractionSheet.count({
     where: { inboundDayWorksExtractionId: extractionId, userAction: "pending" }

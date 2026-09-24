@@ -28,6 +28,39 @@ import { descriptionSimilarity, DESCRIPTION_SIMILARITY_THRESHOLD } from "./payme
 // user to split it into a second email.
 const MAX_PAGES_PER_ATTACHMENT = 20;
 
+// A real-world batch means several large sequential vision calls in one
+// run — a transient network/provider blip on any single one of them
+// otherwise reads to the reviewer as "this document can't be read", which
+// is misleading (the document is fine; it's usually just a one-off retry
+// away from succeeding, as confirmed when the exact PDFs from a genuine
+// failed run were re-extracted moments later without any changes). Never
+// retries UnreadablePdfError (a real, deterministic problem with the file
+// itself — retrying it wastes an AI call and can't succeed) or
+// AiSpendCapExceededError (retrying can't fix a spend cap and would only
+// burn more of it). Everything else — network errors, transient 5xx,
+// occasional malformed JSON from the model — gets a couple of quick
+// retries before this attachment is actually reported as failed.
+const TRANSIENT_RETRY_DELAYS_MS = [2000, 5000];
+
+async function withTransientRetries<T>(fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= TRANSIENT_RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error instanceof UnreadablePdfError || error instanceof AiSpendCapExceededError) {
+        throw error;
+      }
+      lastError = error;
+      const delay = TRANSIENT_RETRY_DELAYS_MS[attempt];
+      if (delay != null) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export async function startDayWorksExtraction(
   client: { inboundDayWorksExtraction: { create: typeof prisma.inboundDayWorksExtraction.create } },
   params: { emailId: string; projectId: string; createdByUserId: string }
@@ -163,11 +196,13 @@ export async function runDayWorksExtraction(extractionId: string): Promise<void>
         continue;
       }
 
-      const summaries = await extractDayWorksSheetSummariesFromImages(images, {
-        organisationId: extraction.project.organisationId,
-        userId: extraction.createdByUserId,
-        contextRef: extractionId
-      });
+      const summaries = await withTransientRetries(() =>
+        extractDayWorksSheetSummariesFromImages(images, {
+          organisationId: extraction.project.organisationId,
+          userId: extraction.createdByUserId,
+          contextRef: extractionId
+        })
+      );
 
       let sheetIndex = 0;
       for (const summary of summaries) {
@@ -203,10 +238,17 @@ export async function runDayWorksExtraction(extractionId: string): Promise<void>
         errors.push(error.message);
         break;
       }
+      // UnreadablePdfError means the file itself genuinely couldn't be
+      // rendered — worded accordingly. Anything else already survived
+      // withTransientRetries' retries and still failed, so it's worded as
+      // likely transient (a real, if less common, possibility) rather than
+      // implying a permanent problem with the document — Retry (which only
+      // re-attempts attachments that never produced a sheet row) is
+      // genuinely likely to succeed for these.
       const message =
         error instanceof UnreadablePdfError
           ? `${attachment.fileName}: this document's pages couldn't be read automatically.`
-          : `${attachment.fileName}: could not read this document automatically.`;
+          : `${attachment.fileName}: could not be read right now (likely a temporary issue) — try Retry.`;
       errors.push(message);
     }
   }

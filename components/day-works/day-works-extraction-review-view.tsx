@@ -205,8 +205,10 @@ export function DayWorksExtractionReviewView({
       </div>
 
       {extraction.status === "extracting" && (
-        <p className="text-sm rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 p-3">
-          Reading the attachment(s) — this page will update automatically once it's done.
+        <p className="text-sm rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 p-3 flex items-center gap-2">
+          <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+          Reading the attachment(s) — sheets will appear below as each one finishes. Keep this page open until the
+          spinner at the bottom disappears.
         </p>
       )}
 
@@ -411,6 +413,16 @@ export function DayWorksExtractionReviewView({
                   </Fragment>
                 );
               })}
+              {extraction.status === "extracting" && (
+                <tr>
+                  <td colSpan={8} className="p-3">
+                    <div className="flex items-center justify-center gap-2 text-xs text-[#4c739a] dark:text-slate-400">
+                      <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                      Still processing more sheets from this batch…
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
 

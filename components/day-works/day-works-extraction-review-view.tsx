@@ -275,7 +275,7 @@ export function DayWorksExtractionReviewView({
                 <th className="p-2 text-right">Rate</th>
                 <th className="p-2">Match</th>
                 <th className="p-2">Action</th>
-                <th className="p-2"></th>
+                <th className="p-2 sticky right-0 bg-white dark:bg-slate-900 shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.08)]"></th>
               </tr>
             </thead>
             <tbody>
@@ -385,8 +385,12 @@ export function DayWorksExtractionReviewView({
                           )}
                         </div>
                       </td>
-                      <td className="p-2">
-                        <button onClick={() => setExpandedId(isExpanded ? null : sheet.id)} className="text-primary font-bold hover:underline">
+                      <td
+                        className={`p-2 sticky right-0 shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.08)] ${
+                          isLowConfidence ? "bg-amber-50 dark:bg-amber-950" : "bg-white dark:bg-slate-900"
+                        }`}
+                      >
+                        <button onClick={() => setExpandedId(isExpanded ? null : sheet.id)} className="text-primary font-bold hover:underline whitespace-nowrap">
                           {isExpanded ? "Hide" : "Details"}
                         </button>
                       </td>

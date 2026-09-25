@@ -120,6 +120,14 @@ export async function createBillingPortalSession(params: {
   });
 }
 
+// True when Stripe says the customer we saved doesn't exist in the Stripe
+// account the current keys belong to — which happens when the keys are
+// switched to a different Stripe account, or from test mode to live.
+export function isMissingStripeCustomer(error: unknown): boolean {
+  const e = error as { code?: string; param?: string; type?: string } | null;
+  return !!e && e.code === "resource_missing" && e.param === "customer";
+}
+
 export function constructWebhookEvent(payload: string, signature: string): Stripe.Event {
   const stripe = getClient();
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

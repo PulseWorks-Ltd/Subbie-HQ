@@ -152,6 +152,26 @@ export async function matchVariationForDayWorksSheet(
 // processed and skipped, so retryDayWorksExtraction (below) only ever
 // fills in whatever genuinely failed, never re-extracts (and duplicates)
 // an attachment that already succeeded.
+// The vision prompt asks for an ISO date but a handwritten sheet is
+// transcribed close to verbatim, so a non-ISO format (dd.mm.yy, dd/mm/yyyy,
+// etc.) reaches here often enough to matter. `new Date(raw)` silently
+// produces an Invalid Date for those, which Prisma then rejects — and since
+// this sheet is created inside the SAME per-attachment try block as every
+// other sheet from that attachment, one bad date used to take down every
+// sheet on the whole document, not just the one it belonged to (confirmed
+// via a real reproduction of the exact "B-20 DWS" batch: 6 of 8 attachments
+// failed entirely, every single time, each because exactly one of their
+// sheets had a date like this). Never let a date parse failure discard real
+// extracted data — fall back to null and surface the raw text in notes so
+// the reviewer can set it manually, same as any other field the model
+// couldn't read is a normal, non-blocking gap.
+function parseSheetDate(raw: string | null): { date: Date | null; unparsedNote: string | null } {
+  if (!raw) return { date: null, unparsedNote: null };
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) return { date: parsed, unparsedNote: null };
+  return { date: null, unparsedNote: `Date on sheet ("${raw}") couldn't be read automatically — please set it manually.` };
+}
+
 export async function runDayWorksExtraction(extractionId: string): Promise<void> {
   const extraction = await prisma.inboundDayWorksExtraction.findUnique({
     where: { id: extractionId },
@@ -207,6 +227,7 @@ export async function runDayWorksExtraction(extractionId: string): Promise<void>
       let sheetIndex = 0;
       for (const summary of summaries) {
         const match = await matchVariationForDayWorksSheet(extraction.projectId, summary.siReferenceOnSheet, summary.task);
+        const { date: parsedDate, unparsedNote } = parseSheetDate(summary.date);
         await prisma.inboundDayWorksExtractionSheet.create({
           data: {
             inboundDayWorksExtractionId: extractionId,
@@ -217,11 +238,11 @@ export async function runDayWorksExtraction(extractionId: string): Promise<void>
             teamMemberCount: summary.teamMemberCount,
             totalHours: summary.totalHours,
             ratePerHour: defaultRatePerHour,
-            date: summary.date ? new Date(summary.date) : null,
+            date: parsedDate,
             startTime: summary.startTime,
             finishTime: summary.finishTime,
             task: summary.task,
-            notes: summary.notes,
+            notes: unparsedNote ? (summary.notes ? `${summary.notes} ${unparsedNote}` : unparsedNote) : summary.notes,
             weather: summary.weather,
             location: summary.location,
             confidence: summary.confidence,

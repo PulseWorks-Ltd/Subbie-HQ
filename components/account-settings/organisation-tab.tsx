@@ -26,6 +26,7 @@ function BillingSection({
     hasStripeCustomer: boolean;
   };
 }) {
+  const router = useRouter();
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +39,8 @@ function BillingSection({
 
     if (!response.ok) {
       setError(typeof body?.error === "string" ? body.error : "Could not open billing management.");
+      // the old Stripe details were cleared: show "Upgrade to a paid plan" instead
+      if (body?.billingReset) router.refresh();
       return;
     }
 
